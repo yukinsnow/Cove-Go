@@ -8,7 +8,9 @@ permissions:
   contents: read
 jobs:
   build:
-    runs-on: macos-15
+    # Explicit Intel host avoids the capacity-constrained default ARM pool.
+    # Xcode still cross-compiles the iPhone arm64 binary.
+    runs-on: macos-15-intel
     steps:
       - uses: actions/checkout@v4
       # connectivity_plus uses Network APIs introduced in the iOS 26 SDK.
