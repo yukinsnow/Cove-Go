@@ -7,7 +7,13 @@ import 'package:image_picker/image_picker.dart';
 import 'package:openclaw_client/openclaw_client.dart';
 
 import '../l10n/l10n.dart';
-import '../ui/theme/glass.dart';
+import '../ui/theme/theme.dart';
+import '../ui/theme/app_icons.dart';
+import '../ui/chat/composer.dart';
+import '../ui/chat/widgets/user_bubble.dart';
+import '../ui/shell/drawer/session_tile.dart';
+import '../ui/shell/page_frame.dart';
+import '../ui/common/status_dot.dart';
 import '../ui/common/glass_pill.dart';
 import 'controller.dart';
 
@@ -25,6 +31,8 @@ class _ClawHomeState extends State<ClawHome> with WidgetsBindingObserver {
   final input = TextEditingController(), scroll = ScrollController();
   final attachments = <Map<String, dynamic>>[];
   String queue = 'followup';
+  String sessionQuery = '';
+  final composerFocus = FocusNode();
   @override
   void initState() {
     super.initState();
@@ -47,6 +55,7 @@ class _ClawHomeState extends State<ClawHome> with WidgetsBindingObserver {
     WidgetsBinding.instance.removeObserver(this);
     c.removeListener(update);
     c.dispose();
+    composerFocus.dispose();
     input.dispose();
     scroll.dispose();
     super.dispose();
@@ -132,60 +141,103 @@ class _ClawHomeState extends State<ClawHome> with WidgetsBindingObserver {
     });
   }
 
+  void closeSidebar() {
+    FocusManager.instance.primaryFocus?.unfocus();
+    scaffoldKey.currentState?.closeDrawer();
+  }
+
   Widget sessionList() {
     final l = context.l10n;
     return Column(
       children: [
-        ListTile(
-          title: Text(l.ocSessions),
-          trailing: IconButton(
-            tooltip: l.ocRefresh,
-            onPressed: c.connected ? () => c.guard(c.refreshSessions) : null,
-            icon: const Icon(Icons.refresh),
-          ),
-        ),
-        ListTile(
-          leading: const Icon(Icons.add),
-          title: Text(l.ocNew),
-          onTap: c.connected ? () => c.guard(c.newSession) : null,
-        ),
-        Expanded(
-          child: ListView(
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 12, 12, 12),
+          child: Row(
             children: [
-              for (final s in c.sessions)
-                ListTile(
-                  selected: s['key'] == c.sessionKey,
-                  leading: Icon(s['hasActiveRun'] == true ? Icons.play_circle_outline : Icons.chat_bubble_outline),
-                  title: Text(
-                    '${s['displayName'] ?? s['label'] ?? s['key']}',
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  onTap: () => c.guard(() => c.select(s['key'] as String)),
-                ),
+              Expanded(child: Text('OpenClaw', style: Theme.of(context).textTheme.titleLarge)),
+              GlassIconButton(
+                icon: AppIcons.refresh,
+                tooltip: l.ocRefresh,
+                onPressed: c.connected ? () => c.guard(c.refreshSessions) : null,
+              ),
             ],
           ),
         ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          child: GlassSurface(
+            tier: GlassTier.chrome,
+            stadium: true,
+            onTap: c.connected
+                ? () {
+                    closeSidebar();
+                    c.guard(c.newSession);
+                  }
+                : null,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: Row(children: [const Icon(AppIcons.add, size: 20), const SizedBox(width: 10), Text(l.ocNew)]),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.all(12),
+          child: TextField(
+            onChanged: (value) => setState(() => sessionQuery = value.trim().toLowerCase()),
+            decoration: InputDecoration(
+              hintText: l.ocSearchSessions,
+              prefixIcon: const Icon(AppIcons.search),
+              isDense: true,
+            ),
+          ),
+        ),
+        Expanded(
+          child: ListView(
+            padding: const EdgeInsets.symmetric(horizontal: 10),
+            children: [
+              for (final session in c.sessions)
+                if (sessionTitle(session).toLowerCase().contains(sessionQuery))
+                  SessionTile(
+                    title: sessionTitle(session),
+                    running: session['hasActiveRun'] == true,
+                    current: session['key'] == c.sessionKey,
+                    onLongPress: null,
+                    onTap: () {
+                      closeSidebar();
+                      c.guard(() => c.select(session['key'] as String));
+                    },
+                  ),
+            ],
+          ),
+        ),
+        const Divider(indent: 20, endIndent: 20),
         if (widget.onBackend != null)
           ListTile(
-            leading: const Icon(Icons.devices_outlined),
+            leading: const Icon(AppIcons.swap),
             title: const Text('DSH Remote'),
             onTap: () {
-              FocusManager.instance.primaryFocus?.unfocus();
-              scaffoldKey.currentState?.closeDrawer();
+              closeSidebar();
               widget.onBackend!();
             },
           ),
-        ListTile(leading: const Icon(Icons.settings_outlined), title: Text(l.ocSettings), onTap: settings),
         ListTile(
-          leading: const Icon(Icons.description_outlined),
+          leading: const Icon(AppIcons.settings),
+          title: Text(l.ocSettings),
+          onTap: () {
+            closeSidebar();
+            settings();
+          },
+        ),
+        ListTile(leading: const Icon(AppIcons.translate), title: Text(l.ocEnglish), onTap: widget.onLanguage),
+        ListTile(
+          leading: const Icon(AppIcons.info),
           title: Text(l.ocLicenses),
           onTap: () => showLicensePage(context: context, applicationName: 'OpenClaw Go'),
         ),
-        ListTile(leading: const Icon(Icons.language), title: Text(l.ocEnglish), onTap: widget.onLanguage),
       ],
     );
   }
+
+  String sessionTitle(Map<String, dynamic> session) =>
+      '${session['displayName'] ?? session['label'] ?? session['key']}';
 
   Widget bubble(Map<String, dynamic> message) {
     final text = messageText(message), user = message['role'] == 'user';
@@ -199,35 +251,132 @@ class _ClawHomeState extends State<ClawHome> with WidgetsBindingObserver {
         ),
       );
     }
-    return Align(
-      alignment: user ? Alignment.centerRight : Alignment.centerLeft,
-      child: Container(
-        constraints: const BoxConstraints(maxWidth: 780),
-        margin: const EdgeInsets.symmetric(vertical: 8),
-        child: GlassSurface(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      child: user
+          ? UserBubble(text: text)
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SelectionArea(child: GptMarkdown(text, style: AppType.chatBody(context))),
+                IconButton(
+                  visualDensity: VisualDensity.compact,
+                  tooltip: context.l10n.ocCopy,
+                  onPressed: () => Clipboard.setData(ClipboardData(text: text)),
+                  icon: const Icon(AppIcons.copy, size: 18),
+                ),
+              ],
+            ),
+    );
+  }
+
+  Widget header(bool wide) {
+    final l = context.l10n;
+    final session = c.sessions.where((s) => s['key'] == c.sessionKey).firstOrNull;
+    return SafeArea(
+      bottom: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(12, 6, 12, 8),
+        child: BackdropGroup(
+          child: Row(
             children: [
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(user ? 'You' : 'OpenClaw', style: Theme.of(context).textTheme.labelMedium),
-                  IconButton(
-                    visualDensity: VisualDensity.compact,
-                    tooltip: context.l10n.ocCopy,
-                    onPressed: () => Clipboard.setData(ClipboardData(text: text)),
-                    icon: const Icon(Icons.copy, size: 15),
+              if (!wide) ...[
+                GlassIconButton(
+                  icon: AppIcons.menu,
+                  tooltip: l.ocSessions,
+                  onPressed: () {
+                    composerFocus.unfocus();
+                    scaffoldKey.currentState?.openDrawer();
+                  },
+                ),
+                const SizedBox(width: 8),
+              ],
+              Expanded(
+                child: GlassSurface(
+                  tier: GlassTier.chrome,
+                  stadium: true,
+                  grouped: true,
+                  onTap: c.busy ? null : settings,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        session == null ? 'OpenClaw Go' : sessionTitle(session),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.titleSmall,
+                      ),
+                      Row(
+                        children: [
+                          StatusDot(tone: c.connected ? StatusTone.ok : StatusTone.idle, size: 6),
+                          const SizedBox(width: 6),
+                          Flexible(
+                            child: Text(
+                              c.connected ? l.ocConnected : l.ocDisconnected,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: Theme.of(context).textTheme.labelSmall,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
-                ],
+                ),
               ),
-              SelectionArea(child: GptMarkdown(text)),
+              const SizedBox(width: 8),
+              GlassIconButton(
+                icon: AppIcons.model,
+                tooltip: l.ocModels,
+                onPressed: c.connected && c.sessionKey.isNotEmpty ? chooseModel : null,
+              ),
+              const SizedBox(width: 8),
+              GlassIconButton(
+                icon: AppIcons.add,
+                tooltip: l.ocNew,
+                onPressed: c.connected ? () => c.guard(c.newSession) : null,
+              ),
+              if (MediaQuery.viewInsetsOf(context).bottom > 0) ...[
+                const SizedBox(width: 8),
+                GlassIconButton(
+                  icon: Icons.keyboard_hide_outlined,
+                  tooltip: l.ocHideKeyboard,
+                  onPressed: composerFocus.unfocus,
+                ),
+              ],
             ],
           ),
         ),
       ),
     );
   }
+
+  Future<void> sendOptions() => showModalBottomSheet<void>(
+    context: context,
+    builder: (ctx) => SafeArea(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (final item in [
+            ('followup', context.l10n.ocQueue),
+            ('steer', context.l10n.ocSteer),
+            ('interrupt', context.l10n.ocInterrupt),
+          ])
+            ListTile(
+              selected: queue == item.$1,
+              leading: Icon(queue == item.$1 ? AppIcons.done : AppIcons.queued),
+              title: Text(item.$2),
+              onTap: () {
+                setState(() => queue = item.$1);
+                Navigator.pop(ctx);
+              },
+            ),
+        ],
+      ),
+    ),
+  );
 
   Future<void> chooseModel() async {
     final selected = await showModalBottomSheet<String>(
@@ -257,182 +406,144 @@ class _ClawHomeState extends State<ClawHome> with WidgetsBindingObserver {
   Widget build(BuildContext context) {
     final l = context.l10n;
     final wide = MediaQuery.sizeOf(context).width >= 850;
-    return Scaffold(
-      key: scaffoldKey,
-      onDrawerChanged: (open) {
-        if (open) FocusManager.instance.primaryFocus?.unfocus();
-      },
-      appBar: AppBar(
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+    return AppBackdrop(
+      child: Scaffold(
+        key: scaffoldKey,
+        onDrawerChanged: (open) {
+          if (open) FocusManager.instance.primaryFocus?.unfocus();
+        },
+        backgroundColor: Colors.transparent,
+        appBar: PreferredSize(preferredSize: const Size.fromHeight(68), child: header(wide)),
+        drawer: wide
+            ? null
+            : Drawer(
+                child: AppBackdrop(child: SafeArea(child: sessionList())),
+              ),
+        body: Row(
           children: [
-            const Text('OpenClaw Go'),
-            Text(c.connected ? l.ocConnected : l.ocDisconnected, style: Theme.of(context).textTheme.labelSmall),
-          ],
-        ),
-        actions: [
-          if (MediaQuery.viewInsetsOf(context).bottom > 0)
-            IconButton(
-              tooltip: l.ocHideKeyboard,
-              onPressed: () => FocusManager.instance.primaryFocus?.unfocus(),
-              icon: const Icon(Icons.keyboard_hide_outlined),
-            ),
-          IconButton(
-            tooltip: l.ocModels,
-            onPressed: c.connected && c.sessionKey.isNotEmpty ? chooseModel : null,
-            icon: const Icon(Icons.tune),
-          ),
-          IconButton(tooltip: l.ocSettings, onPressed: c.busy ? null : settings, icon: const Icon(Icons.link)),
-        ],
-      ),
-      drawer: wide ? null : Drawer(child: SafeArea(child: sessionList())),
-      body: Row(
-        children: [
-          if (wide) SizedBox(width: 280, child: sessionList()),
-          Expanded(
-            child: Column(
-              children: [
-                if (c.busy) const LinearProgressIndicator(),
-                if (c.error.isNotEmpty)
-                  MaterialBanner(
-                    content: SelectableText(c.error),
-                    actions: [TextButton(onPressed: () => c.connect(c.address, c.token), child: Text(l.ocReconnect))],
-                  ),
-                Expanded(
-                  child: c.sessionKey.isEmpty
-                      ? Center(
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.hub_outlined, size: 56, color: Theme.of(context).colorScheme.primary),
-                              const SizedBox(height: 20),
-                              Text(l.ocWelcome, style: Theme.of(context).textTheme.headlineSmall),
-                              const SizedBox(height: 8),
-                              Text(l.ocWelcomeHint),
-                              const SizedBox(height: 24),
-                              FilledButton(
-                                onPressed: c.busy
-                                    ? null
-                                    : c.connected
-                                    ? () => c.guard(c.newSession)
-                                    : settings,
-                                child: Text(c.connected ? l.ocNew : l.ocConnect),
+            if (wide) SizedBox(width: 280, child: sessionList()),
+            Expanded(
+              child: Column(
+                children: [
+                  if (c.busy) const LinearProgressIndicator(),
+                  if (c.error.isNotEmpty)
+                    MaterialBanner(
+                      content: SelectableText(c.error),
+                      actions: [TextButton(onPressed: () => c.connect(c.address, c.token), child: Text(l.ocReconnect))],
+                    ),
+                  Expanded(
+                    child: c.sessionKey.isEmpty
+                        ? Center(
+                            child: SingleChildScrollView(
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.hub_outlined, size: 56, color: Theme.of(context).colorScheme.primary),
+                                  const SizedBox(height: 20),
+                                  Text(l.ocWelcome, style: Theme.of(context).textTheme.headlineSmall),
+                                  const SizedBox(height: 8),
+                                  Text(l.ocWelcomeHint),
+                                  const SizedBox(height: 24),
+                                  FilledButton(
+                                    onPressed: c.busy
+                                        ? null
+                                        : c.connected
+                                        ? () => c.guard(c.newSession)
+                                        : settings,
+                                    child: Text(c.connected ? l.ocNew : l.ocConnect),
+                                  ),
+                                ],
                               ),
-                            ],
-                          ),
-                        )
-                      : RefreshIndicator(
-                          onRefresh: () => c.guard(c.history),
-                          child: ListView(
-                            controller: scroll,
-                            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                            children: [
-                              for (final message in c.messages) bubble(message),
-                              if (c.tools.isNotEmpty)
-                                GlassPill(
-                                  child: Text('${l.ocTools} · ${c.tools.length}'),
-                                  onTap: () => showModalBottomSheet<void>(
-                                    context: context,
-                                    isScrollControlled: true,
-                                    builder: (ctx) => SafeArea(
-                                      child: SizedBox(
-                                        height: MediaQuery.sizeOf(ctx).height * .7,
-                                        child: ListView(
-                                          children: [
-                                            for (final tool in c.tools.values)
-                                              ExpansionTile(
-                                                title: Text('${tool['name'] ?? l.ocTools} · ${tool['phase'] ?? ''}'),
-                                                children: [
-                                                  Padding(
-                                                    padding: const EdgeInsets.all(16),
-                                                    child: SelectableText(c.toolText(tool)),
-                                                  ),
-                                                ],
-                                              ),
-                                          ],
+                            ),
+                          )
+                        : RefreshIndicator(
+                            onRefresh: () => c.guard(c.history),
+                            child: ListView(
+                              controller: scroll,
+                              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+                              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                              children: [
+                                for (final message in c.messages) bubble(message),
+                                if (c.tools.isNotEmpty)
+                                  GlassPill(
+                                    child: Text('${l.ocTools} · ${c.tools.length}'),
+                                    onTap: () => showModalBottomSheet<void>(
+                                      context: context,
+                                      isScrollControlled: true,
+                                      builder: (ctx) => SafeArea(
+                                        child: SizedBox(
+                                          height: MediaQuery.sizeOf(ctx).height * .7,
+                                          child: ListView(
+                                            children: [
+                                              for (final tool in c.tools.values)
+                                                ExpansionTile(
+                                                  title: Text('${tool['name'] ?? l.ocTools} · ${tool['phase'] ?? ''}'),
+                                                  children: [
+                                                    Padding(
+                                                      padding: const EdgeInsets.all(16),
+                                                      child: SelectableText(c.toolText(tool)),
+                                                    ),
+                                                  ],
+                                                ),
+                                            ],
+                                          ),
                                         ),
                                       ),
                                     ),
                                   ),
-                                ),
-                              for (final text in c.live.values) bubble({'role': 'assistant', 'content': text}),
-                            ],
+                                for (final text in c.live.values) bubble({'role': 'assistant', 'content': text}),
+                              ],
+                            ),
                           ),
+                  ),
+                  SafeArea(
+                    top: false,
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+                      child: TextFieldTapRegion(
+                        onTapOutside: (_) => composerFocus.unfocus(),
+                        child: Composer(
+                          controller: input,
+                          focusNode: composerFocus,
+                          connected: c.connected,
+                          running: c.live.isNotEmpty,
+                          busy: c.sending,
+                          placeholder: l.ocHint,
+                          maxLines: Composer.linesFor(context),
+                          onSend: send,
+                          onStop: () => c.guard(c.abort),
+                          onSendOptions: sendOptions,
+                          accessory: IconButton(
+                            tooltip: l.ocQueue,
+                            onPressed: sendOptions,
+                            icon: const Icon(AppIcons.queued, size: 20),
+                          ),
+                          hasAttachments: attachments.isNotEmpty,
+                          leading: IconButton(
+                            tooltip: l.ocAttach,
+                            onPressed: c.connected ? attach : null,
+                            icon: const Icon(AppIcons.add),
+                          ),
+                          tray: attachments.isEmpty
+                              ? null
+                              : Wrap(
+                                  children: [
+                                    for (var i = 0; i < attachments.length; i++)
+                                      InputChip(
+                                        label: Text('${attachments[i]['fileName']}'),
+                                        onDeleted: () => setState(() => attachments.removeAt(i)),
+                                      ),
+                                  ],
+                                ),
                         ),
-                ),
-                SafeArea(
-                  top: false,
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
-                    child: GlassSurface(
-                      padding: const EdgeInsets.all(10),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          if (attachments.isNotEmpty)
-                            Wrap(
-                              children: [
-                                for (var i = 0; i < attachments.length; i++)
-                                  InputChip(
-                                    label: Text('${attachments[i]['fileName']}'),
-                                    onDeleted: () => setState(() => attachments.removeAt(i)),
-                                  ),
-                              ],
-                            ),
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            children: [
-                              IconButton(
-                                tooltip: l.ocAttach,
-                                onPressed: c.connected ? attach : null,
-                                icon: const Icon(Icons.add_photo_alternate_outlined),
-                              ),
-                              Expanded(
-                                child: TextField(
-                                  controller: input,
-                                  onTapOutside: (_) => FocusManager.instance.primaryFocus?.unfocus(),
-                                  minLines: 1,
-                                  maxLines: 6,
-                                  enabled: c.connected,
-                                  decoration: InputDecoration(hintText: l.ocHint, border: InputBorder.none),
-                                ),
-                              ),
-                              IconButton(
-                                tooltip: l.ocStop,
-                                onPressed: c.connected && c.sessionKey.isNotEmpty ? () => c.guard(c.abort) : null,
-                                icon: const Icon(Icons.stop_circle_outlined),
-                              ),
-                              IconButton.filled(
-                                tooltip: l.ocSend,
-                                onPressed: c.connected && !c.sending ? send : null,
-                                icon: const Icon(Icons.arrow_upward),
-                              ),
-                            ],
-                          ),
-                          Align(
-                            alignment: Alignment.centerLeft,
-                            child: DropdownButton<String>(
-                              value: queue,
-                              isDense: true,
-                              underline: const SizedBox.shrink(),
-                              items: [
-                                DropdownMenuItem(value: 'followup', child: Text(l.ocQueue)),
-                                DropdownMenuItem(value: 'steer', child: Text(l.ocSteer)),
-                                DropdownMenuItem(value: 'interrupt', child: Text(l.ocInterrupt)),
-                              ],
-                              onChanged: (v) => setState(() => queue = v!),
-                            ),
-                          ),
-                        ],
                       ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

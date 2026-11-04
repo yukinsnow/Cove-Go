@@ -27,5 +27,6 @@
   "ocConnected": "Connected",
   "ocEnglish": "English / 中文",
   "ocLicenses": "Open-source licenses",
-  "ocHideKeyboard": "Hide keyboard"
+  "ocHideKeyboard": "Hide keyboard",
+  "ocSearchSessions": "Search conversations"
 }

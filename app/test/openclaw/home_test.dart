@@ -5,6 +5,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:dsh_app/main_openclaw.dart';
 import 'package:dsh_app/openclaw/home.dart';
+import 'package:dsh_app/ui/theme/app_icons.dart';
+import 'package:dsh_app/ui/chat/composer.dart';
+import 'package:dsh_app/ui/chat/widgets/user_bubble.dart';
 import 'package:dsh_app/state/hosts_state.dart';
 import 'package:dsh_app/ui/remote/remote_screen.dart';
 
@@ -32,7 +35,7 @@ void main() {
     expect(tester.widgetList<TextField>(find.byType(TextField)).any((w) => w.obscureText), isTrue);
     await tester.tapAt(const Offset(4, 4));
     await tester.pumpAndSettle();
-    await tester.tap(find.byIcon(Icons.menu));
+    await tester.tap(find.byIcon(AppIcons.menu));
     await tester.pumpAndSettle();
     await tester.tap(find.text('English / 中文'));
     await tester.pumpAndSettle();
@@ -48,7 +51,7 @@ void main() {
     expect(find.byType(RemoteScreen, skipOffstage: false), findsNothing);
     final original = tester.state(find.byType(ClawHome));
     expect(find.byType(NavigationBar), findsNothing);
-    await tester.tap(find.byIcon(Icons.menu));
+    await tester.tap(find.byIcon(AppIcons.menu));
     await tester.pumpAndSettle();
     await tester.tap(find.text('DSH Remote'));
     await tester.pumpAndSettle();
@@ -60,6 +63,40 @@ void main() {
     await tester.pumpAndSettle();
     expect(identical(tester.state(find.byType(ClawHome)), original), isTrue);
     expect(find.text('未连接'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pumpAndSettle();
+  });
+  testWidgets('DSH composer and messages retain keyboard dismissal on a phone', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetViewInsets);
+    await tester.pumpWidget(const ProviderScope(child: OpenClawApp()));
+    await tester.pumpAndSettle();
+    final dynamic state = tester.state(find.byType(ClawHome));
+    state.c.sessionKey = 'test-session';
+    state.c.sessions = <Map<String, dynamic>>[
+      {'key': 'test-session', 'displayName': 'Test chat'},
+    ];
+    state.c.messages = <Map<String, dynamic>>[
+      {'role': 'user', 'content': 'Hello'},
+      {'role': 'assistant', 'content': 'A **reply**'},
+    ];
+    state.c.changed();
+    await tester.pumpAndSettle();
+    expect(find.byType(Composer), findsOneWidget);
+    expect(find.byType(UserBubble), findsOneWidget);
+    expect(find.text('Test chat'), findsOneWidget);
+    await tester.tap(find.descendant(of: find.byType(Composer), matching: find.byType(TextField)));
+    await tester.pumpAndSettle();
+    expect(state.composerFocus.hasFocus, isTrue);
+    tester.view.viewInsets = const FakeViewPadding(bottom: 300);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('收起键盘'));
+    await tester.pumpAndSettle();
+    expect(state.composerFocus.hasFocus, isFalse);
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pumpAndSettle();

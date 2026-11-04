@@ -15518,6 +15518,12 @@ abstract class L10n {
   /// **'收起键盘'**
   String get ocHideKeyboard;
 
+  /// No description provided for @ocSearchSessions.
+  ///
+  /// In zh, this message translates to:
+  /// **'搜索会话'**
+  String get ocSearchSessions;
+
   /// No description provided for @performanceTitle.
   ///
   /// In zh, this message translates to:

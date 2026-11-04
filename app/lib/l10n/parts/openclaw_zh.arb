@@ -27,5 +27,6 @@
   "ocConnected": "已连接",
   "ocEnglish": "English / 中文",
   "ocLicenses": "开源许可",
-  "ocHideKeyboard": "收起键盘"
+  "ocHideKeyboard": "收起键盘",
+  "ocSearchSessions": "搜索会话"
 }
