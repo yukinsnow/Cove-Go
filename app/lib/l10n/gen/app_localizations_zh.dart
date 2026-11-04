@@ -8445,6 +8445,9 @@ class L10nZh extends L10n {
   String get ocLicenses => '开源许可';
 
   @override
+  String get ocHideKeyboard => '收起键盘';
+
+  @override
   String get performanceTitle => '性能';
 
   @override

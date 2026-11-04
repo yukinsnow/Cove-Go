@@ -15512,6 +15512,12 @@ abstract class L10n {
   /// **'开源许可'**
   String get ocLicenses;
 
+  /// No description provided for @ocHideKeyboard.
+  ///
+  /// In zh, this message translates to:
+  /// **'收起键盘'**
+  String get ocHideKeyboard;
+
   /// No description provided for @performanceTitle.
   ///
   /// In zh, this message translates to:

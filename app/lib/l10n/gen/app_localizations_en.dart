@@ -8901,6 +8901,9 @@ class L10nEn extends L10n {
   String get ocLicenses => 'Open-source licenses';
 
   @override
+  String get ocHideKeyboard => 'Hide keyboard';
+
+  @override
   String get performanceTitle => 'Performance';
 
   @override

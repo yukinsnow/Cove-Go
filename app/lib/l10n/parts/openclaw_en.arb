@@ -26,5 +26,6 @@
   "ocDisconnected": "Disconnected",
   "ocConnected": "Connected",
   "ocEnglish": "English / 中文",
-  "ocLicenses": "Open-source licenses"
+  "ocLicenses": "Open-source licenses",
+  "ocHideKeyboard": "Hide keyboard"
 }

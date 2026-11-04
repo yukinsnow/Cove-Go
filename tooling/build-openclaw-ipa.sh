@@ -20,6 +20,7 @@ p=sys.argv[1]
 with open(p,'rb') as f: data=plistlib.load(f)
 data['CFBundleDisplayName']='OpenClaw Go'
 data['CFBundleName']='OpenClaw Go'
+data['CFBundleIconFiles']=['AppIcon60x60']
 data['NSPhotoLibraryUsageDescription']='Attach selected images to OpenClaw conversations.'
 data['NSCameraUsageDescription']='Capture images for OpenClaw conversations.'
 with open(p,'wb') as f: plistlib.dump(data,f)
@@ -39,7 +40,7 @@ PY
 swift "$ROOT/tooling/openclaw_icon.swift" "$PWD/ios/Runner/Assets.xcassets/AppIcon.appiconset"
 flutter pub get
 python3 tool/l10n_merge.py
-flutter build ios --release --no-codesign --target lib/main_openclaw.dart --dart-define=REMOTE_DUAL_APP=true --build-name 0.1.0 --build-number 1 --dart-define=DSH_APP_VERSION=0.1.0+1
+flutter build ios --release --no-codesign --target lib/main_openclaw.dart --dart-define=REMOTE_DUAL_APP=true --build-name 0.1.1 --build-number 2 --dart-define=DSH_APP_VERSION=0.1.1+2
 # Fresh temporary payload; never deletes an existing checkout path.
 OUT="$ROOT/build/openclaw"
 mkdir -p "$OUT"

@@ -5351,6 +5351,7 @@
   "ocConnected": "已连接",
   "ocEnglish": "English / 中文",
   "ocLicenses": "开源许可",
+  "ocHideKeyboard": "收起键盘",
   "performanceTitle": "性能",
   "performanceAuto": "自动",
   "performanceFull": "完整",

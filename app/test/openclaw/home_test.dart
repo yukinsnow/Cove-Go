@@ -47,10 +47,15 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(RemoteScreen, skipOffstage: false), findsNothing);
     final original = tester.state(find.byType(ClawHome));
+    expect(find.byType(NavigationBar), findsNothing);
+    await tester.tap(find.byIcon(Icons.menu));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('DSH Remote'));
     await tester.pumpAndSettle();
     expect(find.byType(RemoteScreen), findsOneWidget);
-    expect(tester.widget<NavigationBar>(find.byType(NavigationBar)).selectedIndex, 1);
+    expect(find.byType(NavigationBar), findsNothing);
+    await tester.tap(find.byIcon(Icons.menu));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('OpenClaw'));
     await tester.pumpAndSettle();
     expect(identical(tester.state(find.byType(ClawHome)), original), isTrue);

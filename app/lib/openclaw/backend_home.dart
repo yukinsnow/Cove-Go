@@ -39,6 +39,7 @@ class _BackendHomeState extends State<BackendHome> {
   }
 
   Future<void> select(int index) async {
+    FocusManager.instance.primaryFocus?.unfocus();
     selectionVersion++;
     setState(() {
       selected = index;
@@ -49,35 +50,26 @@ class _BackendHomeState extends State<BackendHome> {
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    body: IndexedStack(
-      index: selected,
-      children: [
-        ClawHome(onLanguage: widget.onLanguage),
-        if (openedDsh)
-          Navigator(
-            key: dshNavigator,
-            onGenerateRoute: (_) => MaterialPageRoute<void>(builder: (_) => const DshRemoteHome()),
-          )
-        else
-          const SizedBox.shrink(),
-      ],
-    ),
-    bottomNavigationBar: NavigationBar(
-      selectedIndex: selected,
-      onDestinationSelected: select,
-      destinations: const [
-        NavigationDestination(icon: Icon(Icons.hub_outlined), label: 'OpenClaw'),
-        NavigationDestination(icon: Icon(Icons.devices_outlined), label: 'DSH Remote'),
-      ],
-    ),
+  Widget build(BuildContext context) => IndexedStack(
+    index: selected,
+    children: [
+      ClawHome(onLanguage: widget.onLanguage, onBackend: () => select(1)),
+      if (openedDsh)
+        Navigator(
+          key: dshNavigator,
+          onGenerateRoute: (_) => MaterialPageRoute<void>(builder: (_) => DshRemoteHome(onBackend: () => select(0))),
+        )
+      else
+        const SizedBox.shrink(),
+    ],
   );
 }
 
 /// The original DSH Remote account, trust, P2P/TURN/relay and SSH stack is
 /// retained intact. There is no Android runtime installation/auto-start here.
 class DshRemoteHome extends ConsumerWidget {
-  const DshRemoteHome({super.key});
+  const DshRemoteHome({super.key, required this.onBackend});
+  final VoidCallback onBackend;
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final host = ref.watch(activeHostProvider);
@@ -91,6 +83,23 @@ class DshRemoteHome extends ConsumerWidget {
             onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const RemoteScreen())),
           ),
         ],
+      ),
+      drawer: Drawer(
+        child: SafeArea(
+          child: ListView(
+            children: [
+              const ListTile(title: Text('DSH Remote')),
+              ListTile(
+                leading: const Icon(Icons.hub_outlined),
+                title: const Text('OpenClaw'),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  onBackend();
+                },
+              ),
+            ],
+          ),
+        ),
       ),
       body: host.isLocal ? const RemoteScreen() : const ModeHome(),
     );

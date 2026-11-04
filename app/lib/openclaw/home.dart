@@ -12,14 +12,16 @@ import '../ui/common/glass_pill.dart';
 import 'controller.dart';
 
 class ClawHome extends StatefulWidget {
-  const ClawHome({super.key, required this.onLanguage});
+  const ClawHome({super.key, required this.onLanguage, this.onBackend});
   final VoidCallback onLanguage;
+  final VoidCallback? onBackend;
   @override
   State<ClawHome> createState() => _ClawHomeState();
 }
 
 class _ClawHomeState extends State<ClawHome> with WidgetsBindingObserver {
   final c = ClawController();
+  final scaffoldKey = GlobalKey<ScaffoldState>();
   final input = TextEditingController(), scroll = ScrollController();
   final attachments = <Map<String, dynamic>>[];
   String queue = 'followup';
@@ -164,6 +166,16 @@ class _ClawHomeState extends State<ClawHome> with WidgetsBindingObserver {
             ],
           ),
         ),
+        if (widget.onBackend != null)
+          ListTile(
+            leading: const Icon(Icons.devices_outlined),
+            title: const Text('DSH Remote'),
+            onTap: () {
+              FocusManager.instance.primaryFocus?.unfocus();
+              scaffoldKey.currentState?.closeDrawer();
+              widget.onBackend!();
+            },
+          ),
         ListTile(leading: const Icon(Icons.settings_outlined), title: Text(l.ocSettings), onTap: settings),
         ListTile(
           leading: const Icon(Icons.description_outlined),
@@ -246,6 +258,10 @@ class _ClawHomeState extends State<ClawHome> with WidgetsBindingObserver {
     final l = context.l10n;
     final wide = MediaQuery.sizeOf(context).width >= 850;
     return Scaffold(
+      key: scaffoldKey,
+      onDrawerChanged: (open) {
+        if (open) FocusManager.instance.primaryFocus?.unfocus();
+      },
       appBar: AppBar(
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -255,6 +271,12 @@ class _ClawHomeState extends State<ClawHome> with WidgetsBindingObserver {
           ],
         ),
         actions: [
+          if (MediaQuery.viewInsetsOf(context).bottom > 0)
+            IconButton(
+              tooltip: l.ocHideKeyboard,
+              onPressed: () => FocusManager.instance.primaryFocus?.unfocus(),
+              icon: const Icon(Icons.keyboard_hide_outlined),
+            ),
           IconButton(
             tooltip: l.ocModels,
             onPressed: c.connected && c.sessionKey.isNotEmpty ? chooseModel : null,
@@ -303,6 +325,7 @@ class _ClawHomeState extends State<ClawHome> with WidgetsBindingObserver {
                           onRefresh: () => c.guard(c.history),
                           child: ListView(
                             controller: scroll,
+                            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
                             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                             children: [
                               for (final message in c.messages) bubble(message),
@@ -368,6 +391,7 @@ class _ClawHomeState extends State<ClawHome> with WidgetsBindingObserver {
                               Expanded(
                                 child: TextField(
                                   controller: input,
+                                  onTapOutside: (_) => FocusManager.instance.primaryFocus?.unfocus(),
                                   minLines: 1,
                                   maxLines: 6,
                                   enabled: c.connected,
