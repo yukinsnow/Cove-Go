@@ -1,3 +1,5 @@
+> This fork develops a **dual OpenClaw + DSH Remote client**, directly from the original upstream. See [development setup and limitations](docs/openclaw-remote.en.md).
+
 <p align="center">
   <a href="README.md">简体中文</a> · <b>English</b>
 </p>

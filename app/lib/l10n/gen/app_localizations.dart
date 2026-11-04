@@ -15344,6 +15344,174 @@ abstract class L10n {
   /// **'更换'**
   String get nearbyChange;
 
+  /// No description provided for @ocConnect.
+  ///
+  /// In zh, this message translates to:
+  /// **'连接 OpenClaw'**
+  String get ocConnect;
+
+  /// No description provided for @ocAddress.
+  ///
+  /// In zh, this message translates to:
+  /// **'Gateway 地址（wss://）'**
+  String get ocAddress;
+
+  /// No description provided for @ocToken.
+  ///
+  /// In zh, this message translates to:
+  /// **'Gateway 令牌'**
+  String get ocToken;
+
+  /// No description provided for @ocPairHelp.
+  ///
+  /// In zh, this message translates to:
+  /// **'首次连接需在 OpenClaw 中批准此设备；批准后重新连接。凭据仅存入本机安全存储。'**
+  String get ocPairHelp;
+
+  /// No description provided for @ocSessions.
+  ///
+  /// In zh, this message translates to:
+  /// **'会话'**
+  String get ocSessions;
+
+  /// No description provided for @ocNew.
+  ///
+  /// In zh, this message translates to:
+  /// **'新会话'**
+  String get ocNew;
+
+  /// No description provided for @ocSettings.
+  ///
+  /// In zh, this message translates to:
+  /// **'连接与设置'**
+  String get ocSettings;
+
+  /// No description provided for @ocSend.
+  ///
+  /// In zh, this message translates to:
+  /// **'发送'**
+  String get ocSend;
+
+  /// No description provided for @ocStop.
+  ///
+  /// In zh, this message translates to:
+  /// **'停止'**
+  String get ocStop;
+
+  /// No description provided for @ocHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'让虾饼帮你做点什么…'**
+  String get ocHint;
+
+  /// No description provided for @ocWelcome.
+  ///
+  /// In zh, this message translates to:
+  /// **'把 OpenClaw 装进口袋'**
+  String get ocWelcome;
+
+  /// No description provided for @ocWelcomeHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'连接你的 Gateway，继续电脑上的会话。'**
+  String get ocWelcomeHint;
+
+  /// No description provided for @ocReconnect.
+  ///
+  /// In zh, this message translates to:
+  /// **'重新连接'**
+  String get ocReconnect;
+
+  /// No description provided for @ocTools.
+  ///
+  /// In zh, this message translates to:
+  /// **'工具活动'**
+  String get ocTools;
+
+  /// No description provided for @ocModels.
+  ///
+  /// In zh, this message translates to:
+  /// **'选择模型'**
+  String get ocModels;
+
+  /// No description provided for @ocAttach.
+  ///
+  /// In zh, this message translates to:
+  /// **'添加图片'**
+  String get ocAttach;
+
+  /// No description provided for @ocRemove.
+  ///
+  /// In zh, this message translates to:
+  /// **'移除'**
+  String get ocRemove;
+
+  /// No description provided for @ocQueue.
+  ///
+  /// In zh, this message translates to:
+  /// **'排队'**
+  String get ocQueue;
+
+  /// No description provided for @ocSteer.
+  ///
+  /// In zh, this message translates to:
+  /// **'插话'**
+  String get ocSteer;
+
+  /// No description provided for @ocInterrupt.
+  ///
+  /// In zh, this message translates to:
+  /// **'打断并发送'**
+  String get ocInterrupt;
+
+  /// No description provided for @ocRefresh.
+  ///
+  /// In zh, this message translates to:
+  /// **'刷新'**
+  String get ocRefresh;
+
+  /// No description provided for @ocCopy.
+  ///
+  /// In zh, this message translates to:
+  /// **'复制'**
+  String get ocCopy;
+
+  /// No description provided for @ocCopied.
+  ///
+  /// In zh, this message translates to:
+  /// **'已复制'**
+  String get ocCopied;
+
+  /// No description provided for @ocNoSessions.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂无会话'**
+  String get ocNoSessions;
+
+  /// No description provided for @ocDisconnected.
+  ///
+  /// In zh, this message translates to:
+  /// **'未连接'**
+  String get ocDisconnected;
+
+  /// No description provided for @ocConnected.
+  ///
+  /// In zh, this message translates to:
+  /// **'已连接'**
+  String get ocConnected;
+
+  /// No description provided for @ocEnglish.
+  ///
+  /// In zh, this message translates to:
+  /// **'English / 中文'**
+  String get ocEnglish;
+
+  /// No description provided for @ocLicenses.
+  ///
+  /// In zh, this message translates to:
+  /// **'开源许可'**
+  String get ocLicenses;
+
   /// No description provided for @performanceTitle.
   ///
   /// In zh, this message translates to:

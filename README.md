@@ -1,3 +1,5 @@
+> 本 fork 正在开发 **OpenClaw + DSH Remote 双后端客户端**。基于原始上游，不基于第三方 iOS fork。开发入口、状态与限制见 [双后端说明](docs/openclaw-remote.md)。
+
 <p align="center">
   <b>简体中文</b> · <a href="README.en.md">English</a>
 </p>

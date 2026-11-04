@@ -48,6 +48,7 @@ class BrandMark extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (AppInfo.remoteClient) return Icon(Icons.hub_outlined, size: size, color: color);
     final style = tile
         ? _Style.tile
         : color != null

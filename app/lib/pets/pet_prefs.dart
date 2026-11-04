@@ -8,12 +8,13 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../performance/performance_state.dart';
 import 'pet_state.dart';
+import '../state/app_info.dart';
 
 /// The pets that ship with the app, in picker order.
-const builtInPets = ['deepy-whale', 'whale-girl'];
+const builtInPets = AppInfo.remoteClient ? <String>[] : ['deepy-whale', 'whale-girl'];
 
 /// The default pet.
-const defaultPetId = 'deepy-whale';
+const defaultPetId = AppInfo.remoteClient ? noPetId : 'deepy-whale';
 
 @immutable
 class PetPrefs {
@@ -150,6 +151,7 @@ class PetPrefsController extends Notifier<PetPrefs> {
         await p.setString(keys.pack, id);
         await p.remove(keys.hidden);
       });
+
   /// First run's 「桌宠与悬浮窗」 was picked: the default pet, unless a pet
   /// (or 「不显示」) was chosen already. Without it a light phone, whose
   /// default is no pet, would turn on 「App 外显示」 with nothing to show.

@@ -659,6 +659,13 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "9.6.2"
+  openclaw_client:
+    dependency: "direct main"
+    description:
+      path: "../packages/openclaw_client"
+      relative: true
+    source: path
+    version: "0.1.0"
   package_config:
     dependency: transitive
     description:

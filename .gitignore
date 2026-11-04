@@ -33,3 +33,8 @@ site/build/
 
 # Release assets (tooling/release_assets.py)
 /dist/
+
+# Local OpenClaw verification
+/logs/
+/build/
+/packages/openclaw_client/pubspec.lock

@@ -53,6 +53,8 @@ dependencies:
   re_highlight: ^0.0.3
   path_provider: ^2.1.6
   url_launcher: ^6.3.3
+  openclaw_client:
+    path: ../packages/openclaw_client
   dsh_client:
     path: ../packages/dsh_client
   dsh_remote:
@@ -124,6 +126,7 @@ flutter:
           weight: 700
 
   assets:
+    - assets/openclaw/
     # Full upstream WebRTC Android release notices, shown by LicenseRegistry.
     - assets/licenses/webrtc-150.7871.04.md
     # Phone layout for the embedded DSH Web (see lib/ui/web/web_view_page.dart).

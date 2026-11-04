@@ -8361,6 +8361,90 @@ class L10nZh extends L10n {
   String get nearbyChange => '更换';
 
   @override
+  String get ocConnect => '连接 OpenClaw';
+
+  @override
+  String get ocAddress => 'Gateway 地址（wss://）';
+
+  @override
+  String get ocToken => 'Gateway 令牌';
+
+  @override
+  String get ocPairHelp => '首次连接需在 OpenClaw 中批准此设备；批准后重新连接。凭据仅存入本机安全存储。';
+
+  @override
+  String get ocSessions => '会话';
+
+  @override
+  String get ocNew => '新会话';
+
+  @override
+  String get ocSettings => '连接与设置';
+
+  @override
+  String get ocSend => '发送';
+
+  @override
+  String get ocStop => '停止';
+
+  @override
+  String get ocHint => '让虾饼帮你做点什么…';
+
+  @override
+  String get ocWelcome => '把 OpenClaw 装进口袋';
+
+  @override
+  String get ocWelcomeHint => '连接你的 Gateway，继续电脑上的会话。';
+
+  @override
+  String get ocReconnect => '重新连接';
+
+  @override
+  String get ocTools => '工具活动';
+
+  @override
+  String get ocModels => '选择模型';
+
+  @override
+  String get ocAttach => '添加图片';
+
+  @override
+  String get ocRemove => '移除';
+
+  @override
+  String get ocQueue => '排队';
+
+  @override
+  String get ocSteer => '插话';
+
+  @override
+  String get ocInterrupt => '打断并发送';
+
+  @override
+  String get ocRefresh => '刷新';
+
+  @override
+  String get ocCopy => '复制';
+
+  @override
+  String get ocCopied => '已复制';
+
+  @override
+  String get ocNoSessions => '暂无会话';
+
+  @override
+  String get ocDisconnected => '未连接';
+
+  @override
+  String get ocConnected => '已连接';
+
+  @override
+  String get ocEnglish => 'English / 中文';
+
+  @override
+  String get ocLicenses => '开源许可';
+
+  @override
   String get performanceTitle => '性能';
 
   @override

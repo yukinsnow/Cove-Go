@@ -8816,6 +8816,91 @@ class L10nEn extends L10n {
   String get nearbyChange => 'Change';
 
   @override
+  String get ocConnect => 'Connect OpenClaw';
+
+  @override
+  String get ocAddress => 'Gateway URL (wss://)';
+
+  @override
+  String get ocToken => 'Gateway token';
+
+  @override
+  String get ocPairHelp =>
+      'Approve this device in OpenClaw on first connection, then reconnect. Credentials stay in local secure storage.';
+
+  @override
+  String get ocSessions => 'Sessions';
+
+  @override
+  String get ocNew => 'New chat';
+
+  @override
+  String get ocSettings => 'Connection & settings';
+
+  @override
+  String get ocSend => 'Send';
+
+  @override
+  String get ocStop => 'Stop';
+
+  @override
+  String get ocHint => 'Ask OpenClaw to do something…';
+
+  @override
+  String get ocWelcome => 'OpenClaw in your pocket';
+
+  @override
+  String get ocWelcomeHint => 'Connect your Gateway and continue your conversations.';
+
+  @override
+  String get ocReconnect => 'Reconnect';
+
+  @override
+  String get ocTools => 'Tool activity';
+
+  @override
+  String get ocModels => 'Choose model';
+
+  @override
+  String get ocAttach => 'Attach image';
+
+  @override
+  String get ocRemove => 'Remove';
+
+  @override
+  String get ocQueue => 'Queue';
+
+  @override
+  String get ocSteer => 'Steer';
+
+  @override
+  String get ocInterrupt => 'Interrupt & send';
+
+  @override
+  String get ocRefresh => 'Refresh';
+
+  @override
+  String get ocCopy => 'Copy';
+
+  @override
+  String get ocCopied => 'Copied';
+
+  @override
+  String get ocNoSessions => 'No conversations yet';
+
+  @override
+  String get ocDisconnected => 'Disconnected';
+
+  @override
+  String get ocConnected => 'Connected';
+
+  @override
+  String get ocEnglish => 'English / 中文';
+
+  @override
+  String get ocLicenses => 'Open-source licenses';
+
+  @override
   String get performanceTitle => 'Performance';
 
   @override

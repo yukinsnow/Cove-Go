@@ -1,0 +1,24 @@
+name: Build OpenClaw Go iOS
+on:
+  workflow_dispatch:
+  push:
+    branches: [openclaw]
+    paths: ['app/**', 'packages/openclaw_client/**', 'tooling/build-openclaw-ipa.sh', 'tooling/openclaw_icon.swift', '.github/workflows/build-openclaw-ios.yml']
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.47.9
+          channel: stable
+          cache: true
+      - run: bash tooling/build-openclaw-ipa.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: OpenClaw-Go-unsigned
+          path: build/openclaw/OpenClaw-Go-unsigned.ipa
+          if-no-files-found: error

@@ -7,7 +7,9 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
+
+import '../../../state/app_info.dart';
 
 /// DeepSeek 官方蓝。浅色玻璃上约 3.9–4.3:1(图形的 3:1 线以上)。
 const deepSeekBlue = Color(0xFF4D6BFE);
@@ -165,7 +167,7 @@ class WhaleTailState extends State<WhaleTail> with SingleTickerProviderStateMixi
     super.initState();
     _form = formOf(widget.level);
     _rate = rateOf(widget.level);
-    if (_atlas == null) {
+    if (!AppInfo.remoteClient && _atlas == null) {
       WhaleSprites.load().then((atlas) {
         if (!mounted) return;
         setState(() => _atlas = atlas);
@@ -254,6 +256,14 @@ class WhaleTailState extends State<WhaleTail> with SingleTickerProviderStateMixi
 
   @override
   Widget build(BuildContext context) {
+    if (AppInfo.remoteClient) {
+      return SizedBox.square(
+        dimension: widget.height,
+        child: widget.still
+            ? Icon(Icons.hub_outlined, size: widget.height, color: widget.color)
+            : CircularProgressIndicator(strokeWidth: 2, color: widget.color),
+      );
+    }
     final size = Size(widget.height * WhaleSprites.aspect, widget.height);
     final atlas = _atlas;
     return ExcludeSemantics(
