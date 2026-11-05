@@ -931,8 +931,15 @@ class _RemoteEmptyState extends ConsumerWidget {
   }
 }
 
-/// The drawer's footer: the host icon opens its details; the name and dropdown
-/// switch hosts. 全部功能 and 设置 follow as two equal round buttons.
+/// Protocol-specific host label and status for the shared footer.
+class HostIdentityPresentation {
+  const HostIdentityPresentation({required this.name, required this.status, required this.tone, required this.icon});
+  final String name, status;
+  final StatusTone tone;
+  final IconData icon;
+}
+
+/// The drawer's footer: host details and switcher, followed by equal round keys.
 class IdentityBar extends ConsumerWidget {
   const IdentityBar({
     super.key,
@@ -941,8 +948,10 @@ class IdentityBar extends ConsumerWidget {
     required this.onSettings,
     this.onSettingsHold,
     this.onLocalDetails,
+    this.presentation,
   });
 
+  final HostIdentityPresentation? presentation;
   final VoidCallback onHost;
 
   /// Local hosts have engine details, not a remote network path.
@@ -965,11 +974,16 @@ class IdentityBar extends ConsumerWidget {
     final theme = Theme.of(context);
     final colors = DshColors.of(context);
     final host = ref.watch(activeHostProvider);
-    final name = ref.watch(hostNameProvider(host)) ?? (host.isLocal ? l10n.commonThisPhone : l10n.commonRemoteHost);
-    final view = watchHostStatus(ref, host);
-    final link = host.kind == HostKind.relay ? ref.watch(hostLinkStatusProvider(host)).value : null;
+    final name =
+        presentation?.name ??
+        ref.watch(hostNameProvider(host)) ??
+        (host.isLocal ? l10n.commonThisPhone : l10n.commonRemoteHost);
+    final view = presentation == null ? watchHostStatus(ref, host) : null;
+    final link = presentation == null && host.kind == HostKind.relay
+        ? ref.watch(hostLinkStatusProvider(host)).value
+        : null;
     final path = link?.isConnected == true ? link?.network?.path ?? link?.path : null;
-    final statusLabel = path == null ? view.label : path.label;
+    final statusLabel = presentation?.status ?? (path == null ? view!.label : path.label);
     final tint = hostKindTint(host.kind);
     return Padding(
       // Same 10 / 20 grid as the rows above: the highlight's edge at 10, the
@@ -986,8 +1000,16 @@ class IdentityBar extends ConsumerWidget {
                 const SizedBox(width: 6),
                 IconButton(
                   key: const ValueKey('identity-host-details'),
-                  tooltip: host.isLocal ? l10n.phoneEngineTitle : l10n.remoteNetworkDetails,
-                  onPressed: host.isLocal ? onLocalDetails : () => showRemoteNetworkDetails(context, host),
+                  tooltip: presentation != null
+                      ? l10n.ocSettings
+                      : host.isLocal
+                      ? l10n.phoneEngineTitle
+                      : l10n.remoteNetworkDetails,
+                  onPressed: presentation != null
+                      ? onLocalDetails
+                      : host.isLocal
+                      ? onLocalDetails
+                      : () => showRemoteNetworkDetails(context, host),
                   padding: const EdgeInsets.all(4),
                   constraints: const BoxConstraints.tightFor(width: keySize, height: keySize),
                   style: IconButton.styleFrom(tapTargetSize: MaterialTapTargetSize.shrinkWrap),
@@ -995,7 +1017,11 @@ class IdentityBar extends ConsumerWidget {
                     decoration: ShapeDecoration(color: colors.identity[tint], shape: const CircleBorder()),
                     child: SizedBox.square(
                       dimension: 36,
-                      child: Icon(hostKindIcon(host.kind), size: 19, color: colors.onIdentity[tint]),
+                      child: Icon(
+                        presentation?.icon ?? hostKindIcon(host.kind),
+                        size: 19,
+                        color: colors.onIdentity[tint],
+                      ),
                     ),
                   ),
                 ),
@@ -1029,7 +1055,7 @@ class IdentityBar extends ConsumerWidget {
                                     Row(
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
-                                        StatusDot(tone: view.tone, size: 6),
+                                        StatusDot(tone: presentation?.tone ?? view!.tone, size: 6),
                                         const SizedBox(width: 6),
                                         Flexible(
                                           child: AnimatedSwitcher(

@@ -11,6 +11,8 @@ import 'package:dsh_app/ui/chat/widgets/user_bubble.dart';
 import 'package:dsh_app/state/hosts_state.dart';
 import 'package:dsh_app/ui/remote/host_switcher.dart';
 import 'package:dsh_app/ui/web/mode_home.dart';
+import 'package:dsh_app/ui/shell/sessions_drawer.dart';
+import 'package:dsh_app/ui/shell/session_search_page.dart';
 
 import '../remote/support/fake_relay.dart';
 
@@ -27,7 +29,7 @@ void main() {
     await tester.pumpWidget(const ProviderScope(child: OpenClawApp()));
     await tester.pumpAndSettle();
     expect(find.text('OpenClaw Go'), findsOneWidget);
-    expect(find.text('未连接'), findsOneWidget);
+    expect(find.text('未连接'), findsWidgets);
     expect(find.text('把 OpenClaw 装进口袋'), findsOneWidget);
     await tester.tap(find.text('连接 OpenClaw'));
     await tester.pumpAndSettle();
@@ -38,7 +40,11 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byIcon(AppIcons.menu));
     await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('设置'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('English / 中文'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byIcon(AppIcons.back));
     await tester.pumpAndSettle();
     expect(find.text('Disconnected'), findsOneWidget);
     expect(tester.takeException(), isNull);
@@ -52,7 +58,7 @@ void main() {
     final original = tester.state(find.byType(ClawHome));
     await tester.tap(find.byIcon(AppIcons.menu));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('切换主机'));
+    await tester.tap(find.byKey(const ValueKey('identity-host-switcher')));
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('gateway-host-row')), findsOneWidget);
     expect(find.text('本机'), findsNothing);
@@ -73,10 +79,67 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('gateway-host-row')));
     await tester.pumpAndSettle();
     expect(identical(tester.state(find.byType(ClawHome)), original), isTrue);
-    expect(find.text('未连接'), findsOneWidget);
+    expect(find.text('未连接'), findsWidgets);
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pumpAndSettle();
+  });
+  testWidgets('Gateway drawer reuses DSH header search and pinned footer controls', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(const ProviderScope(child: OpenClawApp()));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 600));
+    final dynamic state = tester.state(find.byType(ClawHome));
+    state.c.sessions = <Map<String, dynamic>>[
+      {'key': 'one', 'displayName': 'Alpha'},
+      {'key': 'two', 'displayName': 'Beta', 'hasActiveRun': true},
+    ];
+    state.c.changed();
+    await tester.tap(find.byIcon(AppIcons.menu));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 600));
+    expect(find.byType(NewChatButton), findsOneWidget);
+    expect(find.byType(WebModeKey), findsOneWidget);
+    expect(find.byType(SessionSearchBar), findsOneWidget);
+    expect(find.byType(IdentityBar), findsOneWidget);
+    expect(find.text('English / 中文'), findsNothing);
+    expect(tester.getTopLeft(find.byType(IdentityBar)).dy, greaterThan(650));
+    await tester.tap(find.text('运行中'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 600));
+    expect(find.text('Alpha'), findsNothing);
+    expect(find.text('Beta'), findsOneWidget);
+    await tester.tap(find.byType(SessionSearchBar));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 600));
+    await tester.enterText(find.byType(TextField), 'Alpha');
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 600));
+    expect(find.text('Alpha'), findsWidgets);
+    expect(find.text('Beta'), findsNothing);
+    await tester.tap(find.byIcon(AppIcons.back));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 600));
+    await tester.tap(find.byIcon(AppIcons.menu));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 600));
+    await tester.tap(find.byTooltip('设置'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 600));
+    expect(find.text('连接与设置'), findsOneWidget);
+    expect(find.text('English / 中文'), findsOneWidget);
+    expect(find.text('开源许可'), findsOneWidget);
+    await tester.tap(find.text('连接与设置'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 600));
+    expect(find.text('Gateway 地址（wss://）'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 600));
   });
   testWidgets('DSH composer and messages retain keyboard dismissal on a phone', (tester) async {
     tester.view.physicalSize = const Size(390, 844);

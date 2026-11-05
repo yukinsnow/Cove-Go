@@ -23,10 +23,18 @@ import 'sessions_drawer.dart' show sessionSelectionColor, sessionTitle;
 /// "搜索对话" at the top of the sessions drawer. Opens [SessionSearchPage];
 /// picking a result opens that conversation and closes the drawer.
 class SessionSearchBar extends ConsumerWidget {
-  const SessionSearchBar({super.key, required this.onClose, this.padding = const EdgeInsets.fromLTRB(10, 2, 10, 6)});
+  const SessionSearchBar({
+    super.key,
+    required this.onClose,
+    this.padding = const EdgeInsets.fromLTRB(10, 2, 10, 6),
+    this.onSearch,
+  });
 
   /// Closes the drawer.
   final VoidCallback onClose;
+
+  /// Protocol-specific search; the shared search surface stays identical.
+  final VoidCallback? onSearch;
   final EdgeInsetsGeometry padding;
 
   Future<void> _open(BuildContext context, WidgetRef ref) async {
@@ -46,12 +54,12 @@ class SessionSearchBar extends ConsumerWidget {
       child: Semantics(
         button: true,
         label: l10n.shellSearchChats,
-        onTap: () => _open(context, ref),
+        onTap: onSearch ?? () => _open(context, ref),
         excludeSemantics: true,
         child: GlassSurface(
           tier: GlassTier.pill,
           stadium: true,
-          onTap: () => _open(context, ref),
+          onTap: onSearch ?? () => _open(context, ref),
           padding: const EdgeInsets.symmetric(horizontal: 12),
           child: ConstrainedBox(
             constraints: const BoxConstraints(minHeight: 40),

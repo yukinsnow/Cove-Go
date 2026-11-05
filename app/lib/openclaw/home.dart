@@ -19,6 +19,14 @@ import '../ui/common/glass_pill.dart';
 import 'controller.dart';
 import '../ui/remote/host_switcher.dart';
 import '../ui/remote/remote_screen.dart';
+import '../ui/shell/sessions_drawer.dart' show IdentityBar, HostIdentityPresentation, NewChatButton;
+import '../ui/shell/brand_mark.dart';
+import '../ui/settings/settings_widgets.dart';
+import '../ui/common/capsule_chip.dart';
+import '../state/drawer_view_state.dart' show SessionDay, sessionDayOf, sessionDayLabels;
+import '../ui/shell/session_search_page.dart';
+import '../ui/web/mode_home.dart';
+import '../ui/web/web_view_page.dart';
 
 class ClawHome extends StatefulWidget {
   const ClawHome({super.key, required this.onLanguage});
@@ -33,7 +41,7 @@ class ClawHomeState extends State<ClawHome> with WidgetsBindingObserver {
   final input = TextEditingController(), scroll = ScrollController();
   final attachments = <Map<String, dynamic>>[];
   String queue = 'followup';
-  String sessionQuery = '';
+  bool runningOnly = false;
   final composerFocus = FocusNode();
   @override
   void initState() {
@@ -169,88 +177,262 @@ class ClawHomeState extends State<ClawHome> with WidgetsBindingObserver {
     scaffoldKey.currentState?.closeDrawer();
   }
 
-  Widget sessionList() {
-    final l = context.l10n;
-    return Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(20, 12, 12, 12),
-          child: Row(
+  void openGatewayWeb() {
+    closeSidebar();
+    final address = Uri.tryParse(c.address);
+    if (address == null || address.host.isEmpty) {
+      settings();
+      return;
+    }
+    // Only the origin; do not put a stored Gateway token into a URL.
+    final url = Uri(
+      scheme: address.scheme == 'wss' || address.scheme == 'https' ? 'https' : 'http',
+      host: address.host,
+      port: address.hasPort ? address.port : null,
+    );
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => WebViewPage(url: url, title: hostName, allowOpenExternal: true),
+      ),
+    );
+  }
+
+  void searchSessions() {
+    closeSidebar();
+    var query = '';
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (page) => StatefulBuilder(
+          builder: (page, updateSearch) => AppPage.list(
+            title: page.l10n.shellSearchChats,
             children: [
-              Expanded(
-                child: InkWell(
-                  onTap: switchHost,
-                  child: Text('$hostName ▾', style: Theme.of(context).textTheme.titleLarge),
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: TextField(
+                  autofocus: true,
+                  onChanged: (value) => updateSearch(() => query = value.trim().toLowerCase()),
+                  decoration: InputDecoration(
+                    hintText: page.l10n.shellSearchChats,
+                    prefixIcon: const Icon(AppIcons.search),
+                  ),
                 ),
               ),
-              GlassIconButton(
-                icon: AppIcons.refresh,
-                tooltip: l.ocRefresh,
-                onPressed: c.connected ? () => c.guard(c.refreshSessions) : null,
-              ),
-            ],
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          child: GlassSurface(
-            tier: GlassTier.chrome,
-            stadium: true,
-            onTap: c.connected
-                ? () {
-                    closeSidebar();
-                    c.guard(c.newSession);
-                  }
-                : null,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            child: Row(children: [const Icon(AppIcons.add, size: 20), const SizedBox(width: 10), Text(l.ocNew)]),
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.all(12),
-          child: TextField(
-            onChanged: (value) => setState(() => sessionQuery = value.trim().toLowerCase()),
-            decoration: InputDecoration(
-              hintText: l.ocSearchSessions,
-              prefixIcon: const Icon(AppIcons.search),
-              isDense: true,
-            ),
-          ),
-        ),
-        Expanded(
-          child: ListView(
-            padding: const EdgeInsets.symmetric(horizontal: 10),
-            children: [
               for (final session in c.sessions)
-                if (sessionTitle(session).toLowerCase().contains(sessionQuery))
+                if (sessionTitle(session).toLowerCase().contains(query))
                   SessionTile(
                     title: sessionTitle(session),
                     running: session['hasActiveRun'] == true,
                     current: session['key'] == c.sessionKey,
                     onLongPress: null,
                     onTap: () {
-                      closeSidebar();
+                      Navigator.of(page).pop();
                       c.guard(() => c.select(session['key'] as String));
                     },
                   ),
             ],
           ),
         ),
-        const Divider(indent: 20, endIndent: 20),
-        ListTile(leading: const Icon(AppIcons.swap), title: Text(l.remoteSwitchHost), onTap: switchHost),
-        ListTile(
-          leading: const Icon(AppIcons.settings),
-          title: Text(l.ocSettings),
-          onTap: () {
-            closeSidebar();
-            settings();
-          },
+      ),
+    );
+  }
+
+  void openSettings({bool features = false}) {
+    closeSidebar();
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (pageContext) {
+          final l = pageContext.l10n;
+          return AppPage.list(
+            title: features ? l.hubSettingsAllFeatures : l.commonSettings,
+            children: [
+              SettingsSection(
+                title: l.commonRemoteHost,
+                children: [
+                  SettingsTile(
+                    icon: AppIcons.remoteHost,
+                    title: l.remoteSwitchHost,
+                    subtitle: hostName,
+                    onTap: () {
+                      Navigator.of(pageContext).pop();
+                      switchHost();
+                    },
+                  ),
+                  SettingsTile(icon: AppIcons.settings, title: l.ocSettings, onTap: settings),
+                ],
+              ),
+              if (features)
+                SettingsSection(
+                  title: l.ocSessions,
+                  children: [
+                    SettingsTile(
+                      icon: AppIcons.refresh,
+                      title: l.ocRefresh,
+                      onTap: c.connected ? () => c.guard(c.refreshSessions) : null,
+                    ),
+                    SettingsTile(
+                      icon: AppIcons.add,
+                      title: l.commonNewChat,
+                      onTap: c.connected
+                          ? () {
+                              Navigator.of(pageContext).pop();
+                              c.guard(c.newSession);
+                            }
+                          : null,
+                    ),
+                    SettingsTile(
+                      icon: AppIcons.model,
+                      title: l.ocModels,
+                      onTap: c.connected && c.sessionKey.isNotEmpty ? chooseModel : null,
+                    ),
+                  ],
+                ),
+              SettingsSection(
+                title: l.commonSettings,
+                children: [
+                  SettingsTile(icon: AppIcons.translate, title: l.ocEnglish, onTap: widget.onLanguage),
+                  SettingsTile(
+                    icon: AppIcons.info,
+                    title: l.ocLicenses,
+                    onTap: () => showLicensePage(context: pageContext, applicationName: 'OpenClaw Go'),
+                  ),
+                ],
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget sessionList() {
+    final l = context.l10n;
+    final theme = Theme.of(context);
+    final top = <Widget>[
+      Padding(
+        padding: const EdgeInsets.fromLTRB(20, 14, 10, 10),
+        child: Row(
+          children: [
+            const Expanded(
+              child: Align(
+                alignment: AlignmentDirectional.centerStart,
+                child: FittedBox(fit: BoxFit.scaleDown, child: BrandLockup(height: 19)),
+              ),
+            ),
+            WebModeKey(onTap: openGatewayWeb),
+            const SizedBox(width: 8),
+            NewChatButton(
+              onTap: () {
+                closeSidebar();
+                if (c.connected) {
+                  c.guard(c.newSession);
+                } else {
+                  settings();
+                }
+              },
+            ),
+          ],
         ),
-        ListTile(leading: const Icon(AppIcons.translate), title: Text(l.ocEnglish), onTap: widget.onLanguage),
-        ListTile(
-          leading: const Icon(AppIcons.info),
-          title: Text(l.ocLicenses),
-          onTap: () => showLicensePage(context: context, applicationName: 'OpenClaw Go'),
+      ),
+      SessionSearchBar(onClose: closeSidebar, onSearch: searchSessions),
+      Padding(
+        padding: const EdgeInsets.fromLTRB(20, 10, 10, 4),
+        child: Row(
+          children: [
+            const Icon(AppIcons.chat, size: 20),
+            const SizedBox(width: 8),
+            Expanded(
+              child: PopupMenuButton<bool>(
+                onSelected: (value) => setState(() => runningOnly = value),
+                itemBuilder: (_) => [
+                  PopupMenuItem(value: false, child: Text(l.remoteWorkspaceAllChats)),
+                  PopupMenuItem(value: true, child: Text(l.commonRunning)),
+                ],
+                child: Row(
+                  children: [
+                    Flexible(child: Text(l.remoteWorkspaceAllChats, style: theme.textTheme.titleSmall)),
+                    const Icon(AppIcons.dropdown, size: 18),
+                  ],
+                ),
+              ),
+            ),
+            GlassIconButton(
+              icon: AppIcons.more,
+              tooltip: l.hubSettingsAllFeatures,
+              size: 32,
+              onPressed: () => openSettings(features: true),
+            ),
+          ],
+        ),
+      ),
+      Padding(
+        padding: const EdgeInsets.fromLTRB(10, 2, 10, 4),
+        child: Row(
+          children: [
+            CapsuleChoiceChip(
+              label: l.shellAll,
+              selected: !runningOnly,
+              onSelected: () => setState(() => runningOnly = false),
+            ),
+            const SizedBox(width: 8),
+            CapsuleChoiceChip(
+              label: l.commonRunning,
+              selected: runningOnly,
+              onSelected: () => setState(() => runningOnly = true),
+            ),
+          ],
+        ),
+      ),
+    ];
+    DateTime? updatedAt(Map<String, dynamic> session) {
+      final value = session['updatedAt'];
+      if (value is num) return DateTime.fromMillisecondsSinceEpoch(value.toInt());
+      return value is String ? DateTime.tryParse(value) : null;
+    }
+
+    final visible = c.sessions.where((session) => !runningOnly || session['hasActiveRun'] == true).toList()
+      ..sort(
+        (a, b) => (updatedAt(b)?.millisecondsSinceEpoch ?? 0).compareTo(updatedAt(a)?.millisecondsSinceEpoch ?? 0),
+      );
+    final groups = <SessionDay?, List<Map<String, dynamic>>>{};
+    final now = DateTime.now();
+    for (final session in visible) {
+      final at = updatedAt(session);
+      (groups[at == null ? null : sessionDayOf(at, now)] ??= []).add(session);
+    }
+    final rows = <Widget>[
+      for (final group in groups.entries) ...[
+        if (group.key != null) DrawerEyebrow(sessionDayLabels[group.key]!),
+        for (final session in group.value)
+          SessionTile(
+            title: sessionTitle(session),
+            running: session['hasActiveRun'] == true,
+            current: session['key'] == c.sessionKey,
+            onLongPress: null,
+            onTap: () {
+              closeSidebar();
+              c.guard(() => c.select(session['key'] as String));
+            },
+          ),
+      ],
+    ];
+    final short = MediaQuery.sizeOf(context).height < 500;
+    return Column(
+      children: [
+        if (!short) ...top,
+        Expanded(
+          child: ListView(padding: const EdgeInsets.symmetric(horizontal: 10), children: [if (short) ...top, ...rows]),
+        ),
+        IdentityBar(
+          presentation: HostIdentityPresentation(
+            name: hostName,
+            status: c.connected ? l.ocConnected : l.ocDisconnected,
+            tone: c.connected ? StatusTone.ok : StatusTone.idle,
+            icon: AppIcons.remoteHost,
+          ),
+          onHost: switchHost,
+          onLocalDetails: () => openSettings(),
+          onFeatures: () => openSettings(features: true),
+          onSettings: () => openSettings(),
         ),
       ],
     );
