@@ -8816,6 +8816,9 @@ class L10nEn extends L10n {
   String get nearbyChange => 'Change';
 
   @override
+  String get ocRemoteHostsIntro => 'Connect to an OpenClaw Gateway, DSH Remote or SSH host';
+
+  @override
   String get ocConnect => 'Connect OpenClaw';
 
   @override

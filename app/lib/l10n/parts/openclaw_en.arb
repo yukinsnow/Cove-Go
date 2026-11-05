@@ -1,4 +1,5 @@
 {
+  "ocRemoteHostsIntro": "Connect to an OpenClaw Gateway, DSH Remote or SSH host",
   "ocConnect": "Connect OpenClaw",
   "ocAddress": "Gateway URL (wss://)",
   "ocToken": "Gateway token",

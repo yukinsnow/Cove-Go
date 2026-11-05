@@ -2542,6 +2542,7 @@
   "nearbyManageModels": "Manage models",
   "nearbyPermissionPill": "Permissions for this chat: {name}",
   "nearbyChange": "Change",
+  "ocRemoteHostsIntro": "Connect to an OpenClaw Gateway, DSH Remote or SSH host",
   "ocConnect": "Connect OpenClaw",
   "ocAddress": "Gateway URL (wss://)",
   "ocToken": "Gateway token",

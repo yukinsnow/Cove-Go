@@ -10,6 +10,7 @@ import 'package:dsh_app/ui/chat/composer.dart';
 import 'package:dsh_app/ui/chat/widgets/user_bubble.dart';
 import 'package:dsh_app/state/hosts_state.dart';
 import 'package:dsh_app/ui/remote/host_switcher.dart';
+import 'package:dsh_app/ui/remote/remote_screen.dart';
 import 'package:dsh_app/ui/web/mode_home.dart';
 import 'package:dsh_app/ui/shell/sessions_drawer.dart';
 import 'package:dsh_app/ui/shell/session_search_page.dart';
@@ -84,6 +85,31 @@ void main() {
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pumpAndSettle();
   });
+  testWidgets('remote management configures Gateway from its list row', (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [relayBackendProvider.overrideWithValue(FakeRelayBackend())],
+        child: const OpenClawApp(),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final state = tester.state<ClawHomeState>(find.byType(ClawHome));
+    state.switchHost();
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('连接电脑或服务器'));
+    await tester.pumpAndSettle();
+    expect(find.byType(RemoteScreen), findsOneWidget);
+    expect(find.byKey(const ValueKey('remote-gateway-host')), findsOneWidget);
+    expect(find.text('OpenClaw Gateway'), findsOneWidget);
+    await tester.tap(find.byTooltip('连接与设置'));
+    await tester.pumpAndSettle();
+    expect(find.byType(RemoteScreen), findsNothing);
+    expect(find.text('Gateway 地址（wss://）'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pumpAndSettle();
+  });
+
   testWidgets('Gateway drawer reuses DSH header search and pinned footer controls', (tester) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1;

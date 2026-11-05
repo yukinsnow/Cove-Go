@@ -2,7 +2,12 @@
 // check), relay trust, saving an SSH host, and going back to 本机.
 
 import 'dart:convert';
+import 'dart:io';
+import 'dart:ui' as ui;
+
 import 'dart:ui' show Tristate;
+
+import 'package:flutter/rendering.dart';
 
 import 'package:dsh_app/remote/secret_store.dart';
 import 'package:dsh_app/runtime/runtime_state.dart';
@@ -83,6 +88,90 @@ void main() {
     }
   }
 
+  testWidgets('reconnecting DSH exposes reason and both retry actions work', (tester) async {
+    const host = HostRef.relay('mac');
+    var retries = 0;
+    SharedPreferences.setMockInitialValues({ActiveHostController.prefsKey: host.encode()});
+    linkStatus = const HostLinkStatus(
+      HostLinkPhase.reconnecting,
+      error: HostLinkError(HostLinkErrorKind.unreachable, '网络连接中断', detail: 'CONNECTION_FAILED', retryable: true),
+    );
+    usePhoneSurface(tester);
+    await tester.pumpWidget(
+      goldenApp(
+        home: const RemoteScreen(),
+        brightness: Brightness.light,
+        overrides: [
+          ...overrides(),
+          remoteConnectionProvider(host).overrideWith(() => _RetryConnection(host, () => retries++)),
+        ],
+      ),
+    );
+    await frames(tester);
+    expect(find.text('网络连接中断'), findsOneWidget);
+    await tester.tap(find.text('重新连接').first);
+    await frames(tester);
+    expect(retries, 1);
+    await tester.ensureVisible(find.byKey(const ValueKey('remote-row-mac')));
+    await tester.tap(find.byKey(const ValueKey('remote-row-mac')));
+    await frames(tester);
+    expect(retries, 2, reason: 'tapping the selected reconnecting host must not be a no-op');
+    await tester.tap(find.text('详情'));
+    await frames(tester);
+    expect(find.text('CONNECTION_FAILED'), findsOneWidget);
+  });
+
+  testWidgets('OpenClaw is a host-list section with settings and no false DSH selection', (tester) async {
+    final capture = GlobalKey();
+    var picks = 0;
+    var configurations = 0;
+    final semantics = tester.ensureSemantics();
+    SharedPreferences.setMockInitialValues({ActiveHostController.prefsKey: const HostRef.relay('mac').encode()});
+    usePhoneSurface(tester);
+    await tester.pumpWidget(
+      goldenApp(
+        home: RepaintBoundary(key: capture, child: const RemoteScreen()),
+        brightness: Brightness.dark,
+        overrides: [
+          ...overrides(),
+          gatewayHostEntryProvider.overrideWithValue(
+            GatewayHostEntry(
+              name: () => 'gateway.example',
+              active: true,
+              onPick: () => picks++,
+              onRemotePick: () {},
+              onConfigure: () => configurations++,
+            ),
+          ),
+        ],
+      ),
+    );
+    await frames(tester);
+    expect(find.text('OpenClaw'), findsOneWidget);
+    expect(find.text('OpenClaw Gateway'), findsOneWidget);
+    final boundary = capture.currentContext!.findRenderObject()! as RenderRepaintBoundary;
+    await tester.runAsync(() async {
+      final image = await boundary.toImage(pixelRatio: 2);
+      final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
+      final file = File('../build/openclaw/remote-hosts-preview.png');
+      await file.parent.create(recursive: true);
+      await file.writeAsBytes(bytes!.buffer.asUint8List());
+      image.dispose();
+    });
+    expect(find.textContaining('正在使用'), findsNothing);
+    expect(
+      tester.getSemantics(find.byKey(const ValueKey('remote-row-mac'))).flagsCollection.isSelected,
+      isNot(Tristate.isTrue),
+    );
+    await tester.tap(find.byKey(const ValueKey('remote-gateway-host')));
+    await frames(tester);
+    expect(picks, 1);
+    await tester.tap(find.byTooltip('连接与设置'));
+    await frames(tester);
+    expect(configurations, 1);
+    semantics.dispose();
+  });
+
   testWidgets('expired relay login offers 重新登录 even after account sign-out', (tester) async {
     relay.user = null;
     linkStatus = const HostLinkStatus(
@@ -103,10 +192,7 @@ void main() {
     for (final provider in ['GitHub', '知乎', 'Google']) {
       expect(find.widgetWithText(FilledButton, '使用 $provider 登录'), findsOneWidget);
     }
-    expect(
-      tester.getTopLeft(find.text('使用 GitHub 登录')).dy,
-      lessThan(tester.getTopLeft(find.text('使用 知乎 登录')).dy),
-    );
+    expect(tester.getTopLeft(find.text('使用 GitHub 登录')).dy, lessThan(tester.getTopLeft(find.text('使用 知乎 登录')).dy));
     await tester.tap(find.text('使用 GitHub 登录'));
     await tester.pump();
     expect(relay.loginProviderIds, ['github']);
@@ -338,4 +424,13 @@ class _Launcher extends StatelessWidget {
       ),
     );
   }
+}
+
+class _RetryConnection extends RemoteConnectionController {
+  _RetryConnection(super.host, this.onRetry);
+  final VoidCallback onRetry;
+  @override
+  Future<HostConnection?> build() async => null;
+  @override
+  void retry() => onRetry();
 }

@@ -12,7 +12,7 @@
 
 - **DSH Remote**：保留原项目 `packages/dsh_remote`、账号浏览器登录/轮询、自托管账号、主机指纹确认、LAN/WebRTC/P2P/TURN/中继及 SSH 连接；聊天继续使用原项目原生界面。
 - **OpenClaw**：新增纯 Dart `packages/openclaw_client`，直接连接 Gateway WebSocket v4；Ed25519 设备身份、挑战时间签名、RPC、会话、历史、流式文本、工具事件、模型选择、图片、排队/插话/打断。
-- 底部入口切换；仅在首次打开 DSH 时初始化其页面；不同连接的账号、凭据、会话与状态不会互相转换或复制。
+- 通过侧栏底部主机选择器切换；“远程主机”列表并列显示 OpenClaw、DSH Remote 与 SSH，OpenClaw 行内可打开连接设置，不额外占用右上角；仅在首次打开 DSH 时初始化其页面；不同连接的账号、凭据、会话与状态不会互相转换或复制。
 - 这不是让 OpenClaw 模拟 DSH Remote 服务端，也不是把 DSH Remote 当成 OpenClaw 的隧道。
 
 ## 运行
@@ -30,6 +30,7 @@ OpenClaw 页面中填写 `wss://` Gateway 地址与令牌；远程明文 `ws://`
 
 DSH Remote 页面使用其原有账号与主机选择。未选远程主机时打开远程主机页；
 选中后进入原生 DSH 会话界面。本入口不安装或自动启动安卓本机 Linux 环境。
+DSH 重连期间可立即重试，也可展开错误详情；iOS 安装包声明本地网络访问用途，首次出现授权提示时需允许访问自己的电脑。
 两个协议可以同时持有连接；这不意味着 iOS 在系统挂起后仍保证后台长连接。
 
 ## iOS 构建
@@ -40,7 +41,7 @@ macOS + Xcode + Flutter 3.47.9：
 bash tooling/build-openclaw-ipa.sh
 ```
 
-输出 `build/openclaw/OpenClaw-Go-unsigned.ipa`，需要自己的签名/安装流程。
+输出 `build/openclaw/OpenClaw-Go-0.1.6-build7-<提交号>-unsigned.ipa`，需要自己的签名/安装流程。
 仓库的 `Build OpenClaw Go iOS` workflow 仅上传构建 Artifact，不创建 Release。
 Linux 上不能运行 Xcode 或证明 iPhone 实机可用。
 

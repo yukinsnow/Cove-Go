@@ -62,6 +62,9 @@ class RemoteScreen extends ConsumerWidget {
       // the problem, then connect again.
       final failed = ref.read(hostLinkStatusProvider(host)).value?.phase == HostLinkPhase.failed;
       if (!failed) {
+        if (ref.read(hostLinkStatusProvider(host)).value?.phase == HostLinkPhase.reconnecting) {
+          ref.read(remoteConnectionProvider(host).notifier).retry();
+        }
         ref.read(gatewayHostEntryProvider)?.onRemotePick();
         navigator.maybePop();
         return;
@@ -94,14 +97,42 @@ class RemoteScreen extends ConsumerWidget {
     final l10n = context.l10n;
     final ssh = ref.watch(hostsProvider.select((s) => s.ssh));
     final active = ref.watch(activeHostProvider);
+    final gateway = ref.watch(gatewayHostEntryProvider);
     final signedIn = ref.watch(relayAccountProvider.select((a) => a.value?.signedIn ?? false));
     void push(Widget page) => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => page));
     return AppPage.list(
       title: l10n.commonRemoteHost,
-      subtitle: Text(l10n.remoteHostsIntro),
-      actions: const [AskAiButton(AskAiTopic.remote)],
+      subtitle: Text(gateway == null ? l10n.remoteHostsIntro : l10n.ocRemoteHostsIntro),
+      actions: gateway == null ? const [AskAiButton(AskAiTopic.remote)] : const [],
       children: [
-        _ActiveCard(active: active),
+        if (gateway?.active != true) _ActiveCard(active: active),
+        if (gateway != null)
+          SettingsSection(
+            title: 'OpenClaw',
+            children: [
+              SettingsTile(
+                key: const ValueKey('remote-gateway-host'),
+                icon: AppIcons.remoteHost,
+                tinted: false,
+                title: gateway.name(),
+                subtitle: 'OpenClaw Gateway',
+                value: gateway.active ? Icon(AppIcons.selected, color: Theme.of(context).colorScheme.primary) : null,
+                chevron: false,
+                onTap: () async {
+                  await Navigator.of(context).maybePop();
+                  gateway.onPick();
+                },
+                trailing: _EdgeIconButton(
+                  icon: const Icon(AppIcons.configure, size: 20),
+                  tooltip: l10n.ocSettings,
+                  onPressed: () async {
+                    await Navigator.of(context).maybePop();
+                    gateway.onConfigure();
+                  },
+                ),
+              ),
+            ],
+          ),
         _RelaySection(onUse: (h) => _use(context, ref, h)),
         SettingsSection(
           title: l10n.remoteSshHosts,
@@ -110,7 +141,7 @@ class RemoteScreen extends ConsumerWidget {
             for (final h in ssh)
               _SshRow(
                 config: h,
-                active: active == HostRef.ssh(h.id),
+                active: gateway?.active != true && active == HostRef.ssh(h.id),
                 onTap: () => _use(context, ref, HostRef.ssh(h.id)),
                 onEdit: () => push(SshHostFormPage(existing: h)),
               ),
@@ -178,7 +209,8 @@ class _ActiveCard extends ConsumerWidget {
         active.kind == HostKind.relay &&
         (error?.kind == HostLinkErrorKind.hostKeyMismatch || error?.kind == HostLinkErrorKind.hostKeyUnverified);
     void reconnect() => ref.read(remoteConnectionProvider(active).notifier).retry();
-    final failed = status.phase == HostLinkPhase.failed && error != null;
+    final showError =
+        (status.phase == HostLinkPhase.failed || status.phase == HostLinkPhase.reconnecting) && error != null;
     // No runtime on this phone: 本机 is nowhere to go back to.
     final canGoLocal = !AppInfo.remoteClient && ref.watch(localRuntimeProvider.select((s) => !s.status.runtimeMissing));
     return OverviewCard(
@@ -207,8 +239,10 @@ class _ActiveCard extends ConsumerWidget {
               label: l10n.remoteSwitchToPhone,
               onPressed: () => ref.read(activeHostProvider.notifier).select(HostRef.local),
             )
+          : status.phase == HostLinkPhase.reconnecting
+          ? _EdgeTextButton(label: l10n.remoteReconnect, onPressed: reconnect)
           : null,
-      footer: failed
+      footer: showError
           ? Padding(
               padding: const EdgeInsets.only(left: OverviewCard.inset, right: OverviewCard.inset - 12),
               child: LinkErrorBox(
@@ -441,7 +475,7 @@ class _RelaySection extends ConsumerWidget {
           for (final h in account.hosts)
             _RelayRow(
               host: h,
-              active: active == HostRef.relay(h.id),
+              active: ref.watch(gatewayHostEntryProvider)?.active != true && active == HostRef.relay(h.id),
               onTap: h.online || active == HostRef.relay(h.id) ? () => onUse(HostRef.relay(h.id, name: h.name)) : null,
             ),
       ],

@@ -8361,6 +8361,9 @@ class L10nZh extends L10n {
   String get nearbyChange => '更换';
 
   @override
+  String get ocRemoteHostsIntro => '连接 OpenClaw Gateway、DSH Remote 或 SSH 主机';
+
+  @override
   String get ocConnect => '连接 OpenClaw';
 
   @override

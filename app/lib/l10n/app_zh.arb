@@ -5323,6 +5323,7 @@
     }
   },
   "nearbyChange": "更换",
+  "ocRemoteHostsIntro": "连接 OpenClaw Gateway、DSH Remote 或 SSH 主机",
   "ocConnect": "连接 OpenClaw",
   "ocAddress": "Gateway 地址（wss://）",
   "ocToken": "Gateway 令牌",

@@ -15344,6 +15344,12 @@ abstract class L10n {
   /// **'更换'**
   String get nearbyChange;
 
+  /// No description provided for @ocRemoteHostsIntro.
+  ///
+  /// In zh, this message translates to:
+  /// **'连接 OpenClaw Gateway、DSH Remote 或 SSH 主机'**
+  String get ocRemoteHostsIntro;
+
   /// No description provided for @ocConnect.
   ///
   /// In zh, this message translates to:

@@ -9,6 +9,7 @@ AGPL-3.0 and upstream third-party notices are retained. The original entry point
 ## Architecture
 
 `app/lib/main_openclaw.dart` offers OpenClaw and DSH Remote in one app.
+The drawer footer opens a shared host picker. The remote-host page lists OpenClaw, DSH Remote and SSH together; Gateway settings are on its row rather than a separate top-right entry.
 The DSH page is initialized lazily. Backend selection is saved, while each backend
 owns its credentials, session identifiers, transport and chat state independently.
 Switching does not convert or migrate conversations between services.
@@ -23,6 +24,7 @@ tool activity, model selection, images, followups, steer and interrupt.
 Remote URLs must use WSS. Approve a new device on the Gateway, then reconnect.
 Credentials and device seed stay in local secure storage, never in Git or build arguments.
 The client does not relax Gateway security or tunnel Gateway through DSH Remote.
+DSH reconnects expose an immediate retry and expandable errors. The iOS archive includes a local-network usage description; allow access to your computer when prompted.
 Both connections may stay open, but iOS background execution is not guaranteed.
 
 ## Run and build
@@ -35,7 +37,7 @@ flutter run --target lib/main_openclaw.dart --dart-define=REMOTE_DUAL_APP=true
 ```
 
 On macOS with Xcode and Flutter 3.47.9, run `bash tooling/build-openclaw-ipa.sh`.
-The output is `build/openclaw/OpenClaw-Go-unsigned.ipa` for your own signing process.
+The output is `build/openclaw/OpenClaw-Go-0.1.6-build7-<revision>-unsigned.ipa` for your own signing process.
 The GitHub workflow uploads an artifact, not a public release. Linux cannot build
 with Xcode or prove iPhone functionality.
 

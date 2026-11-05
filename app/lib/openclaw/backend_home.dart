@@ -94,21 +94,6 @@ class DshRemoteHome extends ConsumerWidget {
     final host = ref.watch(activeHostProvider);
     // ModeHome already owns its chat header and session drawer.
     if (!host.isLocal) return const ModeHome();
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(context.l10n.commonRemoteHost),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.dns_outlined),
-            tooltip: context.l10n.remoteSwitchHost,
-            onPressed: () => showHostSheet(
-              context,
-              onManage: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const RemoteScreen())),
-            ),
-          ),
-        ],
-      ),
-      body: const RemoteScreen(),
-    );
+    return const RemoteScreen();
   }
 }
