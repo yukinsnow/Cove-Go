@@ -8454,6 +8454,9 @@ class L10nZh extends L10n {
   String get ocSearchSessions => '搜索会话';
 
   @override
+  String get ocCachedHistory => '正在显示本地缓存，连接后自动更新';
+
+  @override
   String get performanceTitle => '性能';
 
   @override

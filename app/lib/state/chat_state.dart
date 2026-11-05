@@ -9,6 +9,8 @@ import '../diagnostics/app_error_log.dart';
 import '../l10n/l10n.dart';
 import '../usage/usage_stats.dart';
 import 'attachments.dart';
+import 'offline_chat.dart';
+import 'offline_snapshot.dart';
 import 'chat_error_text.dart';
 import 'connection_state.dart';
 import 'hosts_state.dart';
@@ -426,6 +428,12 @@ class ChatController extends Notifier<ChatState> {
 
   final String sessionId;
   final ChatTranscript _transcript = ChatTranscript();
+  List<ChatItem> _offlineItems = const [];
+  String? _offlineTitle;
+  String? _offlineScope;
+  Timer? _cacheWrite;
+  bool _hasLiveSnapshot = false;
+
   StreamSubscription<DshEvent>? _sub;
   StreamSubscription<DshConnectionState>? _states;
   Timer? _flush;
@@ -521,6 +529,24 @@ class ChatController extends Notifier<ChatState> {
     // rebuild may reuse this Notifier for an identically named session there.
     // Reconnecting to the same Host keeps the existing conversation consent.
     final host = ref.watch(activeHostProvider);
+    final cached = ref.read(offlineChatSnapshotProvider(sessionId)).value;
+    _offlineScope = cached?.scope;
+    ref.listen(offlineChatSnapshotProvider(sessionId), (_, next) {
+      _offlineScope = next.value?.scope;
+      if (_offlineScope != null && _hasLiveSnapshot && _canControl) {
+        unawaited(
+          ref
+              .read(offlineSnapshotStoreProvider)
+              .write(_offlineScope!, offlineChat(_transcript.items, _transcript.title)),
+        );
+      }
+      if (_hasLiveSnapshot || _transcript.items.isNotEmpty) return;
+      _offlineItems = restoreOfflineChat(next.value?.snapshot);
+      _offlineTitle = next.value?.snapshot?['title'] as String?;
+      if (_offlineItems.isNotEmpty) state = _retained(loading: false);
+    });
+    _offlineItems = restoreOfflineChat(cached?.snapshot);
+    _offlineTitle = cached?.snapshot?['title'] as String?;
     if (_approvalHost != host) {
       // These requests belong to the previous Host, even if the new Host has
       // the same session id. A new watch replays its own mux's pending requests.
@@ -567,6 +593,7 @@ class ChatController extends Notifier<ChatState> {
       if (!_syncReady.isCompleted) _syncReady.complete(false);
       release?.cancel();
       _flush?.cancel();
+      _cacheWrite?.cancel();
       _flush = null;
       _stopTimeout?.cancel();
       _awayTimer?.cancel();
@@ -597,7 +624,7 @@ class ChatController extends Notifier<ChatState> {
         _listen(client, pulse);
       }
     });
-    return _retained(loading: _transcript.items.isEmpty);
+    return _retained(loading: _transcript.items.isEmpty && _offlineItems.isEmpty);
   }
 
   /// How long the app may be out of sight before a running conversation on a
@@ -640,8 +667,8 @@ class ChatController extends Notifier<ChatState> {
   /// The loaded conversation without its live parts (running, approvals,
   /// questions), across a new or a lost connection.
   ChatState _retained({required bool loading}) => ChatState(
-    items: _transcript.items,
-    title: _transcript.title,
+    items: !_hasLiveSnapshot && _transcript.items.isEmpty ? _offlineItems : _transcript.items,
+    title: _transcript.title ?? (_hasLiveSnapshot ? null : _offlineTitle),
     turns: _transcript.turns,
     todos: _transcript.todos,
     goal: _transcript.goal,
@@ -1112,8 +1139,17 @@ class ChatController extends Notifier<ChatState> {
 
   void _publish({bool freshSnapshot = false}) {
     _dirty = false;
+    if (freshSnapshot) _hasLiveSnapshot = true;
+    final scope = _offlineScope;
+    if (scope != null && _canControl) {
+      _cacheWrite?.cancel();
+      final store = ref.read(offlineSnapshotStoreProvider);
+      _cacheWrite = Timer(const Duration(milliseconds: 500), () {
+        unawaited(store.write(scope, offlineChat(_transcript.items, _transcript.title)));
+      });
+    }
     _moving.removeWhere((_, operation) => !_currentOperation(operation));
-    final items = _transcript.items;
+    final items = !_hasLiveSnapshot && _transcript.items.isEmpty ? _offlineItems : _transcript.items;
     final running = _transcript.running;
     if (!running) {
       _stopTimeout?.cancel();

@@ -8910,6 +8910,9 @@ class L10nEn extends L10n {
   String get ocSearchSessions => 'Search conversations';
 
   @override
+  String get ocCachedHistory => 'Showing local history. Updates automatically when connected.';
+
+  @override
   String get performanceTitle => 'Performance';
 
   @override

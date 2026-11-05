@@ -17,6 +17,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../l10n/l10n.dart';
 import 'bots_state.dart';
+import 'offline_snapshot.dart';
+import 'offline_identity.dart';
 import 'hosts_state.dart';
 import 'read_list_cache.dart';
 import 'read_list_identity.dart';
@@ -523,9 +525,18 @@ final drawerScopeProvider = Provider<DrawerScope?>((ref) {
   final registry = ref.watch(workspacesProvider);
   final registryCurrent = cache.current(registry, identity, connection?.client);
   final workspace = ref.watch(selectedWorkspaceProvider);
+  final offlineIdentity = ref.watch(offlineReadIdentityProvider).value;
+  final displayIdentity = identity ?? offlineIdentity;
   final key = prefs.loaded
-      ? readListKey(identity, ReadListKind.sessions, prefs.selected == null ? 'all' : 'workspace:${prefs.selected}')
+      ? readListKey(
+          displayIdentity,
+          ReadListKind.sessions,
+          prefs.selected == null ? 'all' : 'workspace:${prefs.selected}',
+        )
       : null;
+  final diskScope = key == null ? null : 'dsh-sessions:${key.identity.digest}:${key.workspace}';
+  final diskValue = diskScope == null ? null : ref.watch(offlineSnapshotProvider(diskScope)).value;
+  final disk = diskScope == null ? null : ref.read(offlineSnapshotStoreProvider).peek(diskScope) ?? diskValue;
   final validSource = all != null && cache.current(all, identity, connection?.client);
   final activity = cache.refresh(ReadListKind.sessions, identity, all);
   final readOnly = sessions.isLoading || sessions.hasError || activity?.pending == true || activity?.failed == true;
@@ -537,7 +548,7 @@ final drawerScopeProvider = Provider<DrawerScope?>((ref) {
   final pending = ref.watch(workspaceFilterPendingProvider);
   final workspaceKnown = prefs.selected == null || registryCurrent && registry.ready && workspace != null;
   if (!validSource || pending || !workspaceKnown || cache.origin(all) != null && !prefs.loaded) {
-    final cached = cache.get<CachedSessions>(key);
+    final cached = cache.get<CachedSessions>(key) ?? _offlineSessions(disk);
     if (cached == null) return null;
     // Once a registry is known, deletion or a changed path/membership version
     // invalidates the old projection. Offline, only the exact last confirmed
@@ -601,6 +612,22 @@ final drawerScopeProvider = Provider<DrawerScope?>((ref) {
         cache.invalidate(key);
         return result;
       }
+    }
+    if (diskScope != null) {
+      unawaited(
+        ref
+            .read(offlineSnapshotStoreProvider)
+            .write(
+              diskScope,
+              CachedSessions(
+                sessions: result.sessions,
+                bots: result.bots,
+                workspaceVersion: version,
+                scoped: result.scoped,
+                workspaceLabel: result.workspaceLabel,
+              ).toJson().cast<String, dynamic>(),
+            ),
+      );
     }
     cache.put(
       key,
@@ -757,4 +784,30 @@ List<DrawerBlock>? watchDrawerBlocks(WidgetRef ref, {DateTime? now}) {
     now: now ?? ref.watch(drawerClockProvider)(),
     scoped: scope.scoped,
   );
+}
+
+CachedSessions? _offlineSessions(Map<String, dynamic>? value) {
+  if (value == null) return null;
+  try {
+    List<SessionSummary> rows(String key) => [
+      for (final s in value[key] as List)
+        SessionSummary(
+          sessionId: s['id'] as String,
+          updatedAt: DateTime.fromMillisecondsSinceEpoch(s['updated'] as int),
+          running: false,
+          blank: false,
+          agentAvailable: false,
+          projections: SessionProjections(-1, {'title': s['title']}),
+        ),
+    ];
+    return CachedSessions(
+      sessions: rows('sessions'),
+      bots: rows('bots'),
+      workspaceVersion: value['workspaceVersion'] as String?,
+      scoped: value['scoped'] as bool,
+      workspaceLabel: value['workspaceLabel'] as String?,
+    );
+  } on Object {
+    return null;
+  }
 }

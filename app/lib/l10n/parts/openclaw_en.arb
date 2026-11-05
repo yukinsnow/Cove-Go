@@ -29,5 +29,6 @@
   "ocEnglish": "English / 中文",
   "ocLicenses": "Open-source licenses",
   "ocHideKeyboard": "Hide keyboard",
-  "ocSearchSessions": "Search conversations"
+  "ocSearchSessions": "Search conversations",
+  "ocCachedHistory": "Showing local history. Updates automatically when connected."
 }

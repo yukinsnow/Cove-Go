@@ -2573,6 +2573,7 @@
   "ocLicenses": "Open-source licenses",
   "ocHideKeyboard": "Hide keyboard",
   "ocSearchSessions": "Search conversations",
+  "ocCachedHistory": "Showing local history. Updates automatically when connected.",
   "performanceTitle": "Performance",
   "performanceAuto": "Auto",
   "performanceFull": "Full",

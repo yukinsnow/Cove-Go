@@ -68,7 +68,12 @@ class ClawHomeState extends State<ClawHome> with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed && c.connected) c.guard(c.history);
+    if (state != AppLifecycleState.resumed) return;
+    if (c.connected) {
+      c.guard(c.history);
+    } else if (!c.busy && c.address.isNotEmpty && c.token.isNotEmpty) {
+      c.connect(c.address, c.token);
+    }
   }
 
   @override
@@ -618,7 +623,12 @@ class ClawHomeState extends State<ClawHome> with WidgetsBindingObserver {
             Expanded(
               child: Column(
                 children: [
-                  if (c.busy) const LinearProgressIndicator(),
+                  if (c.busy && c.messages.isEmpty) const LinearProgressIndicator(),
+                  if (c.readingCache)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                      child: Text(l.ocCachedHistory, style: Theme.of(context).textTheme.bodySmall),
+                    ),
                   if (c.error.isNotEmpty)
                     MaterialBanner(
                       content: SelectableText(c.error),

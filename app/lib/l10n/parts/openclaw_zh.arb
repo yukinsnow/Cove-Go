@@ -29,5 +29,6 @@
   "ocEnglish": "English / 中文",
   "ocLicenses": "开源许可",
   "ocHideKeyboard": "收起键盘",
-  "ocSearchSessions": "搜索会话"
+  "ocSearchSessions": "搜索会话",
+  "ocCachedHistory": "正在显示本地缓存，连接后自动更新"
 }

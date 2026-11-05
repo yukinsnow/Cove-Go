@@ -15530,6 +15530,12 @@ abstract class L10n {
   /// **'搜索会话'**
   String get ocSearchSessions;
 
+  /// No description provided for @ocCachedHistory.
+  ///
+  /// In zh, this message translates to:
+  /// **'正在显示本地缓存，连接后自动更新'**
+  String get ocCachedHistory;
+
   /// No description provided for @performanceTitle.
   ///
   /// In zh, this message translates to:

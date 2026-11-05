@@ -5,17 +5,81 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:openclaw_client/openclaw_client.dart';
 
+import '../state/offline_snapshot.dart';
+
 class ClawController extends ChangeNotifier {
-  ClawController({GatewayClient? client}) : client = client ?? GatewayClient();
+  ClawController({GatewayClient? client, OfflineSnapshotStore? snapshots})
+    : client = client ?? GatewayClient(),
+      snapshots = snapshots ?? OfflineSnapshotStore();
+  final OfflineSnapshotStore snapshots;
+  final _histories = <String, List<Map<String, dynamic>>>{};
+  String get _cacheScope => OfflineSnapshotStore.digest(['gateway', address, token]);
+
+  Future<void> _save() {
+    final histories = Map<String, List<Map<String, dynamic>>>.of(_histories);
+    Map<String, dynamic> snapshot() => {'sessions': sessions, 'selected': sessionKey, 'histories': histories};
+    // Prefer recent conversations when the aggregate exceeds the disk budget.
+    while (utf8.encode(jsonEncode(snapshot())).length > OfflineSnapshotStore.maxBytes && histories.isNotEmpty) {
+      final oldest = histories.keys.firstWhere((key) => key != sessionKey, orElse: () => histories.keys.first);
+      final rows = histories[oldest]!;
+      if (histories.length == 1 && rows.length > 1) {
+        histories[oldest] = rows.sublist(rows.length ~/ 2);
+      } else {
+        histories.remove(oldest);
+      }
+    }
+    return snapshots.write(_cacheScope, snapshot());
+  }
+
+  Future<void> _restore() async {
+    final scope = _cacheScope, selection = _selection, connection = _connectionRevision;
+    final cached = await snapshots.read(scope);
+    if (disposed ||
+        scope != _cacheScope ||
+        cached == null ||
+        selection != _selection ||
+        connection != _connectionRevision) {
+      return;
+    }
+    try {
+      sessions = (cached['sessions'] as List).map((e) => Map<String, dynamic>.from(e as Map)).toList();
+      _histories.clear();
+      for (final entry in (cached['histories'] as Map).entries) {
+        _histories[entry.key as String] = (entry.value as List)
+            .map((e) => Map<String, dynamic>.from(e as Map))
+            .toList();
+      }
+      sessionKey = cached['selected'] as String? ?? '';
+      messages = _histories[sessionKey] ?? [];
+      readingCache = messages.isNotEmpty;
+    } on Object {
+      sessions = [];
+      messages = [];
+      sessionKey = '';
+      _histories.clear();
+    }
+    changed();
+  }
+
+  void _rememberHistory() {
+    readingCache = false;
+    _histories.remove(sessionKey);
+    _histories[sessionKey] = messages;
+    while (_histories.length > 20) {
+      _histories.remove(_histories.keys.first);
+    }
+    unawaited(_save());
+  }
+
   final GatewayClient client;
   final storage = const FlutterSecureStorage();
   StreamSubscription<Map<String, dynamic>>? _events;
   String address = '', token = '', error = '', sessionKey = '';
-  bool busy = false, sending = false, disposed = false;
+  bool busy = false, sending = false, disposed = false, readingCache = false;
   List<Map<String, dynamic>> sessions = [], messages = [], models = [];
   final Map<String, Map<String, dynamic>> tools = {};
   final Map<String, String> live = {};
-  int _selection = 0, _historyRequest = 0;
+  int _selection = 0, _historyRequest = 0, _connectionRevision = 0;
   String? _submissionFingerprint, _submissionId;
 
   /// Changes even when reopening the same conversation; viewports must reset.
@@ -26,9 +90,17 @@ class ClawController extends ChangeNotifier {
   }
 
   Future<void> load() async {
-    address = await storage.read(key: 'claw.address') ?? '';
-    token = await storage.read(key: 'claw.token') ?? '';
+    final revision = _connectionRevision;
+    final savedAddress = await storage.read(key: 'claw.address') ?? '';
+    final savedToken = await storage.read(key: 'claw.token') ?? '';
+    if (disposed || revision != _connectionRevision) return;
+    address = savedAddress;
+    token = savedToken;
+    await _restore();
     changed();
+    if (address.isNotEmpty && token.isNotEmpty && !disposed && revision == _connectionRevision && !connected && !busy) {
+      unawaited(connect(address, token));
+    }
   }
 
   Future<void> guard(Future<void> Function() operation) async {
@@ -43,33 +115,55 @@ class ClawController extends ChangeNotifier {
     changed();
   }
 
-  Future<void> connect(String url, String secret) => guard(() async {
-    busy = true;
-    changed();
-    try {
-      await _events?.cancel();
-      _events = client.events.listen(_onEvent);
-      final identity = await DeviceIdentity.create(await storage.read(key: 'claw.identity'));
-      await storage.write(key: 'claw.identity', value: await identity.exportSeed());
-      address = url.trim();
-      token = secret.trim();
-      await client.connect(address, token, identity);
-      await storage.write(key: 'claw.address', value: address);
-      await storage.write(key: 'claw.token', value: token);
-      await client.request('sessions.subscribe');
-      await refreshSessions();
-      final catalog = await client.request('models.list') as Map;
-      models = (catalog['models'] as List? ?? []).map((e) => Map<String, dynamic>.from(e as Map)).toList();
-      if (sessionKey.isNotEmpty) await select(sessionKey);
-    } finally {
-      busy = false;
+  Future<void> connect(String url, String secret) async {
+    if (busy || disposed) return;
+    ++_connectionRevision;
+    await guard(() async {
+      busy = true;
       changed();
-    }
-  });
+      try {
+        await _events?.cancel();
+        _events = client.events.listen(_onEvent);
+        final identity = await DeviceIdentity.create(await storage.read(key: 'claw.identity'));
+        await storage.write(key: 'claw.identity', value: await identity.exportSeed());
+        final changedHost = address != url.trim() || token != secret.trim();
+        address = url.trim();
+        token = secret.trim();
+        if (changedHost) {
+          ++_selection;
+          sessionKey = '';
+          sessions = [];
+          messages = [];
+          _histories.clear();
+          live.clear();
+          tools.clear();
+          models = [];
+          _submissionFingerprint = null;
+          _submissionId = null;
+          readingCache = false;
+          await _restore();
+          changed();
+        }
+        await client.connect(address, token, identity);
+        await storage.write(key: 'claw.address', value: address);
+        await storage.write(key: 'claw.token', value: token);
+        await client.request('sessions.subscribe');
+        await refreshSessions();
+        if (sessionKey.isNotEmpty) await select(sessionKey);
+        final catalog = await client.request('models.list') as Map;
+        models = (catalog['models'] as List? ?? []).map((e) => Map<String, dynamic>.from(e as Map)).toList();
+      } finally {
+        busy = false;
+        changed();
+      }
+    });
+  }
+
   Future<void> refreshSessions() async {
     final result =
         await client.request('sessions.list', {'limit': 100, 'includeGlobal': false, 'includeUnknown': false}) as Map;
     sessions = (result['sessions'] as List? ?? []).map((e) => Map<String, dynamic>.from(e as Map)).toList();
+    unawaited(_save());
     changed();
   }
 
@@ -77,15 +171,21 @@ class ClawController extends ChangeNotifier {
     final previous = sessionKey;
     sessionKey = key;
     final selection = ++_selection;
-    messages = [];
+    messages = _histories[key] ?? [];
+    readingCache = messages.isNotEmpty;
     live.clear();
     tools.clear();
     changed();
+    unawaited(_save());
+    if (!connected) return;
     if (previous.isNotEmpty) await client.request('sessions.messages.unsubscribe', {'key': previous});
+    if (selection != _selection) return;
     await client.request('sessions.messages.subscribe', {'key': key});
+    if (selection != _selection) return;
     final history = await client.request('chat.history', {'sessionKey': key, 'limit': 150}) as Map;
     if (selection != _selection) return;
     messages = (history['messages'] as List? ?? []).map((e) => Map<String, dynamic>.from(e as Map)).toList();
+    _rememberHistory();
     changed();
   }
 
@@ -100,10 +200,11 @@ class ClawController extends ChangeNotifier {
   Future<void> history() async {
     final key = sessionKey, selection = _selection;
     final request = ++_historyRequest;
-    if (key.isEmpty) return;
+    if (key.isEmpty || !connected) return;
     final result = await client.request('chat.history', {'sessionKey': key, 'limit': 150}) as Map;
     if (selection != _selection || request != _historyRequest) return;
     messages = (result['messages'] as List? ?? []).map((e) => Map<String, dynamic>.from(e as Map)).toList();
+    _rememberHistory();
     changed();
   }
 
