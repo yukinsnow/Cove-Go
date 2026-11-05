@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
 import 'package:gpt_markdown/gpt_markdown.dart';
 import 'package:image_picker/image_picker.dart';
@@ -16,16 +17,17 @@ import '../ui/shell/page_frame.dart';
 import '../ui/common/status_dot.dart';
 import '../ui/common/glass_pill.dart';
 import 'controller.dart';
+import '../ui/remote/host_switcher.dart';
+import '../ui/remote/remote_screen.dart';
 
 class ClawHome extends StatefulWidget {
-  const ClawHome({super.key, required this.onLanguage, this.onBackend});
+  const ClawHome({super.key, required this.onLanguage});
   final VoidCallback onLanguage;
-  final VoidCallback? onBackend;
   @override
-  State<ClawHome> createState() => _ClawHomeState();
+  ClawHomeState createState() => ClawHomeState();
 }
 
-class _ClawHomeState extends State<ClawHome> with WidgetsBindingObserver {
+class ClawHomeState extends State<ClawHome> with WidgetsBindingObserver {
   final c = ClawController();
   final scaffoldKey = GlobalKey<ScaffoldState>();
   final input = TextEditingController(), scroll = ScrollController();
@@ -141,6 +143,27 @@ class _ClawHomeState extends State<ClawHome> with WidgetsBindingObserver {
     });
   }
 
+  void switchHost() {
+    showHostSheet(
+      context,
+      onManage: () => Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) => ProviderScope(
+            overrides: [
+              gatewayHostEntryProvider.overrideWithValue(
+                ProviderScope.containerOf(context).read(gatewayHostEntryProvider),
+              ),
+            ],
+            child: const RemoteScreen(),
+          ),
+        ),
+      ),
+    );
+  }
+
+  String get hostName =>
+      Uri.tryParse(c.address)?.host.isNotEmpty == true ? Uri.parse(c.address).host : context.l10n.commonRemoteHost;
+
   void closeSidebar() {
     FocusManager.instance.primaryFocus?.unfocus();
     scaffoldKey.currentState?.closeDrawer();
@@ -154,7 +177,12 @@ class _ClawHomeState extends State<ClawHome> with WidgetsBindingObserver {
           padding: const EdgeInsets.fromLTRB(20, 12, 12, 12),
           child: Row(
             children: [
-              Expanded(child: Text('OpenClaw', style: Theme.of(context).textTheme.titleLarge)),
+              Expanded(
+                child: InkWell(
+                  onTap: switchHost,
+                  child: Text('$hostName ▾', style: Theme.of(context).textTheme.titleLarge),
+                ),
+              ),
               GlassIconButton(
                 icon: AppIcons.refresh,
                 tooltip: l.ocRefresh,
@@ -209,15 +237,7 @@ class _ClawHomeState extends State<ClawHome> with WidgetsBindingObserver {
           ),
         ),
         const Divider(indent: 20, endIndent: 20),
-        if (widget.onBackend != null)
-          ListTile(
-            leading: const Icon(AppIcons.swap),
-            title: const Text('DSH Remote'),
-            onTap: () {
-              closeSidebar();
-              widget.onBackend!();
-            },
-          ),
+        ListTile(leading: const Icon(AppIcons.swap), title: Text(l.remoteSwitchHost), onTap: switchHost),
         ListTile(
           leading: const Icon(AppIcons.settings),
           title: Text(l.ocSettings),
@@ -296,7 +316,7 @@ class _ClawHomeState extends State<ClawHome> with WidgetsBindingObserver {
                   tier: GlassTier.chrome,
                   stadium: true,
                   grouped: true,
-                  onTap: c.busy ? null : settings,
+                  onTap: switchHost,
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,

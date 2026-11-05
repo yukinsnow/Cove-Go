@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../l10n/l10n.dart';
@@ -17,6 +18,22 @@ import '../theme/app_icons.dart';
 import '../theme/theme.dart';
 import 'host_key_dialog.dart';
 import 'host_status.dart';
+
+/// Optional Gateway entry in the same remote-host picker. Protocol state stays isolated.
+class GatewayHostEntry {
+  const GatewayHostEntry({
+    required this.name,
+    required this.active,
+    required this.onPick,
+    required this.onRemotePick,
+    required this.onConfigure,
+  });
+  final String Function() name;
+  final bool active;
+  final VoidCallback onPick, onRemotePick, onConfigure;
+}
+
+final gatewayHostEntryProvider = Provider<GatewayHostEntry?>((ref) => null);
 
 /// Drawer-header chip: `● 本机 · 运行中 ⌄` / `● 电脑 · 已连接 ⌄`. Opens the
 /// host sheet.
@@ -70,7 +87,15 @@ class HostChip extends ConsumerWidget {
 /// with its state; picking one makes it active. [onManage] opens the remote
 /// page.
 Future<void> showHostSheet(BuildContext context, {required VoidCallback onManage}) {
-  return showAppSheet<void>(context, isScrollControlled: true, builder: (sheet) => HostSheet(onManage: onManage));
+  final gateway = ProviderScope.containerOf(context).read(gatewayHostEntryProvider);
+  return showAppSheet<void>(
+    context,
+    isScrollControlled: true,
+    builder: (sheet) => ProviderScope(
+      overrides: [gatewayHostEntryProvider.overrideWithValue(gateway)],
+      child: HostSheet(onManage: onManage),
+    ),
+  );
 }
 
 class HostSheet extends ConsumerWidget {
@@ -82,18 +107,23 @@ class HostSheet extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = context.l10n;
     final active = ref.watch(activeHostProvider);
+    final gateway = ref.watch(gatewayHostEntryProvider);
     final ssh = ref.watch(hostsProvider.select((s) => s.ssh));
     final account = ref.watch(relayAccountProvider).value;
     final relayHosts = account?.signedIn == true ? account!.hosts : const <RelayHost>[];
 
     Future<void> pick(HostRef host) async {
       if (host == active) {
+        gateway?.onRemotePick();
         Navigator.of(context).pop();
         return;
       }
       final navigator = Navigator.of(context);
       final ok = await activateHost(context, ref, host);
-      if (ok && navigator.mounted) navigator.pop();
+      if (ok) {
+        gateway?.onRemotePick();
+        if (navigator.mounted) navigator.pop();
+      }
     }
 
     // 本机 without its runtime: the row installs it, and switches to it once
@@ -118,19 +148,33 @@ class HostSheet extends ConsumerWidget {
               SheetGroup(
                 margin: const EdgeInsets.fromLTRB(SheetTitleBar.inset, 0, SheetTitleBar.inset, 12),
                 children: [
-                  _HostRow(
-                    host: HostRef.local,
-                    title: l10n.commonThisPhone,
-                    subtitle: l10n.remoteThisPhoneDsh,
-                    active: active.isLocal,
-                    onTap: localMissing ? installLocal : () => pick(HostRef.local),
-                  ),
+                  if (gateway != null)
+                    SettingsTile(
+                      key: const ValueKey('gateway-host-row'),
+                      icon: AppIcons.remoteHost,
+                      tinted: false,
+                      title: gateway.name(),
+                      subtitle: 'Gateway',
+                      trailing: gateway.active ? Icon(AppIcons.selected) : null,
+                      onTap: () {
+                        Navigator.of(context).pop();
+                        gateway.onPick();
+                      },
+                    ),
+                  if (gateway == null && defaultTargetPlatform != TargetPlatform.iOS)
+                    _HostRow(
+                      host: HostRef.local,
+                      title: l10n.commonThisPhone,
+                      subtitle: l10n.remoteThisPhoneDsh,
+                      active: active.isLocal,
+                      onTap: localMissing ? installLocal : () => pick(HostRef.local),
+                    ),
                   for (final h in ssh)
                     _HostRow(
                       host: HostRef.ssh(h.id),
                       title: h.name,
                       subtitle: 'SSH · ${h.address}',
-                      active: active == HostRef.ssh(h.id),
+                      active: gateway?.active != true && active == HostRef.ssh(h.id),
                       onTap: () => pick(HostRef.ssh(h.id)),
                     ),
                   for (final h in relayHosts)
@@ -140,7 +184,7 @@ class HostSheet extends ConsumerWidget {
                       subtitle: h.platform == null
                           ? l10n.remoteRemoteLabel
                           : l10n.remoteRemotePlatform(RelayHost.platformLabel(h.platform!)),
-                      active: active == HostRef.relay(h.id),
+                      active: gateway?.active != true && active == HostRef.relay(h.id),
                       relay: h,
                       onTap: () => pick(HostRef.relay(h.id, name: h.name)),
                     ),
@@ -157,6 +201,16 @@ class HostSheet extends ConsumerWidget {
               SheetGroup(
                 margin: const EdgeInsets.fromLTRB(SheetTitleBar.inset, 0, SheetTitleBar.inset, 12),
                 children: [
+                  if (gateway != null)
+                    SettingsTile(
+                      icon: AppIcons.settings,
+                      tinted: false,
+                      title: l10n.ocSettings,
+                      onTap: () {
+                        Navigator.of(context).pop();
+                        gateway.onConfigure();
+                      },
+                    ),
                   SettingsTile(
                     icon: ssh.isEmpty && relayHosts.isEmpty ? AppIcons.add : AppIcons.configure,
                     tinted: false,

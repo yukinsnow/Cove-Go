@@ -9,7 +9,8 @@ import 'package:dsh_app/ui/theme/app_icons.dart';
 import 'package:dsh_app/ui/chat/composer.dart';
 import 'package:dsh_app/ui/chat/widgets/user_bubble.dart';
 import 'package:dsh_app/state/hosts_state.dart';
-import 'package:dsh_app/ui/remote/remote_screen.dart';
+import 'package:dsh_app/ui/remote/host_switcher.dart';
+import 'package:dsh_app/ui/web/mode_home.dart';
 
 import '../remote/support/fake_relay.dart';
 
@@ -42,24 +43,34 @@ void main() {
     expect(find.text('Disconnected'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
-  testWidgets('both backends share a shell without replacing OpenClaw state', (tester) async {
+  testWidgets('one remote host picker replaces backend drawer and hides local execution', (tester) async {
     final backend = FakeRelayBackend();
     await tester.pumpWidget(
       ProviderScope(overrides: [relayBackendProvider.overrideWithValue(backend)], child: const OpenClawApp()),
     );
     await tester.pumpAndSettle();
-    expect(find.byType(RemoteScreen, skipOffstage: false), findsNothing);
     final original = tester.state(find.byType(ClawHome));
-    expect(find.byType(NavigationBar), findsNothing);
     await tester.tap(find.byIcon(AppIcons.menu));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('DSH Remote'));
+    await tester.tap(find.text('切换主机'));
     await tester.pumpAndSettle();
-    expect(find.byType(RemoteScreen), findsOneWidget);
-    expect(find.byType(NavigationBar), findsNothing);
-    await tester.tap(find.byIcon(Icons.menu));
+    expect(find.byKey(const ValueKey('gateway-host-row')), findsOneWidget);
+    expect(find.text('本机'), findsNothing);
+    expect(find.text('DSH Remote'), findsNothing);
+    // Picking a different protocol preserves the Gateway conversation owner.
+    await tester.tapAt(const Offset(4, 4));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('OpenClaw'));
+    final container = ProviderScope.containerOf(tester.element(find.byType(ClawHome)));
+    container.read(activeHostProvider.notifier).select(const HostRef.relay('test-host', name: 'Yuki-PC'));
+    container.read(gatewayHostEntryProvider)!.onRemotePick();
+    await tester.pumpAndSettle();
+    expect(find.byType(ModeHome), findsOneWidget);
+    // No wrapper app bar/drawer around the native conversation shell.
+    expect(find.byType(AppBar), findsNothing);
+    showHostSheet(tester.element(find.byType(ModeHome)), onManage: () {});
+    await tester.pumpAndSettle();
+    expect(find.text('本机'), findsNothing);
+    await tester.tap(find.byKey(const ValueKey('gateway-host-row')));
     await tester.pumpAndSettle();
     expect(identical(tester.state(find.byType(ClawHome)), original), isTrue);
     expect(find.text('未连接'), findsOneWidget);

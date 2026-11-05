@@ -20,6 +20,7 @@ import '../shell/page_frame.dart';
 import '../theme/app_icons.dart';
 import '../theme/theme.dart';
 import '../web/web_view_page.dart';
+import 'host_switcher.dart';
 import 'host_key_dialog.dart';
 import 'host_status.dart';
 import 'link_progress.dart';
@@ -61,16 +62,21 @@ class RemoteScreen extends ConsumerWidget {
       // the problem, then connect again.
       final failed = ref.read(hostLinkStatusProvider(host)).value?.phase == HostLinkPhase.failed;
       if (!failed) {
+        ref.read(gatewayHostEntryProvider)?.onRemotePick();
         navigator.maybePop();
         return;
       }
       if (await activateHost(context, ref, host)) {
+        ref.read(gatewayHostEntryProvider)?.onRemotePick();
         ref.read(remoteConnectionProvider(host).notifier).retry();
       }
       return;
     }
     final ok = await activateHost(context, ref, host);
-    if (ok && navigator.mounted) navigator.maybePop();
+    if (ok) {
+      ref.read(gatewayHostEntryProvider)?.onRemotePick();
+      if (navigator.mounted) navigator.maybePop();
+    }
   }
 
   /// A host added while this phone has nothing to run on (no runtime, first
@@ -174,7 +180,7 @@ class _ActiveCard extends ConsumerWidget {
     void reconnect() => ref.read(remoteConnectionProvider(active).notifier).retry();
     final failed = status.phase == HostLinkPhase.failed && error != null;
     // No runtime on this phone: 本机 is nowhere to go back to.
-    final canGoLocal = ref.watch(localRuntimeProvider.select((s) => !s.status.runtimeMissing));
+    final canGoLocal = !AppInfo.remoteClient && ref.watch(localRuntimeProvider.select((s) => !s.status.runtimeMissing));
     return OverviewCard(
       leading: OverviewGlyph(hostKindIcon(active.kind), tint: hostKindTint(active.kind)),
       title: Text(l10n.remoteActiveHost(name)),

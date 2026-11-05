@@ -6,6 +6,7 @@ import '../l10n/l10n.dart';
 import '../state/hosts_state.dart';
 import '../ui/remote/remote_screen.dart';
 import '../ui/web/mode_home.dart';
+import '../ui/remote/host_switcher.dart';
 import 'home.dart';
 
 /// Separate protocol owners and navigators: switching never reuses a DSH
@@ -21,6 +22,7 @@ class _BackendHomeState extends State<BackendHome> {
   int selected = 0;
   bool openedDsh = false;
   int selectionVersion = 0;
+  final clawKey = GlobalKey<ClawHomeState>();
   final dshNavigator = GlobalKey<NavigatorState>();
   @override
   void initState() {
@@ -50,58 +52,63 @@ class _BackendHomeState extends State<BackendHome> {
   }
 
   @override
-  Widget build(BuildContext context) => IndexedStack(
-    index: selected,
-    children: [
-      ClawHome(onLanguage: widget.onLanguage, onBackend: () => select(1)),
-      if (openedDsh)
-        Navigator(
-          key: dshNavigator,
-          onGenerateRoute: (_) => MaterialPageRoute<void>(builder: (_) => DshRemoteHome(onBackend: () => select(0))),
-        )
-      else
-        const SizedBox.shrink(),
-    ],
-  );
+  Widget build(BuildContext context) {
+    return ProviderScope(
+      overrides: [
+        gatewayHostEntryProvider.overrideWithValue(
+          GatewayHostEntry(
+            name: () => clawKey.currentState?.hostName ?? context.l10n.commonRemoteHost,
+            active: selected == 0,
+            onPick: () => select(0),
+            onRemotePick: () => select(1),
+            onConfigure: () {
+              select(0);
+              clawKey.currentState?.settings();
+            },
+          ),
+        ),
+      ],
+      child: IndexedStack(
+        index: selected,
+        children: [
+          ClawHome(key: clawKey, onLanguage: widget.onLanguage),
+          if (openedDsh)
+            Navigator(
+              key: dshNavigator,
+              onGenerateRoute: (_) => MaterialPageRoute<void>(builder: (_) => const DshRemoteHome()),
+            )
+          else
+            const SizedBox.shrink(),
+        ],
+      ),
+    );
+  }
 }
 
 /// The original DSH Remote account, trust, P2P/TURN/relay and SSH stack is
 /// retained intact. There is no Android runtime installation/auto-start here.
 class DshRemoteHome extends ConsumerWidget {
-  const DshRemoteHome({super.key, required this.onBackend});
-  final VoidCallback onBackend;
+  const DshRemoteHome({super.key});
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final host = ref.watch(activeHostProvider);
+    // ModeHome already owns its chat header and session drawer.
+    if (!host.isLocal) return const ModeHome();
     return Scaffold(
       appBar: AppBar(
-        title: const Text('DSH Remote'),
+        title: Text(context.l10n.commonRemoteHost),
         actions: [
           IconButton(
-            tooltip: context.l10n.commonRemoteHost,
             icon: const Icon(Icons.dns_outlined),
-            onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const RemoteScreen())),
+            tooltip: context.l10n.remoteSwitchHost,
+            onPressed: () => showHostSheet(
+              context,
+              onManage: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const RemoteScreen())),
+            ),
           ),
         ],
       ),
-      drawer: Drawer(
-        child: SafeArea(
-          child: ListView(
-            children: [
-              const ListTile(title: Text('DSH Remote')),
-              ListTile(
-                leading: const Icon(Icons.hub_outlined),
-                title: const Text('OpenClaw'),
-                onTap: () {
-                  Navigator.of(context).pop();
-                  onBackend();
-                },
-              ),
-            ],
-          ),
-        ),
-      ),
-      body: host.isLocal ? const RemoteScreen() : const ModeHome(),
+      body: const RemoteScreen(),
     );
   }
 }

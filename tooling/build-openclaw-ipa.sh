@@ -40,7 +40,7 @@ PY
 swift "$ROOT/tooling/openclaw_icon.swift" "$PWD/ios/Runner/Assets.xcassets/AppIcon.appiconset"
 flutter pub get
 python3 tool/l10n_merge.py
-flutter build ios --release --no-codesign --target lib/main_openclaw.dart --dart-define=REMOTE_DUAL_APP=true --build-name 0.1.2 --build-number 3 --dart-define=DSH_APP_VERSION=0.1.2+3
+flutter build ios --release --no-codesign --target lib/main_openclaw.dart --dart-define=REMOTE_DUAL_APP=true --build-name 0.1.3 --build-number 4 --dart-define=DSH_APP_VERSION=0.1.3+4
 # Fresh temporary payload; never deletes an existing checkout path.
 OUT="$ROOT/build/openclaw"
 mkdir -p "$OUT"
