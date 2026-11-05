@@ -11,6 +11,7 @@ import '../l10n/l10n.dart';
 import '../ui/theme/theme.dart';
 import '../ui/theme/app_icons.dart';
 import '../ui/chat/composer.dart';
+import '../ui/chat/chat_header.dart';
 import '../ui/chat/widgets/user_bubble.dart';
 import '../ui/shell/drawer/session_tile.dart';
 import '../ui/shell/page_frame.dart';
@@ -19,29 +20,39 @@ import '../ui/common/glass_pill.dart';
 import 'controller.dart';
 import '../ui/remote/host_switcher.dart';
 import '../ui/remote/remote_screen.dart';
-import '../ui/shell/sessions_drawer.dart' show IdentityBar, HostIdentityPresentation, NewChatButton;
-import '../ui/shell/brand_mark.dart';
+import '../ui/shell/sessions_drawer.dart'
+    show IdentityBar, HostIdentityPresentation, DrawerBrandHeader, SessionDrawerSurface;
+import '../ui/shell/drawer/drawer_filter_bar.dart';
+import '../ui/shell/adaptive/adaptive_layout.dart';
+import '../state/app_info.dart';
+
+import 'dart:math' as math;
+
 import '../ui/settings/settings_widgets.dart';
-import '../ui/common/capsule_chip.dart';
-import '../state/drawer_view_state.dart' show SessionDay, sessionDayOf, sessionDayLabels;
+import '../state/drawer_view_state.dart' show DrawerFilter, SessionDay, sessionDayOf, sessionDayLabels;
 import '../ui/shell/session_search_page.dart';
-import '../ui/web/mode_home.dart';
 import '../ui/web/web_view_page.dart';
 
 class ClawHome extends StatefulWidget {
-  const ClawHome({super.key, required this.onLanguage});
+  const ClawHome({super.key, required this.onLanguage, this.controller});
+  final ClawController? controller;
   final VoidCallback onLanguage;
   @override
   ClawHomeState createState() => ClawHomeState();
 }
 
 class ClawHomeState extends State<ClawHome> with WidgetsBindingObserver {
-  final c = ClawController();
+  late final c = widget.controller ?? ClawController();
   final scaffoldKey = GlobalKey<ScaffoldState>();
   final input = TextEditingController(), scroll = ScrollController();
   final attachments = <Map<String, dynamic>>[];
   String queue = 'followup';
-  bool runningOnly = false;
+  DrawerFilter filter = DrawerFilter.all;
+  final seen = <String, Object?>{};
+  bool isUnread(Map<String, dynamic> session) =>
+      session['key'] != c.sessionKey &&
+      session['updatedAt'] != null &&
+      (!seen.containsKey(session['key']) || seen[session['key']] != session['updatedAt']);
   final composerFocus = FocusNode();
   @override
   void initState() {
@@ -258,6 +269,7 @@ class ClawHomeState extends State<ClawHome> with WidgetsBindingObserver {
                     },
                   ),
                   SettingsTile(icon: AppIcons.settings, title: l.ocSettings, onTap: settings),
+                  SettingsTile(icon: AppIcons.info, title: AppInfo.displayVersion, subtitle: AppInfo.sourceRevision),
                 ],
               ),
               if (features)
@@ -308,79 +320,51 @@ class ClawHomeState extends State<ClawHome> with WidgetsBindingObserver {
     final l = context.l10n;
     final theme = Theme.of(context);
     final top = <Widget>[
-      Padding(
-        padding: const EdgeInsets.fromLTRB(20, 14, 10, 10),
-        child: Row(
-          children: [
-            const Expanded(
-              child: Align(
-                alignment: AlignmentDirectional.centerStart,
-                child: FittedBox(fit: BoxFit.scaleDown, child: BrandLockup(height: 19)),
-              ),
-            ),
-            WebModeKey(onTap: openGatewayWeb),
-            const SizedBox(width: 8),
-            NewChatButton(
-              onTap: () {
-                closeSidebar();
-                if (c.connected) {
-                  c.guard(c.newSession);
-                } else {
-                  settings();
-                }
-              },
-            ),
-          ],
-        ),
+      DrawerBrandHeader(
+        onWeb: openGatewayWeb,
+        onNewChat: () {
+          closeSidebar();
+          if (c.connected) {
+            c.guard(c.newSession);
+          } else {
+            settings();
+          }
+        },
       ),
       SessionSearchBar(onClose: closeSidebar, onSearch: searchSessions),
       Padding(
-        padding: const EdgeInsets.fromLTRB(20, 10, 10, 4),
+        padding: const EdgeInsets.fromLTRB(20, 0, 10, 0),
         child: Row(
           children: [
-            const Icon(AppIcons.chat, size: 20),
+            const Icon(AppIcons.conversations, size: 18),
             const SizedBox(width: 8),
             Expanded(
-              child: PopupMenuButton<bool>(
-                onSelected: (value) => setState(() => runningOnly = value),
+              child: PopupMenuButton<DrawerFilter>(
+                onSelected: (value) => setState(() => filter = value),
                 itemBuilder: (_) => [
-                  PopupMenuItem(value: false, child: Text(l.remoteWorkspaceAllChats)),
-                  PopupMenuItem(value: true, child: Text(l.commonRunning)),
+                  PopupMenuItem(value: DrawerFilter.all, child: Text(l.remoteWorkspaceAllChats)),
+                  PopupMenuItem(value: DrawerFilter.running, child: Text(l.commonRunning)),
                 ],
                 child: Row(
                   children: [
                     Flexible(child: Text(l.remoteWorkspaceAllChats, style: theme.textTheme.titleSmall)),
-                    const Icon(AppIcons.dropdown, size: 18),
+                    const Icon(AppIcons.expand, size: 18),
                   ],
                 ),
               ),
             ),
-            GlassIconButton(
-              icon: AppIcons.more,
-              tooltip: l.hubSettingsAllFeatures,
-              size: 32,
-              onPressed: () => openSettings(features: true),
-            ),
+            DrawerViewButton(onTap: () => openSettings(features: true)),
           ],
         ),
       ),
-      Padding(
-        padding: const EdgeInsets.fromLTRB(10, 2, 10, 4),
-        child: Row(
-          children: [
-            CapsuleChoiceChip(
-              label: l.shellAll,
-              selected: !runningOnly,
-              onSelected: () => setState(() => runningOnly = false),
-            ),
-            const SizedBox(width: 8),
-            CapsuleChoiceChip(
-              label: l.commonRunning,
-              selected: runningOnly,
-              onSelected: () => setState(() => runningOnly = true),
-            ),
-          ],
-        ),
+      SessionFilterRow(
+        enabled: (value) => value != DrawerFilter.pending,
+        selected: filter,
+        label: (value) {
+          final count = value == DrawerFilter.unread ? c.sessions.where(isUnread).length : 0;
+          return count > 0 ? '${value.label} $count' : value.label;
+        },
+        onSelected: (value) => setState(() => filter = value),
       ),
     ];
     DateTime? updatedAt(Map<String, dynamic> session) {
@@ -389,10 +373,22 @@ class ClawHomeState extends State<ClawHome> with WidgetsBindingObserver {
       return value is String ? DateTime.tryParse(value) : null;
     }
 
-    final visible = c.sessions.where((session) => !runningOnly || session['hasActiveRun'] == true).toList()
-      ..sort(
-        (a, b) => (updatedAt(b)?.millisecondsSinceEpoch ?? 0).compareTo(updatedAt(a)?.millisecondsSinceEpoch ?? 0),
-      );
+    final visible =
+        c.sessions
+            .where(
+              (session) => switch (filter) {
+                DrawerFilter.all => true,
+                DrawerFilter.running => session['hasActiveRun'] == true,
+                // The sessions API does not expose approval state. Never borrow DSH's
+                // pending interactions or invent a Gateway approval from a running flag.
+                DrawerFilter.pending => false,
+                DrawerFilter.unread => isUnread(session),
+              },
+            )
+            .toList()
+          ..sort(
+            (a, b) => (updatedAt(b)?.millisecondsSinceEpoch ?? 0).compareTo(updatedAt(a)?.millisecondsSinceEpoch ?? 0),
+          );
     final groups = <SessionDay?, List<Map<String, dynamic>>>{};
     final now = DateTime.now();
     for (final session in visible) {
@@ -407,20 +403,23 @@ class ClawHomeState extends State<ClawHome> with WidgetsBindingObserver {
             title: sessionTitle(session),
             running: session['hasActiveRun'] == true,
             current: session['key'] == c.sessionKey,
+            unread: isUnread(session),
             onLongPress: null,
             onTap: () {
               closeSidebar();
+              seen[session['key'] as String] = session['updatedAt'];
               c.guard(() => c.select(session['key'] as String));
             },
           ),
       ],
     ];
-    final short = MediaQuery.sizeOf(context).height < 500;
+    final short = MediaQuery.sizeOf(context).height < WindowClass.compactHeight;
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         if (!short) ...top,
         Expanded(
-          child: ListView(padding: const EdgeInsets.symmetric(horizontal: 10), children: [if (short) ...top, ...rows]),
+          child: ListView(padding: const EdgeInsets.fromLTRB(10, 4, 10, 16), children: [if (short) ...top, ...rows]),
         ),
         IdentityBar(
           presentation: HostIdentityPresentation(
@@ -475,82 +474,64 @@ class ClawHomeState extends State<ClawHome> with WidgetsBindingObserver {
   Widget header(bool wide) {
     final l = context.l10n;
     final session = c.sessions.where((s) => s['key'] == c.sessionKey).firstOrNull;
-    return SafeArea(
-      bottom: false,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(12, 6, 12, 8),
-        child: BackdropGroup(
-          child: Row(
-            children: [
-              if (!wide) ...[
-                GlassIconButton(
-                  icon: AppIcons.menu,
-                  tooltip: l.ocSessions,
-                  onPressed: () {
-                    composerFocus.unfocus();
-                    scaffoldKey.currentState?.openDrawer();
-                  },
-                ),
-                const SizedBox(width: 8),
-              ],
-              Expanded(
-                child: GlassSurface(
-                  tier: GlassTier.chrome,
-                  stadium: true,
-                  grouped: true,
-                  onTap: switchHost,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+    final model = session?['model'] ?? session?['modelOverride'];
+    return ChatHeader(
+      useDshState: false,
+      title: session == null ? 'OpenClaw Go' : sessionTitle(session),
+      status: HeaderStatus(
+        c.connected ? StatusTone.ok : StatusTone.idle,
+        c.connected ? l.ocConnected : l.ocDisconnected,
+      ),
+      onOpenDrawer: wide
+          ? null
+          : () {
+              composerFocus.unfocus();
+              scaffoldKey.currentState?.openDrawer();
+            },
+      onTitleTap: switchHost,
+      onNewChat: c.connected ? () => c.guard(c.newSession) : null,
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Flexible(
+            child: GlassSurface(
+              tier: GlassTier.chrome,
+              stadium: true,
+              grouped: true,
+              onTap: c.connected && c.sessionKey.isNotEmpty ? chooseModel : null,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(minHeight: 44),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 0, 8, 0),
+                  child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(
-                        session == null ? 'OpenClaw Go' : sessionTitle(session),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.titleSmall,
+                      Icon(AppIcons.model, size: 14, color: Theme.of(context).colorScheme.primary),
+                      const SizedBox(width: 5),
+                      Flexible(
+                        child: Text(
+                          model == null ? l.ocModels : '$model'.split('/').last,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.labelMedium?.copyWith(fontSize: 13),
+                        ),
                       ),
-                      Row(
-                        children: [
-                          StatusDot(tone: c.connected ? StatusTone.ok : StatusTone.idle, size: 6),
-                          const SizedBox(width: 6),
-                          Flexible(
-                            child: Text(
-                              c.connected ? l.ocConnected : l.ocDisconnected,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: Theme.of(context).textTheme.labelSmall,
-                            ),
-                          ),
-                        ],
-                      ),
+                      const Icon(AppIcons.expand, size: 16),
                     ],
                   ),
                 ),
               ),
-              const SizedBox(width: 8),
-              GlassIconButton(
-                icon: AppIcons.model,
-                tooltip: l.ocModels,
-                onPressed: c.connected && c.sessionKey.isNotEmpty ? chooseModel : null,
-              ),
-              const SizedBox(width: 8),
-              GlassIconButton(
-                icon: AppIcons.add,
-                tooltip: l.ocNew,
-                onPressed: c.connected ? () => c.guard(c.newSession) : null,
-              ),
-              if (MediaQuery.viewInsetsOf(context).bottom > 0) ...[
-                const SizedBox(width: 8),
-                GlassIconButton(
-                  icon: Icons.keyboard_hide_outlined,
-                  tooltip: l.ocHideKeyboard,
-                  onPressed: composerFocus.unfocus,
-                ),
-              ],
-            ],
+            ),
           ),
-        ),
+          if (MediaQuery.viewInsetsOf(context).bottom > 0) ...[
+            const SizedBox(width: 8),
+            GlassIconButton(
+              icon: Icons.keyboard_hide_outlined,
+              tooltip: l.ocHideKeyboard,
+              onPressed: composerFocus.unfocus,
+            ),
+          ],
+        ],
       ),
     );
   }
@@ -607,7 +588,9 @@ class ClawHomeState extends State<ClawHome> with WidgetsBindingObserver {
   @override
   Widget build(BuildContext context) {
     final l = context.l10n;
-    final wide = MediaQuery.sizeOf(context).width >= 850;
+    final wide =
+        MediaQuery.sizeOf(context).width >= WindowClass.expandedMin &&
+        MediaQuery.sizeOf(context).height >= WindowClass.compactHeight;
     return AppBackdrop(
       child: Scaffold(
         key: scaffoldKey,
@@ -615,15 +598,23 @@ class ClawHomeState extends State<ClawHome> with WidgetsBindingObserver {
           if (open) FocusManager.instance.primaryFocus?.unfocus();
         },
         backgroundColor: Colors.transparent,
-        appBar: PreferredSize(preferredSize: const Size.fromHeight(68), child: header(wide)),
+        appBar: PreferredSize(preferredSize: Size.fromHeight(ChatHeader.barHeightOf(context) + 8), child: header(wide)),
         drawer: wide
             ? null
-            : Drawer(
-                child: AppBackdrop(child: SafeArea(child: sessionList())),
+            : SizedBox(
+                width: math.min(
+                  AdaptiveMetrics.sidebarWidth + MediaQuery.paddingOf(context).left,
+                  MediaQuery.sizeOf(context).width - 56,
+                ),
+                child: SessionDrawerSurface(child: sessionList()),
               ),
         body: Row(
           children: [
-            if (wide) SizedBox(width: 280, child: sessionList()),
+            if (wide)
+              SizedBox(
+                width: AdaptiveMetrics.sidebarWidth,
+                child: SessionDrawerSurface(child: sessionList()),
+              ),
             Expanded(
               child: Column(
                 children: [

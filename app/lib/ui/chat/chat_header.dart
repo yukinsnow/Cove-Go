@@ -56,8 +56,11 @@ class ChatHeader extends ConsumerStatefulWidget {
     this.onTitleTap,
     this.onNewChat,
     this.scrolledUnder,
+    this.useDshState = true,
   });
 
+  /// False for other protocols: keep DSH geometry without DSH agent/schedule state.
+  final bool useDshState;
   final String title;
   final HeaderStatus status;
 
@@ -126,7 +129,7 @@ class _ChatHeaderState extends ConsumerState<ChatHeader> {
     final titleFloor = _titleFloor(context, statusStyle);
     // The schedule clock widens the pill by this much over its plain right
     // padding, while the bar can afford it (see [_HeaderRow]).
-    final scheduled = ref.watch(headerSchedulesProvider.select((s) => s.shown));
+    final scheduled = widget.useDshState && ref.watch(headerSchedulesProvider.select((s) => s.shown));
     final clockExtra = scheduled ? HeaderScheduleCap.extraFor(pillHeight) : 0.0;
     // Wide windows: next to the rail (it has its own ≡) the key goes, and ≡
     // says what it does there (fold or unfold the list).
@@ -159,8 +162,8 @@ class _ChatHeaderState extends ConsumerState<ChatHeader> {
                 clockExtra: clockExtra,
                 children: [
                   // A subagent conversation shows 「‹ 上级对话」 here.
-                  HeaderLeadSlot(
-                    menu: !(chrome?.showsMenuKey ?? true)
+                  _lead(
+                    !(chrome?.showsMenuKey ?? true)
                         ? const SizedBox.shrink()
                         : SizedBox.square(
                             key: const ValueKey('chat-menu'),
@@ -209,7 +212,14 @@ class _ChatHeaderState extends ConsumerState<ChatHeader> {
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    HeaderTitleText(widget.title, style: titleStyle),
+                                    widget.useDshState
+                                        ? HeaderTitleText(widget.title, style: titleStyle)
+                                        : Text(
+                                            widget.title,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: titleStyle,
+                                          ),
                                     Row(
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
@@ -230,7 +240,9 @@ class _ChatHeaderState extends ConsumerState<ChatHeader> {
                                   ],
                                 ),
                               ),
-                              end: HeaderScheduleCap(pillHeight: pillHeight),
+                              end: widget.useDshState
+                                  ? HeaderScheduleCap(pillHeight: pillHeight)
+                                  : const SizedBox(width: _pillPadding),
                             ),
                           ),
                         ),
@@ -240,9 +252,17 @@ class _ChatHeaderState extends ConsumerState<ChatHeader> {
                   // The agents capsule, then the model chip (a subagent
                   // conversation has no model chip). Flexible: the chip
                   // takes the width this row gives it.
-                  HeaderTrailingSlot(
-                    trailing: Flexible(child: _ChipSlot(child: widget.trailing)),
-                  ),
+                  widget.useDshState
+                      ? HeaderTrailingSlot(
+                          trailing: Flexible(child: _ChipSlot(child: widget.trailing)),
+                        )
+                      : Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const SizedBox(width: HeaderTrailingSlot.gap),
+                            Flexible(child: _ChipSlot(child: widget.trailing)),
+                          ],
+                        ),
                   // Mirrors the menu key; gone on the new-chat screen. On a
                   // wide window the key that unfolds 对话详情 follows it.
                   Row(
@@ -270,7 +290,7 @@ class _ChatHeaderState extends ConsumerState<ChatHeader> {
                                 ),
                               ),
                       ),
-                      const DetailPanelKey(),
+                      if (widget.useDshState) const DetailPanelKey(),
                     ],
                   ),
                 ],
@@ -281,6 +301,8 @@ class _ChatHeaderState extends ConsumerState<ChatHeader> {
       ],
     );
   }
+
+  Widget _lead(Widget menu) => widget.useDshState ? HeaderLeadSlot(menu: menu) : menu;
 
   /// The pill's text inset, both sides ([HeaderScheduleCap.padding] on the
   /// right, where the clock goes).

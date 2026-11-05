@@ -147,29 +147,7 @@ class SessionsDrawer extends ConsumerWidget {
         duration: quick,
         child: selecting
             ? DrawerSelectionHeader(key: const ValueKey('selecting'), now: now)
-            : Padding(
-                key: const ValueKey('brand'),
-                // The lockup lines up with the rows' text (20); the
-                // button's edge with the search bar's and the rows'
-                // edges (10).
-                padding: const EdgeInsets.fromLTRB(20, 14, 10, 10),
-                child: Row(
-                  children: [
-                    // On a narrow drawer with large text the lockup gives
-                    // way a little rather than the keys.
-                    const Expanded(
-                      child: Align(
-                        alignment: AlignmentDirectional.centerStart,
-                        child: FittedBox(fit: BoxFit.scaleDown, child: BrandLockup(height: 19)),
-                      ),
-                    ),
-                    // 网页模式, quietly: the one solid element stays 新对话.
-                    const WebModeKey(),
-                    const SizedBox(width: 8),
-                    NewChatButton(onTap: newChat),
-                  ],
-                ),
-              ),
+            : DrawerBrandHeader(key: const ValueKey('brand'), onNewChat: newChat),
       ),
       SafeModeBanner(
         padding: const EdgeInsets.fromLTRB(10, 0, 10, 8),
@@ -200,10 +178,7 @@ class SessionsDrawer extends ConsumerWidget {
       child: _SessionList(onClose: onClose, now: now),
     );
 
-    const radius = BorderRadius.only(
-      topRight: Radius.circular(AppShape.xl),
-      bottomRight: Radius.circular(AppShape.xl),
-    );
+    const radius = SessionDrawerSurface.radius;
     final content = Material(
         type: MaterialType.transparency,
         child: SafeArea(
@@ -300,12 +275,7 @@ class SessionsDrawer extends ConsumerWidget {
         // 滑动中的面板不做背景模糊:玻璃每帧重新采样它背后的聊天内容,中低端
         // 机上就是掉帧的主因。停稳(0 / 1)时再恢复玻璃。
         final moving = motion.value > 0.0 && motion.value < 1.0;
-        return GlassSurface(
-          tier: GlassTier.sheet,
-          borderRadius: radius,
-          blur: moving ? false : null,
-          child: child,
-        );
+        return GlassSurface(tier: GlassTier.sheet, borderRadius: radius, blur: moving ? false : null, child: child);
       },
     );
   }
@@ -340,6 +310,53 @@ class _RenderReportHeight extends RenderProxyBox {
       if (attached && identical(height, target)) target.value = value;
     });
   }
+}
+
+/// Shared brand row for every remote protocol; connection state never swaps
+/// this chrome for a protocol-specific header.
+class DrawerBrandHeader extends StatelessWidget {
+  const DrawerBrandHeader({super.key, required this.onNewChat, this.onWeb});
+  final VoidCallback onNewChat;
+  final VoidCallback? onWeb;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.fromLTRB(20, 14, 10, 10),
+    child: Row(
+      children: [
+        const Expanded(
+          child: Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: FittedBox(fit: BoxFit.scaleDown, child: BrandLockup(height: 19)),
+          ),
+        ),
+        WebModeKey(onTap: onWeb),
+        const SizedBox(width: 8),
+        NewChatButton(onTap: onNewChat),
+      ],
+    ),
+  );
+}
+
+/// The same glass, corner radius and safe-area treatment for both protocols.
+class SessionDrawerSurface extends StatelessWidget {
+  const SessionDrawerSurface({super.key, required this.child});
+  final Widget child;
+
+  static const radius = BorderRadius.only(
+    topRight: Radius.circular(AppShape.xl),
+    bottomRight: Radius.circular(AppShape.xl),
+  );
+
+  @override
+  Widget build(BuildContext context) => GlassSurface(
+    tier: GlassTier.sheet,
+    borderRadius: radius,
+    child: Material(
+      type: MaterialType.transparency,
+      child: SafeArea(right: false, child: child),
+    ),
+  );
 }
 
 /// "新对话": the drawer's one solid primary element, a 36dp pill.

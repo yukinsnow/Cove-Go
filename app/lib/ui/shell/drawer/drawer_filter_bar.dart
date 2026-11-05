@@ -23,7 +23,6 @@ class DrawerFilterBar extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final l10n = context.l10n;
     final filter = ref.watch(drawerFilterProvider);
     final scope = ref.watch(drawerScopeProvider);
     if (scope == null || (scope.sessions.isEmpty && filter == DrawerFilter.all)) {
@@ -38,9 +37,32 @@ class DrawerFilterBar extends ConsumerWidget {
       DrawerFilter.unread when unread > 0 => '${f.label} $unread',
       _ => f.label,
     };
+    return SessionFilterRow(
+      selected: filter,
+      label: label,
+      onSelected: (f) => ref.read(drawerFilterProvider.notifier).set(f),
+    );
+  }
+}
+
+/// Protocol-independent capsule layout. Counts and filtering stay with the
+/// owning protocol, rather than reading another server's conversation state.
+class SessionFilterRow extends StatelessWidget {
+  const SessionFilterRow({
+    super.key,
+    required this.selected,
+    required this.label,
+    required this.onSelected,
+    this.enabled,
+  });
+  final bool Function(DrawerFilter)? enabled;
+  final DrawerFilter selected;
+  final String Function(DrawerFilter) label;
+  final ValueChanged<DrawerFilter> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    // On the drawer's glass the chips' opaque canvas would hide their faint
-    // fill (the capsule clears it only in dark mode).
     return Theme(
       data: theme.copyWith(canvasColor: Colors.transparent),
       child: SingleChildScrollView(
@@ -49,17 +71,20 @@ class DrawerFilterBar extends ConsumerWidget {
         child: Row(
           children: [
             for (final (i, f) in DrawerFilter.values.indexed) ...[
-              if (i > 0) const SizedBox(width: gap),
-              Semantics(
-                label: l10n.shellFilterLabel(label(f)),
-                selected: f == filter,
-                excludeSemantics: true,
-                button: true,
-                onTap: () => ref.read(drawerFilterProvider.notifier).set(f),
-                child: CapsuleChoiceChip(
-                  label: label(f),
-                  selected: f == filter,
-                  onSelected: () => ref.read(drawerFilterProvider.notifier).set(f),
+              if (i > 0) const SizedBox(width: DrawerFilterBar.gap),
+              Opacity(
+                opacity: enabled?.call(f) == false ? 0.38 : 1,
+                child: IgnorePointer(
+                  ignoring: enabled?.call(f) == false,
+                  child: Semantics(
+                    enabled: enabled?.call(f) ?? true,
+                    label: context.l10n.shellFilterLabel(label(f)),
+                    selected: f == selected,
+                    excludeSemantics: true,
+                    button: true,
+                    onTap: () => onSelected(f),
+                    child: CapsuleChoiceChip(label: label(f), selected: f == selected, onSelected: () => onSelected(f)),
+                  ),
                 ),
               ),
             ],

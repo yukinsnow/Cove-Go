@@ -40,12 +40,23 @@ PY
 swift "$ROOT/tooling/openclaw_icon.swift" "$PWD/ios/Runner/Assets.xcassets/AppIcon.appiconset"
 flutter pub get
 python3 tool/l10n_merge.py
-flutter build ios --release --no-codesign --target lib/main_openclaw.dart --dart-define=REMOTE_DUAL_APP=true --build-name 0.1.4 --build-number 5 --dart-define=DSH_APP_VERSION=0.1.4+5
+flutter build ios --release --no-codesign --target lib/main_openclaw.dart --dart-define=REMOTE_DUAL_APP=true --build-name 0.1.5 --build-number 6 --dart-define=DSH_APP_VERSION=0.1.5+6 --dart-define=APP_SOURCE_REVISION="$(git rev-parse --short=12 HEAD) / ${GITHUB_RUN_ID:-local}"
 # Fresh temporary payload; never deletes an existing checkout path.
 OUT="$ROOT/build/openclaw"
 mkdir -p "$OUT"
 STAGE="$(mktemp -d)"
 mkdir -p "$STAGE/Payload"
 cp -R build/ios/iphoneos/Runner.app "$STAGE/Payload/"
-(cd "$STAGE" && zip -qry "$OUT/OpenClaw-Go-unsigned.ipa" Payload)
-printf 'Unsigned IPA: %s\n' "$OUT/OpenClaw-Go-unsigned.ipa"
+IPA="OpenClaw-Go-0.1.5-build6-$(git rev-parse --short=12 HEAD)-unsigned.ipa"
+(cd "$STAGE" && zip -qry "$OUT/$IPA" Payload)
+python3 - "$OUT/$IPA" <<'PYVERIFY'
+import hashlib,json,sys,zipfile,plistlib
+from pathlib import Path
+p=Path(sys.argv[1])
+with zipfile.ZipFile(p) as z:
+    assert z.testzip() is None
+    info=plistlib.loads(z.read('Payload/Runner.app/Info.plist'))
+    assert (info['CFBundleShortVersionString'], info['CFBundleVersion']) == ('0.1.5','6')
+Path(str(p)+'.sha256').write_text(hashlib.sha256(p.read_bytes()).hexdigest()+'  '+p.name+'\n')
+PYVERIFY
+printf 'Unsigned IPA: %s\n' "$OUT/$IPA"

@@ -6,6 +6,7 @@ import '../l10n/l10n.dart';
 /// constant kept in sync with `pubspec.yaml` (`version: 1.0.2+1`). Release builds can
 /// override it: `flutter build apk --dart-define=DSH_APP_VERSION=1.2.0+7`.
 abstract final class AppInfo {
+  static const sourceRevision = String.fromEnvironment('APP_SOURCE_REVISION', defaultValue: 'development');
   static const version = String.fromEnvironment('DSH_APP_VERSION', defaultValue: '1.0.2+1');
 
   /// "1.0.0 (1)" for display.

@@ -6,7 +6,8 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:openclaw_client/openclaw_client.dart';
 
 class ClawController extends ChangeNotifier {
-  final client = GatewayClient();
+  ClawController({GatewayClient? client}) : client = client ?? GatewayClient();
+  final GatewayClient client;
   final storage = const FlutterSecureStorage();
   StreamSubscription<Map<String, dynamic>>? _events;
   String address = '', token = '', error = '', sessionKey = '';
