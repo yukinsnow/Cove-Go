@@ -17,6 +17,9 @@ class ClawController extends ChangeNotifier {
   final Map<String, String> live = {};
   int _selection = 0, _historyRequest = 0;
   String? _submissionFingerprint, _submissionId;
+
+  /// Changes even when reopening the same conversation; viewports must reset.
+  int get selectionRevision => _selection;
   bool get connected => client.connected;
   void changed() {
     if (!disposed) notifyListeners();

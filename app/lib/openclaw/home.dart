@@ -44,7 +44,7 @@ class ClawHome extends StatefulWidget {
 class ClawHomeState extends State<ClawHome> with WidgetsBindingObserver {
   late final c = widget.controller ?? ClawController();
   final scaffoldKey = GlobalKey<ScaffoldState>();
-  final input = TextEditingController(), scroll = ScrollController();
+  final input = TextEditingController(), scroll = ScrollController(keepScrollOffset: false);
   final attachments = <Map<String, dynamic>>[];
   String queue = 'followup';
   DrawerFilter filter = DrawerFilter.all;
@@ -652,6 +652,11 @@ class ClawHomeState extends State<ClawHome> with WidgetsBindingObserver {
                         : RefreshIndicator(
                             onRefresh: () => c.guard(c.history),
                             child: ListView(
+                              key: ValueKey(('gateway-messages', c.sessionKey, c.selectionRevision)),
+                              // Zero is the newest message. A new conversation gets
+                              // a fresh viewport; streaming does not pull a reader
+                              // away from older messages they scrolled up to read.
+                              reverse: true,
                               controller: scroll,
                               keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
                               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
@@ -685,7 +690,7 @@ class ClawHomeState extends State<ClawHome> with WidgetsBindingObserver {
                                     ),
                                   ),
                                 for (final text in c.live.values) bubble({'role': 'assistant', 'content': text}),
-                              ],
+                              ].reversed.toList(),
                             ),
                           ),
                   ),

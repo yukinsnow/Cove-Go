@@ -72,6 +72,21 @@ void _expectTop(WidgetTester tester, String scenario, {bool short = false}) {
 }
 
 void main() {
+  testWidgets('a cold long conversation and delayed history open at the newest message', (tester) async {
+    final chat = await _open(tester, const ChatState(loading: true));
+    chat.emit(ChatState(loading: false, items: _history(80)));
+    await pumpFrames(tester, 20);
+    _expectBottom(tester);
+    expect(_position(tester).maxScrollExtent, greaterThan(_position(tester).minScrollExtent));
+    // Scroll up to read, then reopen with a fresh conversation viewport.
+    _position(tester).jumpTo(_position(tester).minScrollExtent);
+    await pumpFrames(tester, 10);
+    await tester.pumpWidget(const SizedBox.shrink());
+    await pumpFrames(tester, 2);
+    await _open(tester, ChatState(loading: false, items: _history(80)));
+    _expectBottom(tester);
+  });
+
   testWidgets('new short chat starts at the top and cannot be pulled into a gap', (tester) async {
     final chat = await _open(tester, const ChatState(loading: false));
     chat.emit(ChatState(loading: false, items: [_user(1, 'First prompt'), _reply(2, 'Short reply')]));

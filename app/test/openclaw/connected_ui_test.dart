@@ -66,7 +66,7 @@ void main() {
             'models.list' => {'models': <dynamic>[]},
             'chat.history' => {
               'messages': [
-                {'role': 'assistant', 'content': 'Connected fixture response'},
+                for (var i = 0; i < 80; i++) {'role': 'user', 'content': 'History message $i'},
               ],
             },
             _ => <String, dynamic>{},
@@ -129,6 +129,20 @@ void main() {
       expect(controller.error, isEmpty);
       await tester.runAsync(() => controller.select('alpha'));
       await settle();
+      expect(state.scroll.position.pixels, closeTo(0, 0.5));
+      expect(state.scroll.position.maxScrollExtent, greaterThan(500));
+      expect(find.text('History message 79').hitTestable(), findsOneWidget);
+      state.scroll.jumpTo(500);
+      await settle();
+      controller.changed();
+      await settle();
+      expect(state.scroll.position.pixels, closeTo(500, 0.5), reason: 'reading older messages must not force a jump');
+      for (final key in ['beta', 'alpha', 'alpha']) {
+        await tester.runAsync(() => controller.select(key));
+        await settle();
+        expect(state.scroll.position.pixels, closeTo(0, 0.5), reason: 'entering $key always starts at newest');
+        expect(find.text('History message 79').hitTestable(), findsOneWidget);
+      }
       expect(find.byType(ChatHeader), findsOneWidget);
       expect(tester.widget<ChatHeader>(find.byType(ChatHeader)).useDshState, isFalse);
       await checkDrawer();

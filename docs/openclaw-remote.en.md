@@ -25,6 +25,7 @@ Remote URLs must use WSS. Approve a new device on the Gateway, then reconnect.
 Credentials and device seed stay in local secure storage, never in Git or build arguments.
 The client does not relax Gateway security or tunnel Gateway through DSH Remote.
 DSH reconnects expose an immediate retry and expandable errors. The iOS archive includes a local-network usage description; allow access to your computer when prompted.
+Opening, switching or reopening an OpenClaw conversation starts at the newest message; UI refreshes do not force readers back down while browsing older messages.
 Both connections may stay open, but iOS background execution is not guaranteed.
 
 ## Run and build
@@ -37,7 +38,7 @@ flutter run --target lib/main_openclaw.dart --dart-define=REMOTE_DUAL_APP=true
 ```
 
 On macOS with Xcode and Flutter 3.47.9, run `bash tooling/build-openclaw-ipa.sh`.
-The output is `build/openclaw/OpenClaw-Go-0.1.6-build7-<revision>-unsigned.ipa` for your own signing process.
+The output is `build/openclaw/OpenClaw-Go-0.1.7-build8-<revision>-unsigned.ipa` for your own signing process.
 The GitHub workflow uploads an artifact, not a public release. Linux cannot build
 with Xcode or prove iPhone functionality.
 
