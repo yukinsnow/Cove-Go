@@ -8981,6 +8981,11 @@ class L10nEn extends L10n {
   String get ocHostLoadFailed => 'Could not load saved OpenClaw hosts. Please reopen the app.';
 
   @override
+  String ocRemoveGatewayFailedCode(String code) {
+    return 'Could not delete the connection. Please try again. Error code: $code';
+  }
+
+  @override
   String get performanceTitle => 'Performance';
 
   @override

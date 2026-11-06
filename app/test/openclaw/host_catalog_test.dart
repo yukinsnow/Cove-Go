@@ -1,4 +1,7 @@
 import 'dart:convert';
+import 'dart:async';
+
+import 'package:flutter/services.dart';
 
 import 'package:dsh_app/openclaw/controller.dart';
 import 'package:dsh_app/openclaw/host_catalog.dart';
@@ -49,6 +52,77 @@ class MemoryStorage extends FlutterSecureStorage {
     WindowsOptions? wOptions,
   }) async {
     values.remove(key);
+  }
+}
+
+class StrictDeleteStorage extends MemoryStorage {
+  @override
+  Future<void> delete({
+    required String key,
+    AppleOptions? iOptions,
+    AndroidOptions? aOptions,
+    LinuxOptions? lOptions,
+    WebOptions? webOptions,
+    AppleOptions? mOptions,
+    WindowsOptions? wOptions,
+  }) async {
+    if (!values.containsKey(key)) throw PlatformException(code: 'Unexpected security result code', details: -25300);
+    await super.delete(key: key);
+  }
+}
+
+class FailingDeleteStorage extends MemoryStorage {
+  String? failingKey;
+  @override
+  Future<void> delete({
+    required String key,
+    AppleOptions? iOptions,
+    AndroidOptions? aOptions,
+    LinuxOptions? lOptions,
+    WebOptions? webOptions,
+    AppleOptions? mOptions,
+    WindowsOptions? wOptions,
+  }) async {
+    if (key == failingKey) throw PlatformException(code: 'native', message: 'test-secret', details: -34018);
+    await super.delete(key: key);
+  }
+}
+
+class SlowWriteStorage extends MemoryStorage {
+  final started = Completer<void>(), release = Completer<void>();
+  @override
+  Future<void> write({
+    required String key,
+    required String? value,
+    AppleOptions? iOptions,
+    AndroidOptions? aOptions,
+    LinuxOptions? lOptions,
+    WebOptions? webOptions,
+    AppleOptions? mOptions,
+    WindowsOptions? wOptions,
+  }) async {
+    if (key.endsWith('.token')) {
+      started.complete();
+      await release.future;
+    }
+    await super.write(key: key, value: value);
+  }
+}
+
+class ConnectingGateway extends MockGateway {
+  final started = Completer<void>(), released = Completer<void>();
+  @override
+  Future<Map<String, dynamic>> connect(String address, String token, DeviceIdentity identity) async {
+    started.complete();
+    await released.future;
+    connected = true;
+    return {};
+  }
+
+  @override
+  Future<void> disconnect() async {
+    connected = false;
+    if (started.isCompleted && !released.isCompleted) released.complete();
   }
 }
 
@@ -105,6 +179,80 @@ class NoSnapshots extends OfflineSnapshotStore {
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+
+  test('direct host deletion skips absent optional keychain entries and remains retryable', () async {
+    final storage = StrictDeleteStorage();
+    final c = ClawController(profileId: 'direct', storage: storage, client: MockGateway(), snapshots: NoSnapshots());
+    addTearDown(c.dispose);
+    await c.connect('wss://direct.example', 'test-secret');
+    expect(storage.values.containsKey('claw.host.direct.sshId'), false);
+    await c.removeHost();
+    expect(c.address, isEmpty);
+    expect(storage.values.keys.where((k) => k.startsWith('claw.host.direct.')), isEmpty);
+    await c.removeHost();
+  });
+
+  test('deletion during connecting cancels the attempt without restoring credentials', () async {
+    final storage = MemoryStorage();
+    final client = ConnectingGateway();
+    final c = ClawController(profileId: 'pending', storage: storage, client: client, snapshots: NoSnapshots());
+    addTearDown(c.dispose);
+    final connecting = c.connect('wss://pending.example', 'test-secret');
+    await client.started.future;
+    expect(c.busy, true);
+    final deleting = c.removeHost();
+    // Release even on old implementations so this reproduction cannot hang.
+    if (!client.released.isCompleted) client.released.complete();
+    await deleting;
+    await connecting;
+    expect(c.address, isEmpty);
+    expect(c.connected, false);
+    expect(storage.values.keys.where((k) => k.startsWith('claw.host.pending.')), isEmpty);
+  });
+
+  test('genuine keychain errors retain catalog entry, redact details and allow deletion retry', () async {
+    final storage = FailingDeleteStorage();
+    final catalog = GatewayHostCatalog(
+      storage: storage,
+      createController: (id) =>
+          ClawController(profileId: id, storage: storage, client: MockGateway(), snapshots: NoSnapshots()),
+    );
+    await catalog.load();
+    final c = catalog.controllers['legacy']!;
+    await c.connect('wss://test.example', 'test-secret');
+    storage.failingKey = 'claw.host.legacy.token';
+    await expectLater(
+      catalog.remove('legacy'),
+      throwsA(isA<HostRemovalException>().having((e) => '$e', 'safe diagnostic', 'storage/-34018')),
+    );
+    expect(catalog.controllers['legacy'], same(c));
+    expect(storage.values['claw.host.legacy.token'], 'test-secret');
+    storage.failingKey = null;
+    await catalog.remove('legacy');
+    expect(catalog.controllers['legacy'], isNot(same(c)));
+    expect(catalog.controllers['legacy']!.address, isEmpty);
+    expect(storage.values.containsKey('claw.host.legacy.token'), false);
+    catalog.dispose();
+  });
+
+  test('removal waits for pending credential write and blocks reconnect from listeners', () async {
+    final storage = SlowWriteStorage();
+    final client = MockGateway();
+    final c = ClawController(profileId: 'writing', storage: storage, client: client, snapshots: NoSnapshots());
+    final connecting = c.connect('wss://test.example', 'test-secret');
+    await storage.started.future;
+    c.addListener(() {
+      if (!c.busy && c.address.isNotEmpty) c.connect('wss://test.example', 'test-secret');
+    });
+    final deleting = c.removeHost();
+    storage.release.complete();
+    await deleting;
+    await connecting;
+    expect(c.address, isEmpty);
+    expect(c.connected, false);
+    expect(storage.values, isEmpty);
+    c.dispose();
+  });
 
   test('migrates legacy credential SSH and paired identity once into secure catalog', () async {
     final storage = MemoryStorage({

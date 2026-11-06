@@ -8523,6 +8523,11 @@ class L10nZh extends L10n {
   String get ocHostLoadFailed => '无法读取已保存的 OpenClaw 主机，请重新打开应用。';
 
   @override
+  String ocRemoveGatewayFailedCode(String code) {
+    return '未能删除连接，请重试。错误代码：$code';
+  }
+
+  @override
   String get performanceTitle => '性能';
 
   @override

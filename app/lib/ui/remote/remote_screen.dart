@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../l10n/l10n.dart';
+import '../../openclaw/controller.dart' show HostRemovalException;
 import '../../remote/relay/relay_backend.dart';
 import '../../runtime/local_footprint.dart';
 import '../../runtime/runtime_state.dart';
@@ -823,9 +824,10 @@ class _GatewayRowsState extends State<_GatewayRows> {
             if (entry.onRemove == null || !await _confirmHostDelete(context, entry.name(), gateway: true)) return;
             try {
               await entry.onRemove!();
-            } catch (_) {
+            } catch (e) {
               if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l.ocRemoveGatewayFailed)));
+                final message = e is HostRemovalException ? l.ocRemoveGatewayFailedCode('$e') : l.ocRemoveGatewayFailed;
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
               }
             }
           },

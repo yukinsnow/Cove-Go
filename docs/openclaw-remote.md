@@ -46,7 +46,7 @@ macOS + Xcode + Flutter 3.47.9：
 bash tooling/build-openclaw-ipa.sh
 ```
 
-输出 `build/openclaw/OpenClaw-Go-0.1.12-build13-<提交号>-unsigned.ipa`，需要自己的签名/安装流程。
+输出 `build/openclaw/OpenClaw-Go-0.1.13-build14-<提交号>-unsigned.ipa`，需要自己的签名/安装流程。
 仓库的 `Build OpenClaw Go iOS` workflow 仅上传构建 Artifact，不创建 Release。
 Linux 上不能运行 Xcode 或证明 iPhone 实机可用。
 

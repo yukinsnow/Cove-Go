@@ -145,6 +145,33 @@ void main() {
     },
   );
 
+  testWidgets('deleting the active last Gateway leaves add actions and a fresh empty controller', (tester) async {
+    await pump(tester);
+    await tester.runAsync(() => catalog.remove('two'));
+    await tester.pumpAndSettle();
+    final previous = catalog.controllers['one']!;
+    tester.state<ClawHomeState>(find.byType(ClawHome)).manageHosts();
+    await tester.pumpAndSettle();
+    final row = find.byKey(const ValueKey('remote-gateway-host-one'));
+    await tester.longPress(row);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('删除').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('删除').last);
+    await tester.pumpAndSettle();
+    expect(catalog.controllers.keys, ['legacy']);
+    expect(previous.disposed, true);
+    expect(catalog.controllers['legacy']!.address, isEmpty);
+    expect(find.byKey(const ValueKey('remote-gateway-host-one')), findsNothing);
+    expect(find.byKey(const ValueKey('add-gateway-host')), findsOneWidget);
+    expect(find.byKey(const ValueKey('add-gateway-ssh-host')), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    Navigator.of(tester.element(find.byType(RemoteScreen))).pop();
+    await tester.pumpAndSettle();
+    expect(tester.state<ClawHomeState>(find.byType(ClawHome)).c, same(catalog.controllers['legacy']));
+    await tester.pumpWidget(const SizedBox());
+  });
+
   testWidgets('direct add opens empty Gateway form and cancellation preserves existing hosts', (tester) async {
     await pump(tester);
     tester.state<ClawHomeState>(find.byType(ClawHome)).manageHosts();

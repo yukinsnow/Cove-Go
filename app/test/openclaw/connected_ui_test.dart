@@ -163,7 +163,12 @@ void main() {
       state.closeSidebar();
       await settle();
     }
-    await tester.runAsync(() => controller.client.disconnect());
+    await tester.runAsync(controller.removeHost);
+    expect(controller.address, isEmpty);
+    expect(controller.token, isEmpty);
+    expect(controller.connected, false);
+    await settle();
+    expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox.shrink());
     await settle();
     await tester.runAsync(() async {

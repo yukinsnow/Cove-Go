@@ -2,11 +2,21 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:openclaw_client/openclaw_client.dart';
 
 import '../state/offline_snapshot.dart';
 import 'image_blocks.dart';
+
+/// Safe diagnostic: never includes an address, keychain value or server text.
+class HostRemovalException implements Exception {
+  HostRemovalException(this.stage, Object cause)
+    : code = cause is PlatformException && cause.details is int ? '${cause.details}' : 'failed';
+  final String stage, code;
+  @override
+  String toString() => '$stage/$code';
+}
 
 class ClawController extends ChangeNotifier {
   ClawController({
@@ -195,85 +205,124 @@ class ClawController extends ChangeNotifier {
     changed();
   }
 
+  Completer<void>? _connecting;
+  Future<void>? _removal;
+  bool _removing = false;
+
   Future<void> connect(String url, String secret) async {
-    if (busy || disposed) return;
-    ++_connectionRevision;
-    await guard(() async {
-      busy = true;
-      changed();
-      try {
-        await _events?.cancel();
-        _events = client.events.listen(_onEvent);
-        final uri = Uri.tryParse(url.trim());
-        if (uri == null ||
-            !['ws', 'wss'].contains(uri.scheme) ||
-            uri.host.isEmpty ||
-            uri.userInfo.isNotEmpty ||
-            uri.hasQuery ||
-            uri.hasFragment ||
-            (sshId == null && uri.scheme == 'ws' && !['localhost', '127.0.0.1', '::1'].contains(uri.host)) ||
-            (sshId != null && uri.scheme != 'ws')) {
-          throw const FormatException('Use a secure Gateway URL without credentials or query parameters');
-        }
-        final identity = await DeviceIdentity.create(await storage.read(key: _key('identity')));
-        await storage.write(key: _key('identity'), value: await identity.exportSeed());
-        final changedHost = address != url.trim() || token != secret.trim() || _sessionSshId != sshId;
-        _sessionSshId = sshId;
-        address = url.trim();
-        token = secret.trim();
-        if (changedHost) {
-          ++_selection;
-          sessionKey = '';
-          sessions = [];
-          messages = [];
-          _histories.clear();
-          _outgoing.clear();
-          live.clear();
-          tools.clear();
-          models = [];
-          _submissionFingerprint = null;
-          _submissionId = null;
-          readingCache = false;
-          await _restore();
+    if (busy || disposed || _removing) return;
+    final done = Completer<void>();
+    _connecting = done;
+    final revision = ++_connectionRevision;
+    bool current() => !disposed && !_removing && revision == _connectionRevision;
+    try {
+      await guard(() async {
+        busy = true;
+        changed();
+        try {
+          await _events?.cancel();
+          _events = client.events.listen(_onEvent);
+          final uri = Uri.tryParse(url.trim());
+          if (uri == null ||
+              !['ws', 'wss'].contains(uri.scheme) ||
+              uri.host.isEmpty ||
+              uri.userInfo.isNotEmpty ||
+              uri.hasQuery ||
+              uri.hasFragment ||
+              (sshId == null && uri.scheme == 'ws' && !['localhost', '127.0.0.1', '::1'].contains(uri.host)) ||
+              (sshId != null && uri.scheme != 'ws')) {
+            throw const FormatException('Use a secure Gateway URL without credentials or query parameters');
+          }
+          if (!current()) return;
+          final identity = await DeviceIdentity.create(await storage.read(key: _key('identity')));
+          if (!current()) return;
+          await storage.write(key: _key('identity'), value: await identity.exportSeed());
+          if (!current()) return;
+          final changedHost = address != url.trim() || token != secret.trim() || _sessionSshId != sshId;
+          _sessionSshId = sshId;
+          address = url.trim();
+          token = secret.trim();
+          if (changedHost) {
+            ++_selection;
+            sessionKey = '';
+            sessions = [];
+            messages = [];
+            _histories.clear();
+            _outgoing.clear();
+            live.clear();
+            tools.clear();
+            models = [];
+            _submissionFingerprint = null;
+            _submissionId = null;
+            readingCache = false;
+            await _restore();
+            changed();
+          }
+          if (!current()) return;
+          await storage.write(key: _key('sshId'), value: sshId);
+          await storage.write(key: _key('address'), value: address);
+          await storage.write(key: _key('token'), value: token);
+          if (!current()) return;
+          await onConfigured?.call();
+          if (!current()) return;
+          await client.disconnect();
+          if (!current()) return;
+          transportAddress = null;
+          transportAddress = await resolveAddress?.call(address, sshId) ?? address;
+          if (!current()) {
+            await closeTransport?.call();
+            return;
+          }
+          await client.connect(transportAddress!, token, identity);
+          if (!current()) return;
+          await client.request('sessions.subscribe');
+          if (!current()) return;
+          await refreshSessions();
+          if (!current()) return;
+          if (sessionKey.isNotEmpty) await select(sessionKey);
+          if (!current()) return;
+          final catalog = await client.request('models.list') as Map;
+          if (!current()) return;
+          models = (catalog['models'] as List? ?? []).map((e) => Map<String, dynamic>.from(e as Map)).toList();
+        } finally {
+          busy = false;
           changed();
         }
-        await storage.write(key: _key('sshId'), value: sshId);
-        await storage.write(key: _key('address'), value: address);
-        await storage.write(key: _key('token'), value: token);
-        await onConfigured?.call();
-        await client.disconnect();
-        transportAddress = null;
-        transportAddress = await resolveAddress?.call(address, sshId) ?? address;
-        if (disposed) {
-          await closeTransport?.call();
-          return;
-        }
-        await client.connect(transportAddress!, token, identity);
-        await client.request('sessions.subscribe');
-        await refreshSessions();
-        if (sessionKey.isNotEmpty) await select(sessionKey);
-        final catalog = await client.request('models.list') as Map;
-        models = (catalog['models'] as List? ?? []).map((e) => Map<String, dynamic>.from(e as Map)).toList();
-      } finally {
-        busy = false;
-        changed();
-      }
-    });
+      });
+    } finally {
+      if (identical(_connecting, done)) _connecting = null;
+      done.complete();
+    }
   }
 
-  Future<void> removeHost() async {
-    if (busy || disposed) throw StateError('Connection is busy');
+  Future<void> removeHost() => _removal ??= _removeHost().whenComplete(() => _removal = null);
+
+  Future<void> _removeHost() async {
+    if (disposed) throw StateError('Controller disposed');
+    _removing = true;
     ++_connectionRevision;
     busy = true;
     changed();
+    var stage = 'disconnect';
     try {
-      await storage.delete(key: _key('sshId'));
+      // Cancel transport work, then wait for any in-flight keychain writes.
+      // Never let a late connect recreate credentials after their deletion.
+      final connecting = _connecting;
+      await client.disconnect();
+      await closeTransport?.call();
+      await connecting?.future;
+      busy = true;
+      stage = 'storage';
+      for (final field in ['sshId', 'address', 'token', 'identity']) {
+        final key = _key(field);
+        // Direct profiles have no SSH item. Some Apple keychain queries for
+        // an absent sync item can fail even though normal reads work.
+        if (await storage.read(key: key) != null) await storage.delete(key: key);
+      }
+      stage = 'disconnect';
       sshId = null;
       transportAddress = null;
       await closeTransport?.call();
-      await storage.delete(key: _key('address'));
-      await storage.delete(key: _key('token'));
-      await storage.delete(key: _key('identity'));
       await _events?.cancel();
       _events = null;
       await client.disconnect();
@@ -288,7 +337,10 @@ class ClawController extends ChangeNotifier {
       tools.clear();
       _submissionFingerprint = _submissionId = null;
       readingCache = false;
+    } catch (e) {
+      throw HostRemovalException(stage, e);
     } finally {
+      _removing = false;
       busy = false;
       changed();
     }

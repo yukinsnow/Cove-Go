@@ -15668,6 +15668,12 @@ abstract class L10n {
   /// **'无法读取已保存的 OpenClaw 主机，请重新打开应用。'**
   String get ocHostLoadFailed;
 
+  /// No description provided for @ocRemoveGatewayFailedCode.
+  ///
+  /// In zh, this message translates to:
+  /// **'未能删除连接，请重试。错误代码：{code}'**
+  String ocRemoveGatewayFailedCode(String code);
+
   /// No description provided for @performanceTitle.
   ///
   /// In zh, this message translates to:

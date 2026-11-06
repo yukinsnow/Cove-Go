@@ -52,5 +52,13 @@
   "ocLobsterMascot": "OpenClaw 小龙虾",
   "ocMascotHint": "显示在原生对话输入栏上方，点击跳一下",
   "ocAddGatewaySsh": "通过 SSH 添加 OpenClaw 主机",
-  "ocHostLoadFailed": "无法读取已保存的 OpenClaw 主机，请重新打开应用。"
+  "ocHostLoadFailed": "无法读取已保存的 OpenClaw 主机，请重新打开应用。",
+  "ocRemoveGatewayFailedCode": "未能删除连接，请重试。错误代码：{code}",
+  "@ocRemoveGatewayFailedCode": {
+    "placeholders": {
+      "code": {
+        "type": "String"
+      }
+    }
+  }
 }
