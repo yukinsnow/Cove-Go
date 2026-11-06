@@ -44,5 +44,11 @@
   "ocGatewayConsole": "OpenClaw Gateway 网页控制台",
   "ocSshGatewayHelp": "Gateway 地址填写 SSH 主机可访问的 ws:// 地址，例如 ws://127.0.0.1:18789。SSH 隧道已加密，无需启动 DSH。",
   "ocSshMissing": "SSH 配置已删除，请编辑 OpenClaw 连接。",
-  "ocSshTestFailed": "SSH 连接失败，请检查地址、凭据与主机指纹。"
+  "ocSshTestFailed": "SSH 连接失败，请检查地址、凭据与主机指纹。",
+  "ocAppearanceMode": "显示模式",
+  "ocDayMode": "日间",
+  "ocNightMode": "夜间",
+  "ocWhaleMascot": "DSH 小鲸鱼",
+  "ocLobsterMascot": "OpenClaw 小龙虾",
+  "ocMascotHint": "显示在原生对话输入栏上方，点击跳一下"
 }

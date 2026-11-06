@@ -17,6 +17,9 @@ import '../ui/shell/drawer/session_tile.dart';
 import '../ui/shell/page_frame.dart';
 import '../ui/common/status_dot.dart';
 import 'controller.dart';
+import 'appearance_settings.dart';
+import 'mascot_settings.dart';
+import 'mascot_stage.dart';
 import 'tool_activity.dart';
 import 'images.dart';
 import 'ssh_tunnel.dart';
@@ -431,6 +434,7 @@ class ClawHomeState extends State<ClawHome> with WidgetsBindingObserver {
                     ),
                   ],
                 ),
+              const RemoteAppearanceSettings(),
               SettingsSection(
                 title: l.commonSettings,
                 children: [
@@ -784,153 +788,158 @@ class ClawHomeState extends State<ClawHome> with WidgetsBindingObserver {
                 child: SessionDrawerSurface(child: sessionList()),
               ),
             Expanded(
-              child: Column(
-                children: [
-                  if (c.busy && c.messages.isEmpty) const LinearProgressIndicator(),
-                  if (c.readingCache)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                      child: Text(l.ocCachedHistory, style: Theme.of(context).textTheme.bodySmall),
-                    ),
-                  if (c.error.isNotEmpty)
-                    MaterialBanner(
-                      content: SelectableText(c.error),
-                      actions: [TextButton(onPressed: () => c.connect(c.address, c.token), child: Text(l.ocReconnect))],
-                    ),
-                  Expanded(
-                    child: c.sessionKey.isEmpty && c.visibleMessages.isEmpty
-                        ? Center(
-                            child: SingleChildScrollView(
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
+              child: RemoteMascotStage(
+                pet: RemoteMascot.lobster,
+                child: Column(
+                  children: [
+                    if (c.busy && c.messages.isEmpty) const LinearProgressIndicator(),
+                    if (c.readingCache)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                        child: Text(l.ocCachedHistory, style: Theme.of(context).textTheme.bodySmall),
+                      ),
+                    if (c.error.isNotEmpty)
+                      MaterialBanner(
+                        content: SelectableText(c.error),
+                        actions: [
+                          TextButton(onPressed: () => c.connect(c.address, c.token), child: Text(l.ocReconnect)),
+                        ],
+                      ),
+                    Expanded(
+                      child: c.sessionKey.isEmpty && c.visibleMessages.isEmpty
+                          ? Center(
+                              child: SingleChildScrollView(
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.hub_outlined, size: 56, color: Theme.of(context).colorScheme.primary),
+                                    const SizedBox(height: 20),
+                                    Text(l.ocWelcome, style: Theme.of(context).textTheme.headlineSmall),
+                                    const SizedBox(height: 8),
+                                    Text(l.ocWelcomeHint),
+                                    const SizedBox(height: 24),
+                                    FilledButton(
+                                      onPressed: c.busy
+                                          ? null
+                                          : c.connected
+                                          ? () => c.guard(c.newSession)
+                                          : settings,
+                                      child: Text(c.connected ? l.ocNew : l.ocConnect),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            )
+                          : RefreshIndicator(
+                              onRefresh: () => c.guard(c.history),
+                              child: ListView(
+                                key: ValueKey(('gateway-messages', c.sessionKey, c.selectionRevision)),
+                                // Zero is the newest message. A new conversation gets
+                                // a fresh viewport; streaming does not pull a reader
+                                // away from older messages they scrolled up to read.
+                                reverse: true,
+                                controller: scroll,
+                                keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+                                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                                 children: [
-                                  Icon(Icons.hub_outlined, size: 56, color: Theme.of(context).colorScheme.primary),
-                                  const SizedBox(height: 20),
-                                  Text(l.ocWelcome, style: Theme.of(context).textTheme.headlineSmall),
-                                  const SizedBox(height: 8),
-                                  Text(l.ocWelcomeHint),
-                                  const SizedBox(height: 24),
-                                  FilledButton(
-                                    onPressed: c.busy
-                                        ? null
-                                        : c.connected
-                                        ? () => c.guard(c.newSession)
-                                        : settings,
-                                    child: Text(c.connected ? l.ocNew : l.ocConnect),
-                                  ),
-                                ],
+                                  ...messageRows(),
+                                  if (c.tools.isNotEmpty)
+                                    GatewayToolActivity(
+                                      entries: [
+                                        for (final tool in c.tools.values)
+                                          GatewayToolEntry(
+                                            name: '${tool['name'] ?? l.ocTools}',
+                                            details: c.toolText(tool),
+                                          ),
+                                      ],
+                                    ),
+                                  for (final text in c.live.values) bubble({'role': 'assistant', 'content': text}),
+                                ].reversed.toList(),
                               ),
                             ),
-                          )
-                        : RefreshIndicator(
-                            onRefresh: () => c.guard(c.history),
-                            child: ListView(
-                              key: ValueKey(('gateway-messages', c.sessionKey, c.selectionRevision)),
-                              // Zero is the newest message. A new conversation gets
-                              // a fresh viewport; streaming does not pull a reader
-                              // away from older messages they scrolled up to read.
-                              reverse: true,
-                              controller: scroll,
-                              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-                              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                              children: [
-                                ...messageRows(),
-                                if (c.tools.isNotEmpty)
-                                  GatewayToolActivity(
-                                    entries: [
-                                      for (final tool in c.tools.values)
-                                        GatewayToolEntry(
-                                          name: '${tool['name'] ?? l.ocTools}',
-                                          details: c.toolText(tool),
+                    ),
+                    SafeArea(
+                      top: false,
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+                        child: TextFieldTapRegion(
+                          onTapOutside: (_) => composerFocus.unfocus(),
+                          child: Composer(
+                            controller: input,
+                            focusNode: composerFocus,
+                            connected: c.connected,
+                            running: c.live.isNotEmpty,
+                            busy: c.sending,
+                            placeholder: l.ocHint,
+                            maxLines: Composer.linesFor(context),
+                            onSend: send,
+                            onStop: () => c.guard(c.abort),
+                            onSendOptions: sendOptions,
+                            accessory: IconButton(
+                              // Match the composer's 40dp text and send-key row.
+                              style: IconButton.styleFrom(
+                                minimumSize: const Size(40, 40),
+                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              ),
+                              tooltip: l.ocQueue,
+                              onPressed: sendOptions,
+                              icon: const Icon(AppIcons.queued, size: 20),
+                            ),
+                            hasAttachments: attachments.isNotEmpty,
+                            leading: IconButton(
+                              // Match the composer's 40dp text and send-key row.
+                              style: IconButton.styleFrom(
+                                minimumSize: const Size(40, 40),
+                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              ),
+                              tooltip: l.ocAttach,
+                              onPressed: c.connected ? attach : null,
+                              icon: const Icon(AppIcons.add),
+                            ),
+                            tray: attachments.isEmpty
+                                ? null
+                                : Wrap(
+                                    children: [
+                                      for (var i = 0; i < attachments.length; i++)
+                                        Stack(
+                                          children: [
+                                            Padding(
+                                              padding: const EdgeInsets.all(4),
+                                              child: GatewayImage(
+                                                block: {
+                                                  'type': 'image',
+                                                  'fileName': attachments[i]['fileName'],
+                                                  'data': attachments[i]['content'],
+                                                },
+                                                client: c.client,
+                                                sessionKey: c.sessionKey,
+                                                size: 72,
+                                              ),
+                                            ),
+                                            Positioned(
+                                              right: 0,
+                                              top: 0,
+                                              child: IconButton.filledTonal(
+                                                tooltip: l.ocRemove,
+                                                onPressed: () => setState(() => attachments.removeAt(i)),
+                                                icon: const Icon(AppIcons.close, size: 16),
+                                                style: IconButton.styleFrom(
+                                                  minimumSize: const Size(28, 28),
+                                                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                                  padding: EdgeInsets.zero,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
                                         ),
                                     ],
                                   ),
-                                for (final text in c.live.values) bubble({'role': 'assistant', 'content': text}),
-                              ].reversed.toList(),
-                            ),
                           ),
-                  ),
-                  SafeArea(
-                    top: false,
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
-                      child: TextFieldTapRegion(
-                        onTapOutside: (_) => composerFocus.unfocus(),
-                        child: Composer(
-                          controller: input,
-                          focusNode: composerFocus,
-                          connected: c.connected,
-                          running: c.live.isNotEmpty,
-                          busy: c.sending,
-                          placeholder: l.ocHint,
-                          maxLines: Composer.linesFor(context),
-                          onSend: send,
-                          onStop: () => c.guard(c.abort),
-                          onSendOptions: sendOptions,
-                          accessory: IconButton(
-                            // Match the composer's 40dp text and send-key row.
-                            style: IconButton.styleFrom(
-                              minimumSize: const Size(40, 40),
-                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                            ),
-                            tooltip: l.ocQueue,
-                            onPressed: sendOptions,
-                            icon: const Icon(AppIcons.queued, size: 20),
-                          ),
-                          hasAttachments: attachments.isNotEmpty,
-                          leading: IconButton(
-                            // Match the composer's 40dp text and send-key row.
-                            style: IconButton.styleFrom(
-                              minimumSize: const Size(40, 40),
-                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                            ),
-                            tooltip: l.ocAttach,
-                            onPressed: c.connected ? attach : null,
-                            icon: const Icon(AppIcons.add),
-                          ),
-                          tray: attachments.isEmpty
-                              ? null
-                              : Wrap(
-                                  children: [
-                                    for (var i = 0; i < attachments.length; i++)
-                                      Stack(
-                                        children: [
-                                          Padding(
-                                            padding: const EdgeInsets.all(4),
-                                            child: GatewayImage(
-                                              block: {
-                                                'type': 'image',
-                                                'fileName': attachments[i]['fileName'],
-                                                'data': attachments[i]['content'],
-                                              },
-                                              client: c.client,
-                                              sessionKey: c.sessionKey,
-                                              size: 72,
-                                            ),
-                                          ),
-                                          Positioned(
-                                            right: 0,
-                                            top: 0,
-                                            child: IconButton.filledTonal(
-                                              tooltip: l.ocRemove,
-                                              onPressed: () => setState(() => attachments.removeAt(i)),
-                                              icon: const Icon(AppIcons.close, size: 16),
-                                              style: IconButton.styleFrom(
-                                                minimumSize: const Size(28, 28),
-                                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                                padding: EdgeInsets.zero,
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                  ],
-                                ),
                         ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ],

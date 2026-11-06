@@ -34,6 +34,10 @@ DSH 重连期间可立即重试，也可展开错误详情；iOS 安装包声明
 打开、切换或重新进入 OpenClaw 会话时从最新消息开始；手动上翻历史时不因界面刷新强制跳回底部。
 两个协议可以同时持有连接；这不意味着 iOS 在系统挂起后仍保证后台长连接。
 
+## 外观与小伙伴
+
+在任一协议的设置中选择日间、夜间或跟随系统；选择保存在设备上并同时应用到两个协议。夜间采用深蓝灰渐变、柔和浅蓝控件和近黑代码块。DSH 原生对话显示原创像素小鲸鱼，OpenClaw 原生对话显示原创像素小龙虾，分别有独立的显示开关并记住选择；点击可轻跳，跟随输入栏或状态条移动。系统减少动态效果时不播放跳动。内嵌网页不注入宠物。原版 Deepy/鲸娘素材仍不打入衍生版。
+
 ## iOS 构建
 
 macOS + Xcode + Flutter 3.47.9：
@@ -42,7 +46,7 @@ macOS + Xcode + Flutter 3.47.9：
 bash tooling/build-openclaw-ipa.sh
 ```
 
-输出 `build/openclaw/OpenClaw-Go-0.1.10-build11-<提交号>-unsigned.ipa`，需要自己的签名/安装流程。
+输出 `build/openclaw/OpenClaw-Go-0.1.11-build12-<提交号>-unsigned.ipa`，需要自己的签名/安装流程。
 仓库的 `Build OpenClaw Go iOS` workflow 仅上传构建 Artifact，不创建 Release。
 Linux 上不能运行 Xcode 或证明 iPhone 实机可用。
 
@@ -51,7 +55,7 @@ Linux 上不能运行 Xcode 或证明 iPhone 实机可用。
 - OpenClaw 原生工具审批/提问面板、语音、内联 widget 与设备能力调用。
 - OpenClaw 历史分页（当前读取最近 150 条）、多个 Gateway 的保存列表。
 - DSH 功能在 iOS 真机上的端到端验收；安卓本机运行、无障碍手机操控不属于 iOS 远程能力。
-- 构建入口已换用独立网络图标，禁用原品牌与桌宠并从 IPA 中排除对应素材；原 DSH 开发入口不变。详见 `ASSETS.md`。
+- 构建入口已换用独立网络图标，禁用原品牌与原版桌宠并从 IPA 中排除对应素材；新的小伙伴为独立绘制；原 DSH 开发入口不变。详见 `ASSETS.md`。
 
 ## 验证
 

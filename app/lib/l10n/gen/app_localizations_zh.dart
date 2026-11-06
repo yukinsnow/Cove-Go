@@ -8499,6 +8499,24 @@ class L10nZh extends L10n {
   String get ocSshTestFailed => 'SSH 连接失败，请检查地址、凭据与主机指纹。';
 
   @override
+  String get ocAppearanceMode => '显示模式';
+
+  @override
+  String get ocDayMode => '日间';
+
+  @override
+  String get ocNightMode => '夜间';
+
+  @override
+  String get ocWhaleMascot => 'DSH 小鲸鱼';
+
+  @override
+  String get ocLobsterMascot => 'OpenClaw 小龙虾';
+
+  @override
+  String get ocMascotHint => '显示在原生对话输入栏上方，点击跳一下';
+
+  @override
   String get performanceTitle => '性能';
 
   @override

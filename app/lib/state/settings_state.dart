@@ -127,6 +127,7 @@ class SettingsController extends Notifier<AppSettings> {
   static const _visualRepliesKey = 'visual_replies';
   static const _secure = FlutterSecureStorage();
   late Future<void> _loaded;
+  bool _themeEdited = false;
 
   @override
   AppSettings build() {
@@ -158,10 +159,9 @@ class SettingsController extends Notifier<AppSettings> {
     if (!ref.mounted) return;
     state = AppSettings(
       apiKey: apiKey,
-      themeMode: ThemeMode.values.firstWhere(
-        (m) => m.name == prefs.getString(_themeKey),
-        orElse: () => ThemeMode.system,
-      ),
+      themeMode: _themeEdited
+          ? state.themeMode
+          : ThemeMode.values.firstWhere((m) => m.name == prefs.getString(_themeKey), orElse: () => ThemeMode.system),
       autoStartLocal: prefs.getBool(_autoStartKey) ?? ref.read(performanceDefaultsProvider).autoStartLocal,
       autoStartLocalExplicit: prefs.containsKey(_autoStartKey),
       autoApproveCommands: prefs.getBool(_autoApproveKey) ?? false,
@@ -202,9 +202,10 @@ class SettingsController extends Notifier<AppSettings> {
   }
 
   Future<void> setThemeMode(ThemeMode mode) async {
+    _themeEdited = true;
+    state = state.copyWith(themeMode: mode);
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_themeKey, mode.name);
-    state = state.copyWith(themeMode: mode);
   }
 
   Future<void> setAutoApproveCommands(bool value) async {

@@ -20,6 +20,8 @@ import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../openclaw/mascot_settings.dart';
+import '../../openclaw/mascot_stage.dart';
 import '../../pets/pet_mood.dart';
 import '../../pets/pet_overlay_bridge.dart';
 import '../../pets/pet_pack.dart';
@@ -170,6 +172,9 @@ class _PetStageState extends ConsumerState<PetStage> {
 
   @override
   Widget build(BuildContext context) {
+    if (ref.watch(dualRemoteUiProvider)) {
+      return RemoteMascotStage(pet: RemoteMascot.whale, child: widget.child);
+    }
     // The overlay outside the app hears every state while the chat lives.
     ref.listen<void>(petOverlayBridgeProvider, (_, _) {});
     return PetPerchScope(

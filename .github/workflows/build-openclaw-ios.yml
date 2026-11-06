@@ -26,8 +26,8 @@ jobs:
       - run: bash tooling/build-openclaw-ipa.sh
       - uses: actions/upload-artifact@v4
         with:
-          name: OpenClaw-Go-0.1.10-build11-${{ github.sha }}-unsigned
+          name: OpenClaw-Go-0.1.11-build12-${{ github.sha }}-unsigned
           path: |
-            build/openclaw/*0.1.10-build11*-unsigned.ipa
-            build/openclaw/*0.1.10-build11*-unsigned.ipa.sha256
+            build/openclaw/*0.1.11-build12*-unsigned.ipa
+            build/openclaw/*0.1.11-build12*-unsigned.ipa.sha256
           if-no-files-found: error

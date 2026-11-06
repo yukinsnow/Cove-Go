@@ -8957,6 +8957,24 @@ class L10nEn extends L10n {
   String get ocSshTestFailed => 'SSH connection failed. Check the address, credentials and host fingerprint.';
 
   @override
+  String get ocAppearanceMode => 'Display mode';
+
+  @override
+  String get ocDayMode => 'Day';
+
+  @override
+  String get ocNightMode => 'Night';
+
+  @override
+  String get ocWhaleMascot => 'DSH whale';
+
+  @override
+  String get ocLobsterMascot => 'OpenClaw lobster';
+
+  @override
+  String get ocMascotHint => 'Show above the native chat input; tap to hop';
+
+  @override
   String get performanceTitle => 'Performance';
 
   @override

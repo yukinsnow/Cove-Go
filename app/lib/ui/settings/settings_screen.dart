@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../l10n/l10n.dart';
+import '../../openclaw/appearance_settings.dart';
+import '../../openclaw/mascot_settings.dart';
 import '../../runtime/local_footprint.dart';
 import '../../runtime/runtime_state.dart';
 import '../../state/account_state.dart';
@@ -202,10 +204,11 @@ class SettingsScreen extends ConsumerWidget {
             ...pluginSettingsTiles(ref, tint: SettingsHues.abilities),
           ],
         ),
+        if (ref.watch(dualRemoteUiProvider)) const RemoteAppearanceSettings(),
         SettingsSection(
           title: l10n.hubSettingsAppearance,
           children: [
-            const AppearanceEntryTile(tint: SettingsHues.appearance),
+            if (!ref.watch(dualRemoteUiProvider)) const AppearanceEntryTile(tint: SettingsHues.appearance),
             SettingsSegmentTile<double>(
               icon: AppIcons.textSize,
               tint: SettingsHues.appearance,
@@ -221,7 +224,7 @@ class SettingsScreen extends ConsumerWidget {
               value: settings.foldCompletedTurns,
               onChanged: (v) => unawaited(notifier.setFoldCompletedTurns(v)),
             ),
-            const PetEntryTile(tint: SettingsHues.appearance),
+            if (!ref.watch(dualRemoteUiProvider)) const PetEntryTile(tint: SettingsHues.appearance),
           ],
         ),
         SettingsSection(

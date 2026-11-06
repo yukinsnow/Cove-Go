@@ -8,7 +8,9 @@ import 'openclaw/backend_home.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'ui/theme/app_theme.dart';
+import 'openclaw/remote_theme.dart';
+import 'openclaw/mascot_settings.dart';
+import 'state/settings_state.dart';
 import 'ui/common/third_party_licenses.dart';
 import 'ui/settings/font_licenses.dart';
 
@@ -22,34 +24,40 @@ void main() {
   runApp(const ProviderScope(child: OpenClawApp()));
 }
 
-class OpenClawApp extends StatefulWidget {
+class OpenClawApp extends ConsumerStatefulWidget {
   const OpenClawApp({super.key});
   @override
-  State<OpenClawApp> createState() => _OpenClawAppState();
+  ConsumerState<OpenClawApp> createState() => _OpenClawAppState();
 }
 
-class _OpenClawAppState extends State<OpenClawApp> {
+class _OpenClawAppState extends ConsumerState<OpenClawApp> {
   Locale locale = const Locale('zh', 'CN');
+  final light = buildRemoteLightTheme();
+  final dark = buildRemoteDarkTheme();
   @override
   Widget build(BuildContext context) {
     AppLocale.use(locale);
-    return MaterialApp(
-      title: 'OpenClaw Go',
-      debugShowCheckedModeBanner: false,
-      theme: buildLightTheme(),
-      darkTheme: buildDarkTheme(),
-      locale: locale,
-      localizationsDelegates: const [
-        L10n.delegate,
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      supportedLocales: AppLocale.supported,
-      home: BackendHome(
-        onLanguage: () => setState(() {
-          locale = locale.languageCode == 'zh' ? const Locale('en') : const Locale('zh', 'CN');
-        }),
+    return ProviderScope(
+      overrides: [dualRemoteUiProvider.overrideWithValue(true)],
+      child: MaterialApp(
+        title: 'OpenClaw Go',
+        debugShowCheckedModeBanner: false,
+        theme: light,
+        darkTheme: dark,
+        themeMode: ref.watch(settingsProvider.select((s) => s.themeMode)),
+        locale: locale,
+        localizationsDelegates: const [
+          L10n.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: AppLocale.supported,
+        home: BackendHome(
+          onLanguage: () => setState(() {
+            locale = locale.languageCode == 'zh' ? const Locale('en') : const Locale('zh', 'CN');
+          }),
+        ),
       ),
     );
   }

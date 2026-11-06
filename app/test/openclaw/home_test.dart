@@ -76,6 +76,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('设置'));
     await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(find.text('English / 中文'), 250);
     await tester.tap(find.text('English / 中文'));
     await tester.pumpAndSettle();
     await tester.tap(find.byIcon(AppIcons.back));

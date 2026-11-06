@@ -28,6 +28,10 @@ DSH reconnects expose an immediate retry and expandable errors. The iOS archive 
 Opening, switching or reopening an OpenClaw conversation starts at the newest message; UI refreshes do not force readers back down while browsing older messages.
 Both connections may stay open, but iOS background execution is not guaranteed.
 
+## Appearance and companions
+
+Both protocol settings offer Day, Night and Follow system. The choice persists on-device and applies to both protocols. Night uses blue-slate glass, soft periwinkle controls and near-black code blocks. Native DSH chats show an original pixel whale; native OpenClaw chats show an original pixel lobster. Each has an independent persistent visibility switch. Tap to hop; the companion follows the input/status perch and respects reduced motion. Embedded web pages are not modified. Restricted upstream Deepy/whale-girl artwork remains excluded.
+
 ## Run and build
 
 ```sh
@@ -38,7 +42,7 @@ flutter run --target lib/main_openclaw.dart --dart-define=REMOTE_DUAL_APP=true
 ```
 
 On macOS with Xcode and Flutter 3.47.9, run `bash tooling/build-openclaw-ipa.sh`.
-The output is `build/openclaw/OpenClaw-Go-0.1.10-build11-<revision>-unsigned.ipa` for your own signing process.
+The output is `build/openclaw/OpenClaw-Go-0.1.11-build12-<revision>-unsigned.ipa` for your own signing process.
 The GitHub workflow uploads an artifact, not a public release. Linux cannot build
 with Xcode or prove iPhone functionality.
 
@@ -49,7 +53,7 @@ history pagination (currently the latest 150 messages) and saved multi-Gateway p
 DSH Remote still needs end-to-end iPhone testing. Android local execution and
 accessibility-based phone control are not iOS remote features.
 The dual-backend build uses an original network icon, disables the upstream brand/mascots,
-and excludes their assets from the IPA; the original DSH development entry point is unchanged.
+and excludes their assets from the IPA. The new companions are independently drawn; the original DSH development entry point is unchanged.
 See `ASSETS.md`. This remains an unverified development build until iPhone testing.
 
 ## Checks

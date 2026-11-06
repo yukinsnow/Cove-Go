@@ -15620,6 +15620,42 @@ abstract class L10n {
   /// **'SSH 连接失败，请检查地址、凭据与主机指纹。'**
   String get ocSshTestFailed;
 
+  /// No description provided for @ocAppearanceMode.
+  ///
+  /// In zh, this message translates to:
+  /// **'显示模式'**
+  String get ocAppearanceMode;
+
+  /// No description provided for @ocDayMode.
+  ///
+  /// In zh, this message translates to:
+  /// **'日间'**
+  String get ocDayMode;
+
+  /// No description provided for @ocNightMode.
+  ///
+  /// In zh, this message translates to:
+  /// **'夜间'**
+  String get ocNightMode;
+
+  /// No description provided for @ocWhaleMascot.
+  ///
+  /// In zh, this message translates to:
+  /// **'DSH 小鲸鱼'**
+  String get ocWhaleMascot;
+
+  /// No description provided for @ocLobsterMascot.
+  ///
+  /// In zh, this message translates to:
+  /// **'OpenClaw 小龙虾'**
+  String get ocLobsterMascot;
+
+  /// No description provided for @ocMascotHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'显示在原生对话输入栏上方，点击跳一下'**
+  String get ocMascotHint;
+
   /// No description provided for @performanceTitle.
   ///
   /// In zh, this message translates to:
