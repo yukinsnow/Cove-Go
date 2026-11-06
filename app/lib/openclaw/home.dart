@@ -18,6 +18,13 @@ import '../ui/shell/page_frame.dart';
 import '../ui/common/status_dot.dart';
 import 'controller.dart';
 import 'tool_activity.dart';
+import 'images.dart';
+import 'ssh_tunnel.dart';
+import '../state/hosts_state.dart';
+import '../remote/ssh/ssh_transport.dart';
+import '../remote/ssh/ssh_link.dart';
+import '../ui/remote/host_key_dialog.dart';
+import '../ui/remote/ssh_host_form.dart';
 import '../ui/remote/host_switcher.dart';
 import '../ui/remote/remote_screen.dart';
 import '../ui/shell/sessions_drawer.dart'
@@ -54,11 +61,36 @@ class ClawHomeState extends State<ClawHome> with WidgetsBindingObserver {
       session['updatedAt'] != null &&
       (!seen.containsKey(session['key']) || seen[session['key']] != session['updatedAt']);
   final composerFocus = FocusNode();
+  final gatewayTunnel = GatewaySshTunnel();
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     c.addListener(update);
+    c.closeTransport = gatewayTunnel.close;
+    c.resolveAddress = (address, sshId) async {
+      if (sshId == null) {
+        await gatewayTunnel.close();
+        return address;
+      }
+      final container = ProviderScope.containerOf(context, listen: false);
+      final hosts = container.read(hostsProvider.notifier);
+      await hosts.ready;
+      if (!mounted) throw StateError("View disposed");
+      final config = container.read(hostsProvider).sshById(sshId);
+      if (config == null) throw StateError(context.l10n.ocSshMissing);
+      return gatewayTunnel.open(address, SshConnectParams.of(config, await hosts.loadSecrets(sshId)), (key) async {
+        if (config.hostKeyFingerprint != null) {
+          return config.hostKeyFingerprint == key.fingerprint && config.hostKeyType == key.type;
+        }
+        if (!mounted ||
+            !await confirmHostKey(context, HostKeyPrompt(hostName: config.name, address: config.address, key: key))) {
+          return false;
+        }
+        await hosts.pinHostKey(sshId, key);
+        return true;
+      });
+    };
     c.guard(c.load);
   }
 
@@ -87,48 +119,86 @@ class ClawHomeState extends State<ClawHome> with WidgetsBindingObserver {
     super.dispose();
   }
 
-  Future<void> settings() async {
+  Future<void> settings({BuildContext? from}) async {
     final url = TextEditingController(text: c.address), secret = TextEditingController(text: c.token);
+    String? selectedSsh = c.sshId;
+    final container = ProviderScope.containerOf(from ?? context, listen: false);
+    await container.read(hostsProvider.notifier).ready;
+    if (!mounted || (from != null && !from.mounted)) {
+      url.dispose();
+      secret.dispose();
+      return;
+    }
+    if (selectedSsh != null && container.read(hostsProvider).sshById(selectedSsh) == null) selectedSsh = null;
     final result = await showDialog<(String, String)>(
-      context: context,
-      builder: (ctx) {
-        final l = ctx.l10n;
-        return AlertDialog(
-          title: Text(l.ocConnect),
-          content: SizedBox(
-            width: 440,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: url,
-                  autocorrect: false,
-                  decoration: InputDecoration(labelText: l.ocAddress),
+      context: from ?? context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, update) {
+          final l = ctx.l10n;
+          return AlertDialog(
+            title: Text(l.ocConnect),
+            content: SizedBox(
+              width: 440,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(
+                      controller: url,
+                      autocorrect: false,
+                      decoration: InputDecoration(labelText: l.ocAddress),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: secret,
+                      obscureText: true,
+                      autocorrect: false,
+                      enableSuggestions: false,
+                      decoration: InputDecoration(labelText: l.ocToken),
+                    ),
+                    const SizedBox(height: 16),
+                    DropdownButtonFormField<String>(
+                      key: ValueKey(selectedSsh),
+                      initialValue: selectedSsh ?? '',
+                      decoration: InputDecoration(labelText: l.ocTransport),
+                      items: [
+                        DropdownMenuItem(value: '', child: Text(l.ocDirect)),
+                        for (final h in container.read(hostsProvider).ssh)
+                          DropdownMenuItem(value: h.id, child: Text('SSH · ${h.name}')),
+                      ],
+                      onChanged: (value) => update(() => selectedSsh = value == '' ? null : value),
+                    ),
+                    TextButton.icon(
+                      icon: const Icon(AppIcons.add),
+                      label: Text(l.ocAddSsh),
+                      onPressed: () async {
+                        final saved = await Navigator.of(ctx).push<SshHostConfig>(
+                          MaterialPageRoute(builder: (_) => const SshHostFormPage(gatewayOnly: true)),
+                        );
+                        if (saved != null && ctx.mounted) update(() => selectedSsh = saved.id);
+                      },
+                    ),
+                    if (selectedSsh != null) Text(l.ocSshGatewayHelp),
+                    Text(l.ocPairHelp),
+                  ],
                 ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: secret,
-                  obscureText: true,
-                  autocorrect: false,
-                  enableSuggestions: false,
-                  decoration: InputDecoration(labelText: l.ocToken),
-                ),
-                const SizedBox(height: 16),
-                Text(l.ocPairHelp),
-              ],
+              ),
             ),
-          ),
-          actions: [
-            FilledButton(onPressed: () => Navigator.pop(ctx, (url.text, secret.text)), child: Text(l.ocConnect)),
-          ],
-        );
-      },
+            actions: [
+              FilledButton(onPressed: () => Navigator.pop(ctx, (url.text, secret.text)), child: Text(l.ocConnect)),
+            ],
+          );
+        },
+      ),
     );
     // Controllers are disposed after the dialog route's exit animation.
     await Future<void>.delayed(const Duration(milliseconds: 300));
     url.dispose();
     secret.dispose();
-    if (result != null) await c.connect(result.$1, result.$2);
+    if (result != null && !c.busy) {
+      c.sshId = selectedSsh;
+      await c.connect(result.$1, result.$2);
+    }
   }
 
   Future<void> attach() => c.guard(() async {
@@ -148,6 +218,21 @@ class ClawHomeState extends State<ClawHome> with WidgetsBindingObserver {
             ? 'image/jpeg'
             : null);
     if (mime == null) throw StateError('Choose a JPEG or PNG image');
+    if (!mounted) return;
+    final host = c.address, credential = c.token, session = c.sessionKey, selection = c.selectionRevision;
+    final confirmed = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => GatewayImageSelection(image: MemoryImage(bytes), name: file.name),
+      ),
+    );
+    if (!mounted ||
+        confirmed != true ||
+        c.address != host ||
+        c.token != credential ||
+        c.sessionKey != session ||
+        c.selectionRevision != selection) {
+      return;
+    }
     setState(
       () => attachments.add({'type': 'image', 'mimeType': mime, 'fileName': file.name, 'content': base64Encode(bytes)}),
     );
@@ -185,19 +270,28 @@ class ClawHomeState extends State<ClawHome> with WidgetsBindingObserver {
     });
   }
 
+  Future<void> hideKeyboard() async {
+    composerFocus.unfocus();
+    FocusManager.instance.primaryFocus?.unfocus();
+    // A native IME can outlive Flutter focus (notably during iOS transitions).
+    // Always request dismissal, even when the composer is already unfocused.
+    await SystemChannels.textInput.invokeMethod<void>('TextInput.hide');
+  }
+
   void switchHost() {
-    showHostSheet(
-      context,
-      onManage: () => Navigator.of(context).push(
-        MaterialPageRoute<void>(
-          builder: (_) => ProviderScope(
-            overrides: [
-              gatewayHostEntryProvider.overrideWithValue(
-                ProviderScope.containerOf(context).read(gatewayHostEntryProvider),
-              ),
-            ],
-            child: const RemoteScreen(),
-          ),
+    showHostSheet(context, onManage: manageHosts);
+  }
+
+  void manageHosts() {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => ProviderScope(
+          overrides: [
+            gatewayHostEntryProvider.overrideWithValue(
+              ProviderScope.containerOf(context).read(gatewayHostEntryProvider),
+            ),
+          ],
+          child: const RemoteScreen(),
         ),
       ),
     );
@@ -211,9 +305,18 @@ class ClawHomeState extends State<ClawHome> with WidgetsBindingObserver {
     scaffoldKey.currentState?.closeDrawer();
   }
 
-  void openGatewayWeb() {
+  Future<void> openGatewayWeb({BuildContext? from}) async {
     closeSidebar();
-    final address = Uri.tryParse(c.address);
+    if (c.sshId != null && !c.connected) {
+      await c.connect(c.address, c.token);
+      if (!mounted || (from != null && !from.mounted)) return;
+      if (!c.connected) {
+        ScaffoldMessenger.of(from ?? context)
+            .showSnackBar(SnackBar(content: Text(c.error.isEmpty ? context.l10n.ocDisconnected : c.error)));
+        return;
+      }
+    }
+    final address = Uri.tryParse(c.transportAddress ?? c.address);
     if (address == null || address.host.isEmpty) {
       settings();
       return;
@@ -224,7 +327,7 @@ class ClawHomeState extends State<ClawHome> with WidgetsBindingObserver {
       host: address.host,
       port: address.hasPort ? address.port : null,
     );
-    Navigator.of(context).push(
+    Navigator.of(from ?? context).push(
       MaterialPageRoute<void>(
         builder: (_) => WebViewPage(url: url, title: hostName, allowOpenExternal: true),
       ),
@@ -291,7 +394,14 @@ class ClawHomeState extends State<ClawHome> with WidgetsBindingObserver {
                       switchHost();
                     },
                   ),
-                  SettingsTile(icon: AppIcons.settings, title: l.ocSettings, onTap: settings),
+                  SettingsTile(
+                    icon: AppIcons.configure,
+                    title: l.remoteManageHosts,
+                    onTap: () {
+                      Navigator.of(pageContext).pop();
+                      manageHosts();
+                    },
+                  ),
                   SettingsTile(icon: AppIcons.info, title: AppInfo.displayVersion, subtitle: AppInfo.sourceRevision),
                 ],
               ),
@@ -465,15 +575,26 @@ class ClawHomeState extends State<ClawHome> with WidgetsBindingObserver {
 
   Widget bubble(Map<String, dynamic> message) {
     final text = messageText(message), user = message['role'] == 'user';
-    if (text.isEmpty) return const SizedBox.shrink();
+    final images = gatewayImages(message);
+    if (text.isEmpty && images.isEmpty) return const SizedBox.shrink();
+    final pictures = images.isEmpty
+        ? null
+        : Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final image in images) GatewayImage(block: image, client: c.client, sessionKey: c.sessionKey),
+            ],
+          );
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 12),
       child: user
-          ? UserBubble(text: text)
+          ? UserBubble(text: text, attachments: pictures)
           : Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                MarkdownBody(text: text),
+                ?pictures,
+                if (text.isNotEmpty) MarkdownBody(text: text),
                 IconButton(
                   visualDensity: VisualDensity.compact,
                   tooltip: context.l10n.ocCopy,
@@ -504,7 +625,7 @@ class ClawHomeState extends State<ClawHome> with WidgetsBindingObserver {
             details: text.isEmpty ? c.toolText(message) : text,
           ),
         );
-      } else if (text.isNotEmpty) {
+      } else if (text.isNotEmpty || gatewayImages(message).isNotEmpty) {
         flushTools();
         rows.add(bubble(message));
       }
@@ -569,10 +690,13 @@ class ClawHomeState extends State<ClawHome> with WidgetsBindingObserver {
           ),
           if (MediaQuery.viewInsetsOf(context).bottom > 0) ...[
             const SizedBox(width: 8),
-            GlassIconButton(
-              icon: Icons.keyboard_hide_outlined,
-              tooltip: l.ocHideKeyboard,
-              onPressed: composerFocus.unfocus,
+            TextFieldTapRegion(
+              // Let the button finish its tap before dismissing the keyboard.
+              child: GlassIconButton(
+                icon: Icons.keyboard_hide_outlined,
+                tooltip: l.ocHideKeyboard,
+                onPressed: hideKeyboard,
+              ),
             ),
           ],
         ],
@@ -744,12 +868,22 @@ class ClawHomeState extends State<ClawHome> with WidgetsBindingObserver {
                           onStop: () => c.guard(c.abort),
                           onSendOptions: sendOptions,
                           accessory: IconButton(
+                            // Match the composer's 40dp text and send-key row.
+                            style: IconButton.styleFrom(
+                              minimumSize: const Size(40, 40),
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            ),
                             tooltip: l.ocQueue,
                             onPressed: sendOptions,
                             icon: const Icon(AppIcons.queued, size: 20),
                           ),
                           hasAttachments: attachments.isNotEmpty,
                           leading: IconButton(
+                            // Match the composer's 40dp text and send-key row.
+                            style: IconButton.styleFrom(
+                              minimumSize: const Size(40, 40),
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            ),
                             tooltip: l.ocAttach,
                             onPressed: c.connected ? attach : null,
                             icon: const Icon(AppIcons.add),
@@ -759,9 +893,36 @@ class ClawHomeState extends State<ClawHome> with WidgetsBindingObserver {
                               : Wrap(
                                   children: [
                                     for (var i = 0; i < attachments.length; i++)
-                                      InputChip(
-                                        label: Text('${attachments[i]['fileName']}'),
-                                        onDeleted: () => setState(() => attachments.removeAt(i)),
+                                      Stack(
+                                        children: [
+                                          Padding(
+                                            padding: const EdgeInsets.all(4),
+                                            child: GatewayImage(
+                                              block: {
+                                                'type': 'image',
+                                                'fileName': attachments[i]['fileName'],
+                                                'data': attachments[i]['content'],
+                                              },
+                                              client: c.client,
+                                              sessionKey: c.sessionKey,
+                                              size: 72,
+                                            ),
+                                          ),
+                                          Positioned(
+                                            right: 0,
+                                            top: 0,
+                                            child: IconButton.filledTonal(
+                                              tooltip: l.ocRemove,
+                                              onPressed: () => setState(() => attachments.removeAt(i)),
+                                              icon: const Icon(AppIcons.close, size: 16),
+                                              style: IconButton.styleFrom(
+                                                minimumSize: const Size(28, 28),
+                                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                                padding: EdgeInsets.zero,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
                                       ),
                                   ],
                                 ),

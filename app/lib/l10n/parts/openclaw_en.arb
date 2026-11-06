@@ -1,7 +1,7 @@
 {
   "ocRemoteHostsIntro": "Connect to an OpenClaw Gateway, DSH Remote or SSH host",
   "ocConnect": "Connect OpenClaw",
-  "ocAddress": "Gateway URL (wss://)",
+  "ocAddress": "Gateway address (ws:// or wss://)",
   "ocToken": "Gateway token",
   "ocPairHelp": "Approve this device in OpenClaw on first connection, then reconnect. Credentials stay in local secure storage.",
   "ocSessions": "Sessions",
@@ -30,5 +30,19 @@
   "ocLicenses": "Open-source licenses",
   "ocHideKeyboard": "Hide keyboard",
   "ocSearchSessions": "Search conversations",
-  "ocCachedHistory": "Showing local history. Updates automatically when connected."
+  "ocCachedHistory": "Showing local history. Updates automatically when connected.",
+  "ocAddGateway": "Add OpenClaw host",
+  "ocRemoveGateway": "Delete OpenClaw host",
+  "ocRemoveGatewayHelp": "Remove the connection URL and token from this phone and disconnect. The server and conversations are not deleted.",
+  "ocManageRelayHosts": "Add or remove DSH Remote hosts",
+  "ocManageRelayHostsHelp": "Manage in the DSH Remote console, then refresh this list",
+  "ocRemoveGatewayFailed": "Could not delete the connection. Please try again.",
+  "ocTransport": "Connection method",
+  "ocDirect": "Direct connection",
+  "ocAddSsh": "Add SSH connection",
+  "ocAddDshSsh": "Add DSH host via SSH",
+  "ocGatewayConsole": "OpenClaw Gateway web console",
+  "ocSshGatewayHelp": "Enter the ws:// Gateway address reachable from the SSH server, e.g. ws://127.0.0.1:18789. SSH encrypts the tunnel; DSH is not started.",
+  "ocSshMissing": "SSH configuration was removed. Edit the OpenClaw connection.",
+  "ocSshTestFailed": "SSH connection failed. Check the address, credentials and host fingerprint."
 }

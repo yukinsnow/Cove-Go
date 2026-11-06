@@ -8367,7 +8367,7 @@ class L10nZh extends L10n {
   String get ocConnect => '连接 OpenClaw';
 
   @override
-  String get ocAddress => 'Gateway 地址（wss://）';
+  String get ocAddress => 'Gateway 地址（ws:// 或 wss://）';
 
   @override
   String get ocToken => 'Gateway 令牌';
@@ -8455,6 +8455,48 @@ class L10nZh extends L10n {
 
   @override
   String get ocCachedHistory => '正在显示本地缓存，连接后自动更新';
+
+  @override
+  String get ocAddGateway => '添加 OpenClaw 主机';
+
+  @override
+  String get ocRemoveGateway => '删除 OpenClaw 主机';
+
+  @override
+  String get ocRemoveGatewayHelp => '从此手机删除连接地址和令牌并断开连接。服务器和对话不会删除。';
+
+  @override
+  String get ocManageRelayHosts => '添加或删除 DSH Remote 主机';
+
+  @override
+  String get ocManageRelayHostsHelp => '在 DSH Remote 控制台管理，返回后刷新列表';
+
+  @override
+  String get ocRemoveGatewayFailed => '未能删除连接，请重试。';
+
+  @override
+  String get ocTransport => '连接方式';
+
+  @override
+  String get ocDirect => '直接连接';
+
+  @override
+  String get ocAddSsh => '添加 SSH 连接';
+
+  @override
+  String get ocAddDshSsh => '通过 SSH 添加 DSH 主机';
+
+  @override
+  String get ocGatewayConsole => 'OpenClaw Gateway 网页控制台';
+
+  @override
+  String get ocSshGatewayHelp => 'Gateway 地址填写 SSH 主机可访问的 ws:// 地址，例如 ws://127.0.0.1:18789。SSH 隧道已加密，无需启动 DSH。';
+
+  @override
+  String get ocSshMissing => 'SSH 配置已删除，请编辑 OpenClaw 连接。';
+
+  @override
+  String get ocSshTestFailed => 'SSH 连接失败，请检查地址、凭据与主机指纹。';
 
   @override
   String get performanceTitle => '性能';

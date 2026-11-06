@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../l10n/l10n.dart';
 import '../../remote/ssh/ssh_link.dart';
+import '../../remote/ssh/ssh_transport.dart';
 import '../../state/attachments.dart';
 import '../../state/connection_state.dart';
 import '../../state/hosts_state.dart';
@@ -25,10 +26,11 @@ import '../common/brief_notice.dart';
 /// Add or edit an SSH host, with a "测试连接" that runs the real connect flow
 /// and shows each step.
 class SshHostFormPage extends ConsumerStatefulWidget {
-  const SshHostFormPage({super.key, this.existing, this.initialStatus});
+  const SshHostFormPage({super.key, this.existing, this.initialStatus, this.gatewayOnly = false});
 
   /// Null to add a new host.
   final SshHostConfig? existing;
+  final bool gatewayOnly;
 
   /// Pre-filled test progress (goldens).
   @visibleForTesting
@@ -59,6 +61,7 @@ class _SshHostFormPageState extends ConsumerState<SshHostFormPage> {
   late String? _keyFor = widget.existing == null ? null : '${widget.existing!.host}:${widget.existing!.port}';
   bool _obscure = true;
   bool _saving = false;
+  bool _gatewayTesting = false;
 
   /// A problem that isn't about one field (saving failed).
   String? _formError;
@@ -209,6 +212,7 @@ class _SshHostFormPageState extends ConsumerState<SshHostFormPage> {
     final keyValid = _keyFor == '$host:$port';
     return SshHostConfig(
       id: _id,
+      gatewayOnly: widget.existing?.gatewayOnly ?? widget.gatewayOnly,
       name: _name.text.trim().isEmpty ? host : _name.text.trim(),
       host: host,
       port: port!,
@@ -233,6 +237,43 @@ class _SshHostFormPageState extends ConsumerState<SshHostFormPage> {
     FocusManager.instance.primaryFocus?.unfocus();
     final config = _draft();
     if (config == null) return;
+    if (config.gatewayOnly) {
+      _gatewayTesting = true;
+      setState(() => _testStatus = const HostLinkStatus(HostLinkPhase.connecting, step: HostLinkStep.connect));
+      try {
+        final transport = await ref.read(sshTransportFactoryProvider)(SshConnectParams.of(config, _secrets), (
+          key,
+        ) async {
+          if (config.hostKeyFingerprint != null) {
+            return config.hostKeyFingerprint == key.fingerprint && config.hostKeyType == key.type;
+          }
+          if (!mounted ||
+              !await confirmHostKey(context, HostKeyPrompt(hostName: config.name, address: config.address, key: key))) {
+            return false;
+          }
+          if (!mounted) return false;
+          setState(() {
+            _keyType = key.type;
+            _keyFingerprint = key.fingerprint;
+            _keyFor = '${config.host}:${config.port}';
+          });
+          return true;
+        });
+        transport.close();
+        if (mounted) setState(() => _testStatus = const HostLinkStatus(HostLinkPhase.connected));
+      } catch (_) {
+        if (mounted) {
+          setState(
+            () => _testStatus = HostLinkStatus(
+              HostLinkPhase.failed,
+              error: HostLinkError(HostLinkErrorKind.unreachable, context.l10n.ocSshTestFailed),
+            ),
+          );
+        }
+      }
+      if (mounted) setState(() => _gatewayTesting = false);
+      return;
+    }
     await _testSub?.cancel();
     await _test?.close();
     final secrets = _secrets;
@@ -385,12 +426,12 @@ class _SshHostFormPageState extends ConsumerState<SshHostFormPage> {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final colors = DshColors.of(context);
-    final testing = _test != null;
+    final testing = _test != null || _gatewayTesting;
     final mono = AppType.mono(size: 15, color: scheme.onSurface, height: 1.4);
 
     final page = AppPage.list(
       title: _editing ? l10n.remoteEditHost : l10n.remoteAddSshHost,
-      subtitle: _editing ? null : Text(l10n.remoteSshHostIntro),
+      subtitle: _editing ? null : Text(widget.gatewayOnly ? l10n.ocSshGatewayHelp : l10n.remoteSshHostIntro),
       // One column, not a lazy list: every field stays built so the first one
       // with a problem can be scrolled into view.
       children: [
@@ -562,42 +603,43 @@ class _SshHostFormPageState extends ConsumerState<SshHostFormPage> {
                 ),
               ],
             ),
-            SettingsSection(
-              title: 'DSH',
-              footer: Text.rich(
-                TextSpan(
-                  children: [
-                    TextSpan(text: installHint.first),
-                    TextSpan(
-                      text: installCommand,
-                      style: AppType.monoLabel(color: scheme.onSurfaceVariant),
-                    ),
-                    TextSpan(text: installHint.last),
-                  ],
-                ),
-              ),
-              children: [
-                FormFieldGroup(
-                  children: [
-                    FormFieldBlock(
-                      label: l10n.remoteStartCommand,
-                      helper: l10n.remoteStartCommandHelp,
-                      child: TextField(controller: _command, autocorrect: false, style: mono),
-                    ),
-                    FormFieldBlock(
-                      label: l10n.remoteWorkingDirectory,
-                      helper: l10n.remoteWorkingDirectoryHelp,
-                      child: TextField(
-                        controller: _cwd,
-                        autocorrect: false,
-                        style: mono,
-                        decoration: const InputDecoration(hintText: '~/code'),
+            if (!(widget.existing?.gatewayOnly ?? widget.gatewayOnly))
+              SettingsSection(
+                title: 'DSH',
+                footer: Text.rich(
+                  TextSpan(
+                    children: [
+                      TextSpan(text: installHint.first),
+                      TextSpan(
+                        text: installCommand,
+                        style: AppType.monoLabel(color: scheme.onSurfaceVariant),
                       ),
-                    ),
-                  ],
+                      TextSpan(text: installHint.last),
+                    ],
+                  ),
                 ),
-              ],
-            ),
+                children: [
+                  FormFieldGroup(
+                    children: [
+                      FormFieldBlock(
+                        label: l10n.remoteStartCommand,
+                        helper: l10n.remoteStartCommandHelp,
+                        child: TextField(controller: _command, autocorrect: false, style: mono),
+                      ),
+                      FormFieldBlock(
+                        label: l10n.remoteWorkingDirectory,
+                        helper: l10n.remoteWorkingDirectoryHelp,
+                        child: TextField(
+                          controller: _cwd,
+                          autocorrect: false,
+                          style: mono,
+                          decoration: const InputDecoration(hintText: '~/code'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             SettingsSection(
               title: l10n.remoteHostFingerprint,
               children: [

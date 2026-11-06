@@ -59,6 +59,15 @@ class _BackendHomeState extends State<BackendHome> {
           GatewayHostEntry(
             name: () => clawKey.currentState?.hostName ?? context.l10n.commonRemoteHost,
             active: selected == 0,
+            configured: () => clawKey.currentState?.c.address.isNotEmpty ?? false,
+            configureInPlace: (page) async {
+              await clawKey.currentState?.settings(from: page);
+            },
+            openConsole: (page) => clawKey.currentState?.openGatewayWeb(from: page),
+            onRemove: () async {
+              final controller = clawKey.currentState?.c;
+              if (controller != null) await controller.removeHost();
+            },
             onPick: () => select(0),
             onRemotePick: () => select(1),
             onConfigure: () {

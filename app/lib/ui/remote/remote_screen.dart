@@ -36,23 +36,32 @@ import 'ssh_host_form.dart';
 /// dsh-app starts `dsh web` over SSH and tunnels to it). Picking a host makes
 /// it the active one; the chat and the session list follow. The old Remote
 /// Web console stays as a small fallback at the bottom.
-class RemoteScreen extends ConsumerWidget {
+class RemoteScreen extends ConsumerStatefulWidget {
   const RemoteScreen({super.key});
+  @override
+  ConsumerState<RemoteScreen> createState() => _RemoteScreenState();
+}
 
-  void _openConsole(BuildContext context) {
+class _RemoteScreenState extends ConsumerState<RemoteScreen> {
+  Future<void> _openConsole(BuildContext context) async {
     final l10n = context.l10n;
-    Navigator.of(context).push(
+    final origin = ref.read(relayServerProvider);
+    final url = origin == null ? Uri.parse(AppInfo.remoteConsole) : Uri.parse(origin).resolve('/app');
+    await Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (_) => WebViewPage(
-          url: Uri.parse(AppInfo.remoteConsole),
+          url: url,
           title: l10n.remoteConsole,
-          subtitle: 'dsh.r2049.cn',
+          subtitle: url.host,
           allowOpenExternal: true,
           // Android suspends the page in the background and its connection drops.
           reloadAfterBackground: const Duration(seconds: 60),
         ),
       ),
     );
+    if (mounted && ref.read(relayAccountProvider).value?.signedIn == true) {
+      await ref.read(relayAccountProvider.notifier).refresh();
+    }
   }
 
   Future<void> _use(BuildContext context, WidgetRef ref, HostRef host) async {
@@ -93,7 +102,7 @@ class RemoteScreen extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final l10n = context.l10n;
     final ssh = ref.watch(hostsProvider.select((s) => s.ssh));
     final active = ref.watch(activeHostProvider);
@@ -110,59 +119,137 @@ class RemoteScreen extends ConsumerWidget {
           SettingsSection(
             title: 'OpenClaw',
             children: [
-              SettingsTile(
-                key: const ValueKey('remote-gateway-host'),
-                icon: AppIcons.remoteHost,
-                tinted: false,
-                title: gateway.name(),
-                subtitle: 'OpenClaw Gateway',
-                value: gateway.active ? Icon(AppIcons.selected, color: Theme.of(context).colorScheme.primary) : null,
-                chevron: false,
-                onTap: () async {
-                  await Navigator.of(context).maybePop();
-                  gateway.onPick();
-                },
-                trailing: _EdgeIconButton(
-                  icon: const Icon(AppIcons.configure, size: 20),
-                  tooltip: l10n.ocSettings,
-                  onPressed: () async {
+              if (gateway.hasHost)
+                SettingsTile(
+                  key: const ValueKey('remote-gateway-host'),
+                  icon: AppIcons.remoteHost,
+                  tinted: false,
+                  title: gateway.name(),
+                  subtitle: 'OpenClaw Gateway',
+                  value: gateway.active ? Icon(AppIcons.selected, color: Theme.of(context).colorScheme.primary) : null,
+                  chevron: false,
+                  onTap: () async {
                     await Navigator.of(context).maybePop();
-                    gateway.onConfigure();
+                    gateway.onPick();
+                  },
+                  trailing: _EdgeIconButton(
+                    icon: const Icon(AppIcons.configure, size: 20),
+                    tooltip: l10n.commonEdit,
+                    onPressed: () async {
+                      if (gateway.configureInPlace != null) {
+                        await gateway.configureInPlace!(context);
+                        if (mounted) setState(() {});
+                      } else {
+                        gateway.onConfigure();
+                      }
+                    },
+                  ),
+                ),
+              if (gateway.hasHost && gateway.onRemove != null)
+                SettingsTile(
+                  icon: AppIcons.delete,
+                  tinted: false,
+                  title: l10n.ocRemoveGateway,
+                  onTap: () async {
+                    final confirmed = await showAppDialog<bool>(
+                      context: context,
+                      builder: (dialog) => AlertDialog(
+                        title: Text(l10n.ocRemoveGateway),
+                        content: Text(l10n.ocRemoveGatewayHelp),
+                        actions: [
+                          TextButton(onPressed: () => Navigator.pop(dialog, false), child: Text(l10n.commonCancel)),
+                          FilledButton(onPressed: () => Navigator.pop(dialog, true), child: Text(l10n.commonDelete)),
+                        ],
+                      ),
+                    );
+                    if (confirmed != true) return;
+                    try {
+                      await gateway.onRemove!();
+                    } catch (_) {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.ocRemoveGatewayFailed)));
+                      }
+                    }
+                    if (mounted) setState(() {});
                   },
                 ),
-              ),
+              if (gateway.hasHost && gateway.openConsole != null)
+                SettingsTile(
+                  key: const ValueKey('gateway-console'),
+                  icon: AppIcons.openExternal,
+                  title: l10n.ocGatewayConsole,
+                  onTap: () => gateway.openConsole!(context),
+                ),
+              for (final h in ssh.where((h) => h.gatewayOnly))
+                _SshRow(
+                  config: h,
+                  active: false,
+                  onTap: () => push(SshHostFormPage(existing: h)),
+                  onEdit: () => push(SshHostFormPage(existing: h)),
+                  onDelete: () async {
+                    final ok = await showAppDialog<bool>(
+                      context: context,
+                      builder: (dialog) => AlertDialog(
+                        title: Text(l10n.remoteDeleteHostTitle(h.name)),
+                        content: Text(l10n.remoteDeleteHostBody),
+                        actions: [
+                          TextButton(onPressed: () => Navigator.pop(dialog, false), child: Text(l10n.commonCancel)),
+                          FilledButton(onPressed: () => Navigator.pop(dialog, true), child: Text(l10n.commonDelete)),
+                        ],
+                      ),
+                    );
+                    if (ok == true) await ref.read(hostsProvider.notifier).removeSsh(h.id);
+                  },
+                ),
+              if (!gateway.hasHost)
+                SettingsTile(
+                  key: const ValueKey('add-gateway-host'),
+                  icon: AppIcons.add,
+                  tinted: false,
+                  title: l10n.ocAddGateway,
+                  onTap: () async {
+                    if (gateway.configureInPlace != null) {
+                      await gateway.configureInPlace!(context);
+                      if (mounted) setState(() {});
+                    } else {
+                      gateway.onConfigure();
+                    }
+                  },
+                ),
             ],
           ),
-        _RelaySection(onUse: (h) => _use(context, ref, h)),
-        SettingsSection(
-          title: l10n.remoteSshHosts,
-          footer: Text(l10n.remoteSshRequirements),
-          children: [
-            for (final h in ssh)
+        _RelaySection(
+          onUse: (h) => _use(context, ref, h),
+          onManage: () => _openConsole(context),
+          sshChildren: [
+            for (final h in ssh.where((h) => !h.gatewayOnly))
               _SshRow(
                 config: h,
                 active: gateway?.active != true && active == HostRef.ssh(h.id),
                 onTap: () => _use(context, ref, HostRef.ssh(h.id)),
                 onEdit: () => push(SshHostFormPage(existing: h)),
+                onDelete: () async {
+                  final confirmed = await showAppDialog<bool>(
+                    context: context,
+                    builder: (dialog) => AlertDialog(
+                      title: Text(l10n.remoteDeleteHostTitle(h.name)),
+                      content: Text(l10n.remoteDeleteHostBody),
+                      actions: [
+                        TextButton(onPressed: () => Navigator.pop(dialog, false), child: Text(l10n.commonCancel)),
+                        FilledButton(onPressed: () => Navigator.pop(dialog, true), child: Text(l10n.commonDelete)),
+                      ],
+                    ),
+                  );
+                  if (confirmed == true) await ref.read(hostsProvider.notifier).removeSsh(h.id);
+                },
               ),
             SettingsTile(
               icon: AppIcons.add,
               tinted: false,
               spot: Spots.addSshHost,
+              title: l10n.ocAddDshSsh,
               subtitle: ssh.isEmpty ? l10n.remoteSshDirect : null,
               onTap: () => unawaited(_addSsh(context, ref)),
-            ),
-          ],
-        ),
-        SettingsSection(
-          title: l10n.remoteOtherMethods,
-          children: [
-            SettingsTile(
-              icon: AppIcons.webConsole,
-              tinted: false,
-              title: l10n.remoteWebConsole,
-              subtitle: l10n.remoteWebConsoleProvider,
-              onTap: () => _openConsole(context),
             ),
           ],
         ),
@@ -369,12 +456,18 @@ class _EdgeIconButton extends StatelessWidget {
 }
 
 class _SshRow extends ConsumerWidget {
-  const _SshRow({required this.config, required this.active, required this.onTap, required this.onEdit});
+  const _SshRow({
+    required this.config,
+    required this.active,
+    required this.onTap,
+    required this.onEdit,
+    required this.onDelete,
+  });
 
   final SshHostConfig config;
   final bool active;
   final VoidCallback onTap;
-  final VoidCallback onEdit;
+  final VoidCallback onEdit, onDelete;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -390,10 +483,21 @@ class _SshRow extends ConsumerWidget {
         subtitle: config.address,
         onTap: onTap,
         value: view == null ? null : _HostState(view),
-        trailing: _EdgeIconButton(
-          icon: const Icon(AppIcons.configure, size: 20),
-          tooltip: l10n.commonEdit,
-          onPressed: onEdit,
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _EdgeIconButton(
+              icon: const Icon(AppIcons.configure, size: 20),
+              tooltip: l10n.commonEdit,
+              onPressed: onEdit,
+              nudge: false,
+            ),
+            _EdgeIconButton(
+              icon: const Icon(AppIcons.delete, size: 20),
+              tooltip: l10n.remoteDeleteHost,
+              onPressed: onDelete,
+            ),
+          ],
         ),
       ),
     );
@@ -403,9 +507,12 @@ class _SshRow extends ConsumerWidget {
 // ── DSH Remote account ───────────────────────────────────────────────────────
 
 class _RelaySection extends ConsumerWidget {
-  const _RelaySection({required this.onUse});
+  const _RelaySection({required this.onUse, required this.onManage, this.sshChildren = const []});
+
+  final List<Widget> sshChildren;
 
   final ValueChanged<HostRef> onUse;
+  final VoidCallback onManage;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -426,7 +533,10 @@ class _RelaySection extends ConsumerWidget {
         footer: available
             ? RelayCredit(server: server.isEmpty || server == 'dsh.r2049.cn' ? null : server)
             : Text(l10n.remoteUnavailable),
-        children: [_LoginCard(account: account, available: available, loading: async.isLoading && !async.hasValue)],
+        children: [
+          _LoginCard(account: account, available: available, loading: async.isLoading && !async.hasValue),
+          ...sshChildren,
+        ],
       );
     }
     return SettingsSection(
@@ -478,6 +588,14 @@ class _RelaySection extends ConsumerWidget {
               active: ref.watch(gatewayHostEntryProvider)?.active != true && active == HostRef.relay(h.id),
               onTap: h.online || active == HostRef.relay(h.id) ? () => onUse(HostRef.relay(h.id, name: h.name)) : null,
             ),
+        SettingsTile(
+          icon: AppIcons.configure,
+          tinted: false,
+          title: l10n.ocManageRelayHosts,
+          subtitle: l10n.ocManageRelayHostsHelp,
+          onTap: onManage,
+        ),
+        ...sshChildren,
       ],
     );
   }

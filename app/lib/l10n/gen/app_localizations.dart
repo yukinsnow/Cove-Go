@@ -15359,7 +15359,7 @@ abstract class L10n {
   /// No description provided for @ocAddress.
   ///
   /// In zh, this message translates to:
-  /// **'Gateway 地址（wss://）'**
+  /// **'Gateway 地址（ws:// 或 wss://）'**
   String get ocAddress;
 
   /// No description provided for @ocToken.
@@ -15535,6 +15535,90 @@ abstract class L10n {
   /// In zh, this message translates to:
   /// **'正在显示本地缓存，连接后自动更新'**
   String get ocCachedHistory;
+
+  /// No description provided for @ocAddGateway.
+  ///
+  /// In zh, this message translates to:
+  /// **'添加 OpenClaw 主机'**
+  String get ocAddGateway;
+
+  /// No description provided for @ocRemoveGateway.
+  ///
+  /// In zh, this message translates to:
+  /// **'删除 OpenClaw 主机'**
+  String get ocRemoveGateway;
+
+  /// No description provided for @ocRemoveGatewayHelp.
+  ///
+  /// In zh, this message translates to:
+  /// **'从此手机删除连接地址和令牌并断开连接。服务器和对话不会删除。'**
+  String get ocRemoveGatewayHelp;
+
+  /// No description provided for @ocManageRelayHosts.
+  ///
+  /// In zh, this message translates to:
+  /// **'添加或删除 DSH Remote 主机'**
+  String get ocManageRelayHosts;
+
+  /// No description provided for @ocManageRelayHostsHelp.
+  ///
+  /// In zh, this message translates to:
+  /// **'在 DSH Remote 控制台管理，返回后刷新列表'**
+  String get ocManageRelayHostsHelp;
+
+  /// No description provided for @ocRemoveGatewayFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'未能删除连接，请重试。'**
+  String get ocRemoveGatewayFailed;
+
+  /// No description provided for @ocTransport.
+  ///
+  /// In zh, this message translates to:
+  /// **'连接方式'**
+  String get ocTransport;
+
+  /// No description provided for @ocDirect.
+  ///
+  /// In zh, this message translates to:
+  /// **'直接连接'**
+  String get ocDirect;
+
+  /// No description provided for @ocAddSsh.
+  ///
+  /// In zh, this message translates to:
+  /// **'添加 SSH 连接'**
+  String get ocAddSsh;
+
+  /// No description provided for @ocAddDshSsh.
+  ///
+  /// In zh, this message translates to:
+  /// **'通过 SSH 添加 DSH 主机'**
+  String get ocAddDshSsh;
+
+  /// No description provided for @ocGatewayConsole.
+  ///
+  /// In zh, this message translates to:
+  /// **'OpenClaw Gateway 网页控制台'**
+  String get ocGatewayConsole;
+
+  /// No description provided for @ocSshGatewayHelp.
+  ///
+  /// In zh, this message translates to:
+  /// **'Gateway 地址填写 SSH 主机可访问的 ws:// 地址，例如 ws://127.0.0.1:18789。SSH 隧道已加密，无需启动 DSH。'**
+  String get ocSshGatewayHelp;
+
+  /// No description provided for @ocSshMissing.
+  ///
+  /// In zh, this message translates to:
+  /// **'SSH 配置已删除，请编辑 OpenClaw 连接。'**
+  String get ocSshMissing;
+
+  /// No description provided for @ocSshTestFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'SSH 连接失败，请检查地址、凭据与主机指纹。'**
+  String get ocSshTestFailed;
 
   /// No description provided for @performanceTitle.
   ///

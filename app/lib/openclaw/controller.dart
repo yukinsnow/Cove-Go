@@ -12,8 +12,13 @@ class ClawController extends ChangeNotifier {
     : client = client ?? GatewayClient(),
       snapshots = snapshots ?? OfflineSnapshotStore();
   final OfflineSnapshotStore snapshots;
+  String? sshId;
+  String? _sessionSshId;
+  String? transportAddress;
+  Future<String> Function(String, String?)? resolveAddress;
+  Future<void> Function()? closeTransport;
   final _histories = <String, List<Map<String, dynamic>>>{};
-  String get _cacheScope => OfflineSnapshotStore.digest(['gateway', address, token]);
+  String get _cacheScope => OfflineSnapshotStore.digest(['gateway', address, token, ?sshId]);
 
   Future<void> _save() {
     final histories = Map<String, List<Map<String, dynamic>>>.of(_histories);
@@ -110,7 +115,9 @@ class ClawController extends ChangeNotifier {
     final revision = _connectionRevision;
     final savedAddress = await storage.read(key: 'claw.address') ?? '';
     final savedToken = await storage.read(key: 'claw.token') ?? '';
+    final savedSsh = await storage.read(key: 'claw.sshId');
     if (disposed || revision != _connectionRevision) return;
+    sshId = _sessionSshId = savedSsh;
     address = savedAddress;
     token = savedToken;
     await _restore();
@@ -143,7 +150,8 @@ class ClawController extends ChangeNotifier {
         _events = client.events.listen(_onEvent);
         final identity = await DeviceIdentity.create(await storage.read(key: 'claw.identity'));
         await storage.write(key: 'claw.identity', value: await identity.exportSeed());
-        final changedHost = address != url.trim() || token != secret.trim();
+        final changedHost = address != url.trim() || token != secret.trim() || _sessionSshId != sshId;
+        _sessionSshId = sshId;
         address = url.trim();
         token = secret.trim();
         if (changedHost) {
@@ -162,7 +170,15 @@ class ClawController extends ChangeNotifier {
           await _restore();
           changed();
         }
-        await client.connect(address, token, identity);
+        await client.disconnect();
+        transportAddress = null;
+        transportAddress = await resolveAddress?.call(address, sshId) ?? address;
+        if (disposed) {
+          await closeTransport?.call();
+          return;
+        }
+        await client.connect(transportAddress!, token, identity);
+        await storage.write(key: 'claw.sshId', value: sshId);
         await storage.write(key: 'claw.address', value: address);
         await storage.write(key: 'claw.token', value: token);
         await client.request('sessions.subscribe');
@@ -175,6 +191,38 @@ class ClawController extends ChangeNotifier {
         changed();
       }
     });
+  }
+
+  Future<void> removeHost() async {
+    if (busy || disposed) throw StateError('Connection is busy');
+    ++_connectionRevision;
+    busy = true;
+    changed();
+    try {
+      await storage.delete(key: 'claw.sshId');
+      sshId = null;
+      transportAddress = null;
+      await closeTransport?.call();
+      await storage.delete(key: 'claw.address');
+      await storage.delete(key: 'claw.token');
+      await _events?.cancel();
+      _events = null;
+      await client.disconnect();
+      ++_selection;
+      address = token = error = sessionKey = '';
+      sessions = [];
+      messages = [];
+      models = [];
+      _histories.clear();
+      _outgoing.clear();
+      live.clear();
+      tools.clear();
+      _submissionFingerprint = _submissionId = null;
+      readingCache = false;
+    } finally {
+      busy = false;
+      changed();
+    }
   }
 
   Future<void> refreshSessions() async {
@@ -339,6 +387,7 @@ class ClawController extends ChangeNotifier {
     disposed = true;
     unawaited(_events?.cancel());
     unawaited(client.dispose());
+    unawaited(closeTransport?.call());
     super.dispose();
   }
 }

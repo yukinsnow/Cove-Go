@@ -125,6 +125,7 @@ void main() {
     final capture = GlobalKey();
     var picks = 0;
     var configurations = 0;
+    var consoles = 0;
     final semantics = tester.ensureSemantics();
     SharedPreferences.setMockInitialValues({ActiveHostController.prefsKey: const HostRef.relay('mac').encode()});
     usePhoneSurface(tester);
@@ -141,6 +142,7 @@ void main() {
               onPick: () => picks++,
               onRemotePick: () {},
               onConfigure: () => configurations++,
+              openConsole: (_) => consoles++,
             ),
           ),
         ],
@@ -149,6 +151,10 @@ void main() {
     await frames(tester);
     expect(find.text('OpenClaw'), findsOneWidget);
     expect(find.text('OpenClaw Gateway'), findsOneWidget);
+    expect(find.text('SSH 主机'), findsNothing);
+    await tester.ensureVisible(find.byKey(const ValueKey('gateway-console')));
+    await tester.tap(find.byKey(const ValueKey('gateway-console')));
+    expect(consoles, 1);
     final boundary = capture.currentContext!.findRenderObject()! as RenderRepaintBoundary;
     await tester.runAsync(() async {
       final image = await boundary.toImage(pixelRatio: 2);
@@ -166,10 +172,31 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('remote-gateway-host')));
     await frames(tester);
     expect(picks, 1);
-    await tester.tap(find.byTooltip('连接与设置'));
+    await tester.tap(find.byTooltip('编辑').first);
     await frames(tester);
     expect(configurations, 1);
     semantics.dispose();
+  });
+
+  testWidgets('SSH section deletes only the confirmed host and its saved credential', (tester) async {
+    await secrets.write(SshSecrets.passwordKey(sampleSsh.id), 'test-password');
+    final container = await pump(tester, const RemoteScreen());
+    await frames(tester);
+    final delete = find.byTooltip('删除这台主机').first;
+    await tester.ensureVisible(delete);
+    await tester.tap(delete);
+    await frames(tester);
+    await tester.tap(find.text('取消'));
+    await frames(tester);
+    expect(container.read(hostsProvider).sshById(sampleSsh.id), isNotNull);
+    await tester.tap(delete);
+    await frames(tester);
+    await tester.tap(find.text('删除').last);
+    await frames(tester);
+    expect(container.read(hostsProvider).sshById(sampleSsh.id), isNull);
+    expect(container.read(hostsProvider).sshById(_unpinned.id), isNotNull);
+    expect(await secrets.read(SshSecrets.passwordKey(sampleSsh.id)), isNull);
+    expect(find.byType(RemoteScreen), findsOneWidget);
   });
 
   testWidgets('expired relay login offers 重新登录 even after account sign-out', (tester) async {
@@ -337,6 +364,23 @@ void main() {
     expect(secrets.values[SshSecrets.passwordKey(saved.id)], 's3cret');
     final prefs = await SharedPreferences.getInstance();
     expect(prefs.getString(HostsController.prefsKey), isNot(contains('s3cret')));
+  });
+
+  testWidgets('Gateway SSH tests authentication without launching DSH', (tester) async {
+    await pump(tester, const SshHostFormPage(gatewayOnly: true));
+    await frames(tester);
+    await tester.enterText(find.byType(TextField).at(0), 'Gateway');
+    await tester.enterText(find.byType(TextField).at(1), '10.0.0.8');
+    await tester.enterText(find.byType(TextField).at(2), 'me');
+    await tester.enterText(find.byType(TextField).at(4), 'test-password');
+    await tester.tap(find.text('测试连接'));
+    await frames(tester);
+    await tester.tap(find.text('信任并连接'));
+    await frames(tester);
+    expect(server.remote.launches, 0);
+    expect(server.last.scripts, isEmpty);
+    expect(server.last.isClosed, isTrue);
+    expect(find.text('DSH'), findsNothing);
   });
 
   testWidgets('moving a host to another address drops its pinned key', (tester) async {

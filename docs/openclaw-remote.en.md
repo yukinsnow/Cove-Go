@@ -9,7 +9,7 @@ AGPL-3.0 and upstream third-party notices are retained. The original entry point
 ## Architecture
 
 `app/lib/main_openclaw.dart` offers OpenClaw and DSH Remote in one app.
-The drawer footer opens a shared host picker. The remote-host page lists OpenClaw, DSH Remote and SSH together; Gateway settings are on its row rather than a separate top-right entry.
+The drawer footer opens a shared host picker. The remote-host page groups OpenClaw and DSH Remote separately, with SSH inside their respective add/edit flows. Gateway settings and its web console are on the OpenClaw section rather than a separate top-right entry.
 The DSH page is initialized lazily. Backend selection is saved, while each backend
 owns its credentials, session identifiers, transport and chat state independently.
 Switching does not convert or migrate conversations between services.
@@ -38,7 +38,7 @@ flutter run --target lib/main_openclaw.dart --dart-define=REMOTE_DUAL_APP=true
 ```
 
 On macOS with Xcode and Flutter 3.47.9, run `bash tooling/build-openclaw-ipa.sh`.
-The output is `build/openclaw/OpenClaw-Go-0.1.7-build8-<revision>-unsigned.ipa` for your own signing process.
+The output is `build/openclaw/OpenClaw-Go-0.1.10-build11-<revision>-unsigned.ipa` for your own signing process.
 The GitHub workflow uploads an artifact, not a public release. Linux cannot build
 with Xcode or prove iPhone functionality.
 
@@ -62,3 +62,7 @@ python3 app/tool/l10n_merge.py --check
 ```
 
 Protocol tests use a local mock Gateway, not user conversations or paid model runs.
+
+### SSH Gateway connections
+
+Choose or add an SSH profile in the Gateway connection form. Use a Gateway `ws://` address reachable from that SSH server (for example `ws://127.0.0.1:18789`). The encrypted SSH tunnel forwards the existing Gateway and never launches DSH. Passwords and private keys stay in secure storage; host fingerprints must be trusted. Legacy SSH hosts remain in the DSH section; Gateway-only profiles are excluded from DSH host switching. The Gateway web console uses the same tunnel without adding its token to the URL. Direct remote connections still require `wss://`.

@@ -1,7 +1,7 @@
 {
   "ocRemoteHostsIntro": "连接 OpenClaw Gateway、DSH Remote 或 SSH 主机",
   "ocConnect": "连接 OpenClaw",
-  "ocAddress": "Gateway 地址（wss://）",
+  "ocAddress": "Gateway 地址（ws:// 或 wss://）",
   "ocToken": "Gateway 令牌",
   "ocPairHelp": "首次连接需在 OpenClaw 中批准此设备；批准后重新连接。凭据仅存入本机安全存储。",
   "ocSessions": "会话",
@@ -30,5 +30,19 @@
   "ocLicenses": "开源许可",
   "ocHideKeyboard": "收起键盘",
   "ocSearchSessions": "搜索会话",
-  "ocCachedHistory": "正在显示本地缓存，连接后自动更新"
+  "ocCachedHistory": "正在显示本地缓存，连接后自动更新",
+  "ocAddGateway": "添加 OpenClaw 主机",
+  "ocRemoveGateway": "删除 OpenClaw 主机",
+  "ocRemoveGatewayHelp": "从此手机删除连接地址和令牌并断开连接。服务器和对话不会删除。",
+  "ocManageRelayHosts": "添加或删除 DSH Remote 主机",
+  "ocManageRelayHostsHelp": "在 DSH Remote 控制台管理，返回后刷新列表",
+  "ocRemoveGatewayFailed": "未能删除连接，请重试。",
+  "ocTransport": "连接方式",
+  "ocDirect": "直接连接",
+  "ocAddSsh": "添加 SSH 连接",
+  "ocAddDshSsh": "通过 SSH 添加 DSH 主机",
+  "ocGatewayConsole": "OpenClaw Gateway 网页控制台",
+  "ocSshGatewayHelp": "Gateway 地址填写 SSH 主机可访问的 ws:// 地址，例如 ws://127.0.0.1:18789。SSH 隧道已加密，无需启动 DSH。",
+  "ocSshMissing": "SSH 配置已删除，请编辑 OpenClaw 连接。",
+  "ocSshTestFailed": "SSH 连接失败，请检查地址、凭据与主机指纹。"
 }

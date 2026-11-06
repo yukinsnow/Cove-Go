@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'dart:ui' as drawing;
 
@@ -13,6 +14,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gpt_markdown/gpt_markdown.dart';
 import 'package:dsh_app/l10n/l10n.dart';
 import 'package:dsh_app/openclaw/home.dart';
+import 'package:dsh_app/openclaw/images.dart';
+import 'package:dsh_app/ui/chat/artifact_preview.dart' show ImageViewerPage;
 import 'package:dsh_app/openclaw/tool_activity.dart';
 import 'package:dsh_app/ui/theme/theme.dart';
 import 'package:dsh_app/ui/chat/render/markdown_body.dart';
@@ -30,12 +33,18 @@ class SlowGateway extends GatewayClient {
   Completer<dynamic> admission = Completer<dynamic>();
   Completer<dynamic>? creation;
   bool reject = false;
+  int downloads = 0;
+  static const png = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aD1sAAAAASUVORK5CYII=';
   final ids = <String>[];
   List<Map<String, dynamic>> rows = [];
   @override
   bool get connected => true;
   @override
   Future<dynamic> request(String method, [Map<String, dynamic> params = const {}]) async {
+    if (method == 'artifacts.download') {
+      downloads++;
+      return {'encoding': 'base64', 'data': png};
+    }
     if (method == 'chat.send') {
       ids.add(params['idempotencyKey'] as String);
       await admission.future;
@@ -83,6 +92,122 @@ void main() {
     c = ClawController(client: gateway, snapshots: MemorySnapshots())..sessionKey = 'a';
   });
   tearDown(() => c.dispose());
+
+  testWidgets('image-only history and mixed messages render and open a zoom viewer', (tester) async {
+    final ui = UiController(gateway)..sessionKey = 'a';
+    ui.messages = [
+      {
+        'role': 'user',
+        'content': [
+          {'type': 'image', 'artifactId': 'history-image', 'omitted': true},
+        ],
+      },
+      {
+        'role': 'user',
+        'content': [
+          {'type': 'text', 'text': '带图消息'},
+          {
+            'type': 'image',
+            'source': {'type': 'base64', 'data': SlowGateway.png},
+          },
+        ],
+      },
+    ];
+    await tester.pumpWidget(home(ui, buildLightTheme()));
+    await tester.pumpAndSettle();
+    expect(find.byType(UserBubble), findsNWidgets(2));
+    expect(find.byType(GatewayImage), findsNWidgets(2));
+    expect(find.byType(Image), findsNWidgets(2));
+    expect(gateway.downloads, 1);
+    await tester.tap(find.byType(GatewayImage).first);
+    await tester.pumpAndSettle();
+    expect(find.byType(ImageViewerPage), findsOneWidget);
+    expect(find.byType(InteractiveViewer), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('draft thumbnail previews, sends immediately and survives history echo', (tester) async {
+    final ui = UiController(gateway)..sessionKey = 'a';
+    await tester.pumpWidget(home(ui, buildLightTheme()));
+    await tester.pumpAndSettle();
+    final state = tester.state<ClawHomeState>(find.byType(ClawHome));
+    state.attachments.add({
+      'type': 'image',
+      'mimeType': 'image/png',
+      'fileName': 'photo.png',
+      'content': SlowGateway.png,
+    });
+    ui.changed();
+    await tester.pumpAndSettle();
+    expect(find.byType(GatewayImage), findsOneWidget);
+    await tester.tap(find.byType(GatewayImage));
+    await tester.pumpAndSettle();
+    expect(find.byType(InteractiveViewer), findsOneWidget);
+    Navigator.of(tester.element(find.byType(ImageViewerPage))).pop();
+    await tester.pumpAndSettle();
+    expect(state.attachments, hasLength(1));
+    late Future<void> sending;
+    await tester.runAsync(() async {
+      sending = state.send();
+    });
+    // Admission is deliberately pending, so the send button keeps animating.
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(state.attachments, isEmpty);
+    expect(find.byType(UserBubble), findsOneWidget);
+    expect(find.byType(Image), findsOneWidget);
+    gateway.rows = [
+      {
+        'role': 'user',
+        'content': [
+          {'type': 'image', 'artifactId': 'echo-image', 'omitted': true},
+        ],
+      },
+    ];
+    await tester.runAsync(() async {
+      gateway.admission.complete({});
+      await sending;
+      await ui.history();
+    });
+    await tester.pumpAndSettle();
+    expect(find.byType(UserBubble), findsOneWidget);
+    expect(find.byType(Image), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('zoomable selection requires confirmation and draft remove preserves text', (tester) async {
+    final ui = UiController(gateway)..sessionKey = 'a';
+    await tester.pumpWidget(home(ui, buildLightTheme()));
+    await tester.pumpAndSettle();
+    final state = tester.state<ClawHomeState>(find.byType(ClawHome));
+    Future<bool?> preview() => Navigator.of(state.context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => GatewayImageSelection(image: MemoryImage(base64Decode(SlowGateway.png)), name: 'photo.png'),
+      ),
+    );
+    final cancelled = preview();
+    await tester.pumpAndSettle();
+    expect(find.byType(InteractiveViewer), findsOneWidget);
+    Navigator.of(tester.element(find.byType(GatewayImageSelection))).pop();
+    expect(await cancelled, isNull);
+    final confirmed = preview();
+    await tester.pumpAndSettle();
+    await tester.tap(find.byType(FilledButton));
+    await tester.pumpAndSettle();
+    expect(await confirmed, isTrue);
+    state.input.text = '保留文字';
+    state.attachments.add({'type': 'image', 'mimeType': 'image/png', 'content': SlowGateway.png});
+    ui.changed();
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('移除'));
+    await tester.pumpAndSettle();
+    expect(state.attachments, isEmpty);
+    expect(state.input.text, '保留文字');
+    expect(find.byType(GatewayImage), findsNothing);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
 
   for (final dark in [false, true]) {
     testWidgets('Gateway markdown has readable table and inline code ($dark)', (tester) async {

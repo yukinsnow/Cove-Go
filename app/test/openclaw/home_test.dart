@@ -26,6 +26,37 @@ void main() {
       (_) async => null,
     );
   });
+  testWidgets('Gateway composer centers single-line text and all controls', (tester) async {
+    tester.view.physicalSize = const Size(402, 874);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(const ProviderScope(child: OpenClawApp()));
+    await tester.pumpAndSettle();
+    final composer = find.byType(Composer);
+    final field = find.descendant(of: composer, matching: find.byType(TextField));
+    final plus = find.descendant(of: composer, matching: find.byIcon(AppIcons.add));
+    final queue = find.descendant(of: composer, matching: find.byIcon(AppIcons.queued));
+    final send = find.descendant(of: composer, matching: find.byIcon(AppIcons.send));
+    void checkCenters() {
+      final center = tester.getCenter(composer).dy;
+      for (final item in [field, plus, queue, send]) {
+        expect(tester.getCenter(item).dy, closeTo(center, 0.5));
+      }
+      expect(tester.getSize(composer).height, closeTo(56, 0.5));
+    }
+
+    checkCenters();
+    await tester.enterText(field, '测试输入');
+    await tester.pumpAndSettle();
+    checkCenters();
+    await tester.enterText(field, '第一行\n第二行\n第三行');
+    await tester.pumpAndSettle();
+    expect(tester.getSize(composer).height, greaterThan(56));
+    expect(tester.getCenter(plus).dy, closeTo(tester.getCenter(send).dy, 0.5));
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('disconnected client, connect form and language switch', (tester) async {
     await tester.pumpWidget(const ProviderScope(child: OpenClawApp()));
     await tester.pumpAndSettle();
@@ -34,8 +65,10 @@ void main() {
     expect(find.text('把 OpenClaw 装进口袋'), findsOneWidget);
     await tester.tap(find.text('连接 OpenClaw'));
     await tester.pumpAndSettle();
-    expect(find.text('Gateway 地址（wss://）'), findsOneWidget);
+    expect(find.text('Gateway 地址（ws:// 或 wss://）'), findsOneWidget);
     expect(find.text('Gateway 令牌'), findsOneWidget);
+    expect(find.text('直接连接'), findsOneWidget);
+    expect(find.text('添加 SSH 连接'), findsOneWidget);
     expect(tester.widgetList<TextField>(find.byType(TextField)).any((w) => w.obscureText), isTrue);
     await tester.tapAt(const Offset(4, 4));
     await tester.pumpAndSettle();
@@ -56,7 +89,8 @@ void main() {
       ProviderScope(overrides: [relayBackendProvider.overrideWithValue(backend)], child: const OpenClawApp()),
     );
     await tester.pumpAndSettle();
-    final original = tester.state(find.byType(ClawHome));
+    final original = tester.state<ClawHomeState>(find.byType(ClawHome));
+    original.c.address = 'wss://gateway.example';
     await tester.tap(find.byIcon(AppIcons.menu));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('identity-host-switcher')));
@@ -96,15 +130,58 @@ void main() {
     final state = tester.state<ClawHomeState>(find.byType(ClawHome));
     state.switchHost();
     await tester.pumpAndSettle();
-    await tester.tap(find.text('连接电脑或服务器'));
+    await tester.tap(find.text('管理远程主机'));
     await tester.pumpAndSettle();
     expect(find.byType(RemoteScreen), findsOneWidget);
-    expect(find.byKey(const ValueKey('remote-gateway-host')), findsOneWidget);
-    expect(find.text('OpenClaw Gateway'), findsOneWidget);
-    await tester.tap(find.byTooltip('连接与设置'));
+    expect(find.byKey(const ValueKey('remote-gateway-host')), findsNothing);
+    await tester.tap(find.byKey(const ValueKey('add-gateway-host')));
     await tester.pumpAndSettle();
-    expect(find.byType(RemoteScreen), findsNothing);
-    expect(find.text('Gateway 地址（wss://）'), findsOneWidget);
+    expect(find.byType(RemoteScreen), findsOneWidget);
+    expect(find.text('Gateway 地址（ws:// 或 wss://）'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pumpAndSettle();
+  });
+
+  testWidgets('host picker has one manage entry and Gateway deletion stays in its section', (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [relayBackendProvider.overrideWithValue(FakeRelayBackend())],
+        child: const OpenClawApp(),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final state = tester.state<ClawHomeState>(find.byType(ClawHome));
+    state.c.address = 'wss://gateway.example';
+    state.c.token = 'test-token';
+    state.c.sessions = [
+      {'key': 'old'},
+    ];
+    state.c.changed();
+    state.switchHost();
+    await tester.pumpAndSettle();
+    expect(find.text('连接与设置'), findsNothing);
+    expect(find.text('管理远程主机'), findsOneWidget);
+    await tester.tap(find.text('管理远程主机'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('删除 OpenClaw 主机'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('取消'));
+    await tester.pumpAndSettle();
+    expect(state.c.address, isNotEmpty);
+    await tester.tap(find.text('删除 OpenClaw 主机'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('删除').last);
+    await tester.pumpAndSettle();
+    expect(find.byType(RemoteScreen), findsOneWidget);
+    expect(find.byKey(const ValueKey('add-gateway-host')), findsOneWidget);
+    expect(state.c.address, isEmpty);
+    expect(state.c.token, isEmpty);
+    expect(state.c.sessions, isEmpty);
+    expect(find.byKey(const ValueKey('remote-gateway-host')), findsNothing);
+    await tester.tap(find.text('添加 OpenClaw 主机'));
+    await tester.pumpAndSettle();
+    expect(find.text('Gateway 地址（ws:// 或 wss://）'), findsOneWidget);
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pumpAndSettle();
@@ -155,19 +232,23 @@ void main() {
     await tester.tap(find.byTooltip('设置'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 600));
-    expect(find.text('连接与设置'), findsOneWidget);
+    expect(find.text('连接与设置'), findsNothing);
+    expect(find.text('管理远程主机'), findsOneWidget);
     expect(find.text('English / 中文'), findsOneWidget);
     expect(find.text('开源许可'), findsOneWidget);
-    await tester.tap(find.text('连接与设置'));
+    await tester.tap(find.text('管理远程主机'));
+    await tester.pumpAndSettle();
+    expect(find.byType(RemoteScreen), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('add-gateway-host')));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 600));
-    expect(find.text('Gateway 地址（wss://）'), findsOneWidget);
+    expect(find.text('Gateway 地址（ws:// 或 wss://）'), findsOneWidget);
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 600));
   });
-  testWidgets('DSH composer and messages retain keyboard dismissal on a phone', (tester) async {
+  testWidgets('keyboard dismissal clears native IME and preserves editing', (tester) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
@@ -197,8 +278,28 @@ void main() {
     await tester.tap(find.byTooltip('收起键盘'));
     await tester.pumpAndSettle();
     expect(state.composerFocus.hasFocus, isFalse);
+    expect(tester.testTextInput.isVisible, isFalse);
+    // Simulate a native IME still visible after Flutter has already lost focus.
+    await SystemChannels.textInput.invokeMethod<void>('TextInput.show');
+    expect(tester.testTextInput.isVisible, isTrue);
+    tester.testTextInput.log.clear();
+    await tester.tap(find.byTooltip('收起键盘'));
+    await tester.pumpAndSettle();
+    expect(tester.testTextInput.log.any((call) => call.method == 'TextInput.hide'), isTrue);
+    expect(tester.testTextInput.isVisible, isFalse);
+    // Dismissal must leave the field editable and preserve its draft.
+    final field = find.descendant(of: find.byType(Composer), matching: find.byType(TextField));
+    await tester.tap(field);
+    await tester.pumpAndSettle();
+    expect(state.composerFocus.hasFocus, isTrue);
+    expect(tester.testTextInput.isVisible, isTrue);
+    await tester.enterText(field, '保留草稿');
+    await tester.tap(find.byTooltip('收起键盘'));
+    await tester.pumpAndSettle();
+    expect(state.input.text, '保留草稿');
+    expect(tester.testTextInput.isVisible, isFalse);
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pumpAndSettle();
-  });
+  }, variant: const TargetPlatformVariant({TargetPlatform.iOS, TargetPlatform.android}));
 }

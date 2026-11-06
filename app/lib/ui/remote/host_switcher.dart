@@ -27,10 +27,19 @@ class GatewayHostEntry {
     required this.onPick,
     required this.onRemotePick,
     required this.onConfigure,
+    this.configured,
+    this.configureInPlace,
+    this.onRemove,
+    this.openConsole,
   });
   final String Function() name;
   final bool active;
   final VoidCallback onPick, onRemotePick, onConfigure;
+  final bool Function()? configured;
+  final Future<void> Function(BuildContext)? configureInPlace;
+  final Future<void> Function()? onRemove;
+  final void Function(BuildContext)? openConsole;
+  bool get hasHost => configured?.call() ?? true;
 }
 
 final gatewayHostEntryProvider = Provider<GatewayHostEntry?>((ref) => null);
@@ -108,7 +117,7 @@ class HostSheet extends ConsumerWidget {
     final l10n = context.l10n;
     final active = ref.watch(activeHostProvider);
     final gateway = ref.watch(gatewayHostEntryProvider);
-    final ssh = ref.watch(hostsProvider.select((s) => s.ssh));
+    final ssh = ref.watch(hostsProvider.select((s) => s.ssh.where((h) => !h.gatewayOnly).toList()));
     final account = ref.watch(relayAccountProvider).value;
     final relayHosts = account?.signedIn == true ? account!.hosts : const <RelayHost>[];
 
@@ -148,7 +157,7 @@ class HostSheet extends ConsumerWidget {
               SheetGroup(
                 margin: const EdgeInsets.fromLTRB(SheetTitleBar.inset, 0, SheetTitleBar.inset, 12),
                 children: [
-                  if (gateway != null)
+                  if (gateway != null && gateway.hasHost)
                     SettingsTile(
                       key: const ValueKey('gateway-host-row'),
                       icon: AppIcons.remoteHost,
@@ -201,20 +210,12 @@ class HostSheet extends ConsumerWidget {
               SheetGroup(
                 margin: const EdgeInsets.fromLTRB(SheetTitleBar.inset, 0, SheetTitleBar.inset, 12),
                 children: [
-                  if (gateway != null)
-                    SettingsTile(
-                      icon: AppIcons.settings,
-                      tinted: false,
-                      title: l10n.ocSettings,
-                      onTap: () {
-                        Navigator.of(context).pop();
-                        gateway.onConfigure();
-                      },
-                    ),
                   SettingsTile(
                     icon: ssh.isEmpty && relayHosts.isEmpty ? AppIcons.add : AppIcons.configure,
                     tinted: false,
-                    title: ssh.isEmpty && relayHosts.isEmpty ? l10n.remoteConnectComputer : l10n.remoteManageHosts,
+                    title: gateway != null || ssh.isNotEmpty || relayHosts.isNotEmpty
+                        ? l10n.remoteManageHosts
+                        : l10n.remoteConnectComputer,
                     subtitle: ssh.isEmpty && relayHosts.isEmpty ? l10n.remoteConnectionMethods : null,
                     onTap: () {
                       Navigator.of(context).pop();

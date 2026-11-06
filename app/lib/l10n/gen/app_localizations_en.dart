@@ -8822,7 +8822,7 @@ class L10nEn extends L10n {
   String get ocConnect => 'Connect OpenClaw';
 
   @override
-  String get ocAddress => 'Gateway URL (wss://)';
+  String get ocAddress => 'Gateway address (ws:// or wss://)';
 
   @override
   String get ocToken => 'Gateway token';
@@ -8911,6 +8911,50 @@ class L10nEn extends L10n {
 
   @override
   String get ocCachedHistory => 'Showing local history. Updates automatically when connected.';
+
+  @override
+  String get ocAddGateway => 'Add OpenClaw host';
+
+  @override
+  String get ocRemoveGateway => 'Delete OpenClaw host';
+
+  @override
+  String get ocRemoveGatewayHelp =>
+      'Remove the connection URL and token from this phone and disconnect. The server and conversations are not deleted.';
+
+  @override
+  String get ocManageRelayHosts => 'Add or remove DSH Remote hosts';
+
+  @override
+  String get ocManageRelayHostsHelp => 'Manage in the DSH Remote console, then refresh this list';
+
+  @override
+  String get ocRemoveGatewayFailed => 'Could not delete the connection. Please try again.';
+
+  @override
+  String get ocTransport => 'Connection method';
+
+  @override
+  String get ocDirect => 'Direct connection';
+
+  @override
+  String get ocAddSsh => 'Add SSH connection';
+
+  @override
+  String get ocAddDshSsh => 'Add DSH host via SSH';
+
+  @override
+  String get ocGatewayConsole => 'OpenClaw Gateway web console';
+
+  @override
+  String get ocSshGatewayHelp =>
+      'Enter the ws:// Gateway address reachable from the SSH server, e.g. ws://127.0.0.1:18789. SSH encrypts the tunnel; DSH is not started.';
+
+  @override
+  String get ocSshMissing => 'SSH configuration was removed. Edit the OpenClaw connection.';
+
+  @override
+  String get ocSshTestFailed => 'SSH connection failed. Check the address, credentials and host fingerprint.';
 
   @override
   String get performanceTitle => 'Performance';

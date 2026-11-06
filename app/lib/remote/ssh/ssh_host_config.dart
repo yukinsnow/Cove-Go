@@ -14,6 +14,7 @@ class SshHostConfig {
     required this.name,
     required this.host,
     this.port = 22,
+    this.gatewayOnly = false,
     required this.user,
     this.auth = SshAuthMethod.password,
     this.launchCommand = defaultDshLaunchCommand,
@@ -24,6 +25,7 @@ class SshHostConfig {
 
   /// Stable id (`ssh-<hex>`); also the secret-store namespace.
   final String id;
+  final bool gatewayOnly;
 
   /// What the person calls it ("电脑", "家里的 Mac").
   final String name;
@@ -69,6 +71,7 @@ class SshHostConfig {
     final moved = (host != null && host != this.host) || (port != null && port != this.port);
     return SshHostConfig(
       id: id,
+      gatewayOnly: gatewayOnly,
       name: name ?? this.name,
       host: host ?? this.host,
       port: port ?? this.port,
@@ -83,6 +86,7 @@ class SshHostConfig {
 
   Map<String, Object?> toJson() => {
     'id': id,
+    'gatewayOnly': gatewayOnly,
     'name': name,
     'host': host,
     'port': port,
@@ -106,6 +110,7 @@ class SshHostConfig {
     final cwd = raw['workingDirectory'];
     return SshHostConfig(
       id: id,
+      gatewayOnly: raw['gatewayOnly'] == true,
       name: name is String && name.trim().isNotEmpty ? name : host,
       host: host,
       port: port is int && port > 0 && port < 65536 ? port : 22,
@@ -128,6 +133,7 @@ class SshHostConfig {
   bool operator ==(Object other) =>
       other is SshHostConfig &&
       other.id == id &&
+      other.gatewayOnly == gatewayOnly &&
       other.name == name &&
       other.host == host &&
       other.port == port &&
@@ -139,8 +145,19 @@ class SshHostConfig {
       other.hostKeyFingerprint == hostKeyFingerprint;
 
   @override
-  int get hashCode =>
-      Object.hash(id, name, host, port, user, auth, launchCommand, workingDirectory, hostKeyType, hostKeyFingerprint);
+  int get hashCode => Object.hash(
+    id,
+    gatewayOnly,
+    name,
+    host,
+    port,
+    user,
+    auth,
+    launchCommand,
+    workingDirectory,
+    hostKeyType,
+    hostKeyFingerprint,
+  );
 }
 
 /// The secret material for one SSH host, loaded from the [SecretStore].
