@@ -19,7 +19,7 @@ void main() {
   registerThirdPartyLicenses();
   registerFontLicenses();
   LicenseRegistry.addLicense(() async* {
-    yield LicenseEntryWithLineBreaks(['OpenClaw Go / DSH Go'], await rootBundle.loadString('assets/openclaw/LICENSE'));
+    yield LicenseEntryWithLineBreaks(['Cove-Go / DSH Go'], await rootBundle.loadString('assets/openclaw/LICENSE'));
   });
   runApp(const ProviderScope(child: OpenClawApp()));
 }
@@ -40,7 +40,7 @@ class _OpenClawAppState extends ConsumerState<OpenClawApp> {
     return ProviderScope(
       overrides: [dualRemoteUiProvider.overrideWithValue(true)],
       child: MaterialApp(
-        title: 'OpenClaw Go',
+        title: 'Cove-Go',
         debugShowCheckedModeBanner: false,
         theme: light,
         darkTheme: dark,

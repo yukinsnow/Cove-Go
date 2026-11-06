@@ -45,7 +45,7 @@ class RemoteAboutPage extends StatelessWidget {
         SettingsSection(
           title: l.remoteAboutProject,
           children: [
-            const SettingsTile(icon: AppIcons.info, tinted: false, title: 'OpenClaw Go'),
+            const SettingsTile(icon: AppIcons.info, tinted: false, title: 'Cove-Go'),
             SettingsTile(
               key: const ValueKey('remote-about-version'),
               title: l.remoteAboutVersion,

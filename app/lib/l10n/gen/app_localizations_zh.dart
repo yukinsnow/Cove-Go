@@ -13655,7 +13655,7 @@ class L10nZh extends L10n {
   String get remoteNetworkObservedAt => '最近观测';
 
   @override
-  String get remoteAboutTitle => '关于 OpenClaw Go';
+  String get remoteAboutTitle => '关于 Cove-Go';
 
   @override
   String get remoteAboutDescription => '用于 OpenClaw 与 DSH 的远程客户端。连接自己的主机，在两种后端之间切换。';
@@ -13684,7 +13684,7 @@ class L10nZh extends L10n {
 
   @override
   String get remoteAboutAttribution =>
-      'OpenClaw Go 基于 ccch1mneyyy 的 DSH Go 修改而来。应用代码以 AGPL-3.0 授权；第三方代码、名称与素材仍遵循各自的许可及使用条款。本项目不是 DeepSeek 官方产品。';
+      'Cove-Go 基于 ccch1mneyyy 的 DSH Go 修改而来。应用代码以 AGPL-3.0 授权；第三方代码、名称与素材仍遵循各自的许可及使用条款。本项目不是 DeepSeek 官方产品。';
 
   @override
   String get remoteAboutLinkFailed => '无法打开链接，请使用浏览器重试。';

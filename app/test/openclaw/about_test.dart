@@ -45,8 +45,11 @@ void main() {
       await _pumpAbout(tester, locale);
       final l = lookupL10n(locale);
       expect(find.text(l.remoteAboutTitle), findsWidgets);
+      expect(l.remoteAboutTitle, contains('Cove-Go'));
+      expect(l.remoteAboutAttribution, contains('Cove-Go'));
+      expect(find.text('OpenClaw Go'), findsNothing);
       expect(find.text(l.remoteAboutDescription), findsOneWidget);
-      expect(find.text('OpenClaw Go'), findsOneWidget);
+      expect(find.text('Cove-Go'), findsOneWidget);
       expect(find.text(AppInfo.displayVersion), findsOneWidget);
       expect(find.text(l.remoteAboutAuthor('yukinsnow')), findsOneWidget);
       final upstream = find.byKey(const ValueKey('remote-about-upstream'));

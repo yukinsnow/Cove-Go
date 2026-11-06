@@ -167,7 +167,7 @@ class GatewayClient {
                 'version': '0.1.0',
                 'platform': 'ios',
                 'mode': 'ui',
-                'displayName': 'OpenClaw Go',
+                'displayName': 'Cove-Go',
               },
               'role': 'operator',
               'scopes': scopes,
@@ -180,7 +180,7 @@ class GatewayClient {
                 scopes,
               ),
               'locale': 'zh-CN',
-              'userAgent': 'OpenClaw-Go/0.1.0',
+              'userAgent': 'Cove-Go/0.1.0',
             })
             as Map,
       );

@@ -18,11 +18,11 @@ abstract final class AppInfo {
   /// The app's name as the phone shows it: launcher, Recents, notifications, system
   /// settings, the licence page. Matches `android:label` in AndroidManifest.xml.
   static const remoteClient = bool.fromEnvironment('REMOTE_DUAL_APP');
-  static const name = remoteClient ? 'OpenClaw Go' : 'DSH Go';
+  static const name = remoteClient ? 'Cove-Go' : 'DSH Go';
 
   /// The in-app wordmark: the drawer's lockup, the welcome page and the brand mark's
   /// spoken label.
-  static const wordmark = remoteClient ? 'Remote' : 'DSH';
+  static const wordmark = remoteClient ? 'Cove-Go' : 'DSH';
 
   /// Required wording: the app is built on DSH but is not an official DeepSeek product.
   /// Shown on the About and licence pages.

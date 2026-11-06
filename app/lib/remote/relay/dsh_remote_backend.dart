@@ -34,7 +34,7 @@ class DshRemoteRelayBackend implements RelayBackend, RelayNetworkBackend {
            remote.RemoteAccount(
              secrets: _Secrets(secrets),
              serverUrl: serverUrl,
-             deviceName: defaultTargetPlatform == TargetPlatform.iOS ? 'OpenClaw Go (iOS)' : 'DSH App (Android)',
+             deviceName: defaultTargetPlatform == TargetPlatform.iOS ? 'Cove-Go (iOS)' : 'DSH App (Android)',
              platform: defaultTargetPlatform == TargetPlatform.iOS ? 'dsh-app-ios' : 'dsh-app-android',
              clientVersion: clientVersion,
              onDirectFallback: (_) => debugPrint('[dsh-remote] automatic transport fallback'),

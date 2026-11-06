@@ -69,6 +69,9 @@ void main() {
           if (frame['method'] == 'connect') {
             expect(frame['params']['device']['signedAt'], 42);
             expect(frame['params']['minProtocol'], 4);
+            expect(frame['params']['client']['displayName'], 'Cove-Go');
+            expect(frame['params']['client']['id'], 'openclaw-ios');
+            expect(frame['params']['userAgent'], startsWith('Cove-Go/'));
             peer!.add(
               jsonEncode({
                 'type': 'res',

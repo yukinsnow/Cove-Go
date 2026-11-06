@@ -18,12 +18,12 @@ python3 - "$PWD/ios/Runner/Info.plist" <<'PY'
 import plistlib,sys
 p=sys.argv[1]
 with open(p,'rb') as f: data=plistlib.load(f)
-data['CFBundleDisplayName']='OpenClaw Go'
-data['CFBundleName']='OpenClaw Go'
+data['CFBundleDisplayName']='Cove-Go'
+data['CFBundleName']='Cove-Go'
 data['CFBundleIconFiles']=['AppIcon60x60']
-data['NSPhotoLibraryUsageDescription']='Attach selected images to OpenClaw conversations.'
-data['NSCameraUsageDescription']='Capture images for OpenClaw conversations.'
-data['NSLocalNetworkUsageDescription']='Connect to your DSH computer on the local network.'
+data['NSPhotoLibraryUsageDescription']='Attach selected images to conversations in Cove-Go.'
+data['NSCameraUsageDescription']='Capture images for conversations in Cove-Go.'
+data['NSLocalNetworkUsageDescription']='Connect Cove-Go to your hosts on the local network.'
 data.setdefault('NSAppTransportSecurity', {})['NSAllowsLocalNetworking']=True
 with open(p,'wb') as f: plistlib.dump(data,f)
 PY
@@ -42,14 +42,14 @@ PY
 swift "$ROOT/tooling/openclaw_icon.swift" "$PWD/ios/Runner/Assets.xcassets/AppIcon.appiconset"
 flutter pub get
 python3 tool/l10n_merge.py
-flutter build ios --release --no-codesign --target lib/main_openclaw.dart --dart-define=REMOTE_DUAL_APP=true --build-name 0.1.13 --build-number 14 --dart-define=DSH_APP_VERSION=0.1.13+14 --dart-define=APP_SOURCE_REVISION="$(git rev-parse --short=12 HEAD) / ${GITHUB_RUN_ID:-local}"
+flutter build ios --release --no-codesign --target lib/main_openclaw.dart --dart-define=REMOTE_DUAL_APP=true --build-name 0.1.14 --build-number 15 --dart-define=DSH_APP_VERSION=0.1.14+15 --dart-define=APP_SOURCE_REVISION="$(git rev-parse --short=12 HEAD) / ${GITHUB_RUN_ID:-local}"
 # Fresh temporary payload; never deletes an existing checkout path.
 OUT="$ROOT/build/openclaw"
 mkdir -p "$OUT"
 STAGE="$(mktemp -d)"
 mkdir -p "$STAGE/Payload"
 cp -R build/ios/iphoneos/Runner.app "$STAGE/Payload/"
-IPA="OpenClaw-Go-0.1.13-build14-$(git rev-parse --short=12 HEAD)-unsigned.ipa"
+IPA="Cove-Go-0.1.14-build15-$(git rev-parse --short=12 HEAD)-unsigned.ipa"
 (cd "$STAGE" && zip -qry "$OUT/$IPA" Payload)
 python3 - "$OUT/$IPA" <<'PYVERIFY'
 import hashlib,json,sys,zipfile,plistlib
@@ -58,7 +58,9 @@ p=Path(sys.argv[1])
 with zipfile.ZipFile(p) as z:
     assert z.testzip() is None
     info=plistlib.loads(z.read('Payload/Runner.app/Info.plist'))
-    assert (info['CFBundleShortVersionString'], info['CFBundleVersion']) == ('0.1.13','14')
+    assert (info['CFBundleShortVersionString'], info['CFBundleVersion']) == ('0.1.14','15')
+    assert info['CFBundleDisplayName'] == 'Cove-Go'
+    assert info['CFBundleName'] == 'Cove-Go'
 Path(str(p)+'.sha256').write_text(hashlib.sha256(p.read_bytes()).hexdigest()+'  '+p.name+'\n')
 PYVERIFY
 printf 'Unsigned IPA: %s\n' "$OUT/$IPA"

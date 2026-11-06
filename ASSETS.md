@@ -21,3 +21,9 @@ go.dshtui.com 首页（`site/home/`）由社区开发者 ClayGao233 / 采云师�
 宠物包由 `app/tool/make_pet_pack.py` 从 `app/tool/pet_src/` 生成，品牌图形的代码由 `app/tool/make_brand_mark.py` 从 `app/assets/brand/` 生成。工具脚本本身和其他源码一样，以 AGPL-3.0 发布。
 
 第三方的代码、字体、图标和运行时组件见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
+
+## 衍生版海洋终端图标 / Fork ocean-terminal icon
+
+`tooling/assets/ocean-terminal-master.png` 是本衍生版按用户确认方向（D9 深海配色＋D14 海浪）通过 AI 生成的图标，不使用上游鱼尾、鲸鱼或 DeepSeek 品牌素材。`tooling/openclaw_icon.swift` 从此不透明方形原稿生成 iOS AppIcon 各尺寸；不预烘焙系统外圆角。
+
+The fork uses user-approved AI-generated ocean-terminal artwork, not upstream whale-tail or DeepSeek branding. The Swift build tool resizes the opaque square master for the iOS icon catalog; the OS applies its outer corner mask.

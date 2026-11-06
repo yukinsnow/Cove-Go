@@ -470,7 +470,7 @@ class ClawHomeState extends ConsumerState<ClawHome> with WidgetsBindingObserver 
                   SettingsTile(
                     icon: AppIcons.info,
                     title: l.ocLicenses,
-                    onTap: () => showLicensePage(context: pageContext, applicationName: 'OpenClaw Go'),
+                    onTap: () => showLicensePage(context: pageContext, applicationName: 'Cove-Go'),
                   ),
                 ],
               ),
@@ -681,7 +681,7 @@ class ClawHomeState extends ConsumerState<ClawHome> with WidgetsBindingObserver 
     final model = session?['model'] ?? session?['modelOverride'];
     return ChatHeader(
       useDshState: false,
-      title: session == null ? 'OpenClaw Go' : sessionTitle(session),
+      title: session == null ? 'Cove-Go' : sessionTitle(session),
       status: HeaderStatus(
         c.connected ? StatusTone.ok : StatusTone.idle,
         c.connected ? l.ocConnected : l.ocDisconnected,

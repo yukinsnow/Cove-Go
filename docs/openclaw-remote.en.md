@@ -1,4 +1,4 @@
-# OpenClaw Go: dual-backend remote client
+# Cove-Go: dual-backend remote client
 
 [简体中文](openclaw-remote.md)
 
@@ -42,7 +42,7 @@ flutter run --target lib/main_openclaw.dart --dart-define=REMOTE_DUAL_APP=true
 ```
 
 On macOS with Xcode and Flutter 3.47.9, run `bash tooling/build-openclaw-ipa.sh`.
-The output is `build/openclaw/OpenClaw-Go-0.1.13-build14-<revision>-unsigned.ipa` for your own signing process.
+The output is `build/openclaw/Cove-Go-0.1.14-build15-<revision>-unsigned.ipa` for your own signing process.
 The GitHub workflow uploads an artifact, not a public release. Linux cannot build
 with Xcode or prove iPhone functionality.
 
@@ -52,7 +52,7 @@ OpenClaw approval/question forms, voice, inline widgets, device commands,
 and history pagination (currently the latest 150 messages).
 DSH Remote still needs end-to-end iPhone testing. Android local execution and
 accessibility-based phone control are not iOS remote features.
-The dual-backend build uses an original network icon, disables the upstream brand/mascots,
+The dual-backend build uses the approved ocean-terminal icon (D9 palette with D14 waves), disables the upstream brand/mascots,
 and excludes their assets from the IPA. The new companions are independently drawn; the original DSH development entry point is unchanged.
 See `ASSETS.md`. This remains an unverified development build until iPhone testing.
 
@@ -76,7 +76,7 @@ Choose or add an SSH profile in the Gateway connection form. Use a Gateway `ws:/
 - Remote hosts always offers direct and SSH add actions. Each Gateway owns its credentials, device identity, SSH tunnel, history and draft. Switching native pages does not disconnect other Gateways; iOS suspension still does not guarantee background connections.
 - The legacy single-Gateway configuration is copied into a secure `legacy` profile. Old keys are cleaned only after the catalog is committed. Its paired identity is preserved; new profiles use separate identities.
 - Swipe OpenClaw/SSH rows left to reveal Delete on the right, or long-press for a deletion menu. Confirmation is required; only that phone-side connection is removed, not the server or conversations. DSH Remote has no native deletion API: its gesture routes to real console management instead of pretending to delete locally.
-- Settings → About OpenClaw Go shows the build version, project and author links, and original DSH Go project/author attribution. Links open in an external browser.
+- Settings → About Cove-Go shows the build version, project and author links, and original DSH Go project/author attribution. Links open in an external browser.
 
 ## Image recovery and the input keyboard
 
@@ -86,3 +86,7 @@ Choose or add an SSH profile in the Gateway connection form. Use a Gateway `ws:/
 - Return to send defaults to off in both settings pages. Enabling it changes the software keyboard action to Send, guards active IME composition, disconnected and submitting states, and keeps hardware Shift+Enter as newline. The preference persists locally, independently of the hardware Enter setting.
 
 Mock-Gateway, widget and encrypted-snapshot tests cover these paths; iPhone keyboard and photo-picker behavior still needs real-device validation.
+
+## Cove-Go branding
+
+The product name is `Cove-Go` in every language, with no separate Chinese name. Its ocean-terminal icon combines the D9 palette with D14 waves. This is a display-brand change only: repository URLs, iOS bundle ID, Gateway protocol client ID, device identities and secure-storage keys remain unchanged for installation and pairing continuity. Original DSH Go attribution is retained.

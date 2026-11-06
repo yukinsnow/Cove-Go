@@ -24983,7 +24983,7 @@ abstract class L10n {
   /// No description provided for @remoteAboutTitle.
   ///
   /// In zh, this message translates to:
-  /// **'关于 OpenClaw Go'**
+  /// **'关于 Cove-Go'**
   String get remoteAboutTitle;
 
   /// No description provided for @remoteAboutDescription.
@@ -25031,7 +25031,7 @@ abstract class L10n {
   /// No description provided for @remoteAboutAttribution.
   ///
   /// In zh, this message translates to:
-  /// **'OpenClaw Go 基于 ccch1mneyyy 的 DSH Go 修改而来。应用代码以 AGPL-3.0 授权；第三方代码、名称与素材仍遵循各自的许可及使用条款。本项目不是 DeepSeek 官方产品。'**
+  /// **'Cove-Go 基于 ccch1mneyyy 的 DSH Go 修改而来。应用代码以 AGPL-3.0 授权；第三方代码、名称与素材仍遵循各自的许可及使用条款。本项目不是 DeepSeek 官方产品。'**
   String get remoteAboutAttribution;
 
   /// No description provided for @remoteAboutLinkFailed.

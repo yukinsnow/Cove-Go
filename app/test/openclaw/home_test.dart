@@ -60,7 +60,7 @@ void main() {
   testWidgets('disconnected client, connect form and language switch', (tester) async {
     await tester.pumpWidget(const ProviderScope(child: OpenClawApp()));
     await tester.pumpAndSettle();
-    expect(find.text('OpenClaw Go'), findsOneWidget);
+    expect(find.text('Cove-Go'), findsOneWidget);
     expect(find.text('未连接'), findsWidgets);
     expect(find.text('把 OpenClaw 装进口袋'), findsOneWidget);
     await tester.tap(find.text('连接 OpenClaw'));

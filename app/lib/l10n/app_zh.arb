@@ -8628,7 +8628,7 @@
   "remoteNetworkFallbackPathUnverified": "尚未确认 WebRTC 路径类型",
   "remoteNetworkSnapshotHint": "显示最近一次确认的路径与延迟，刷新可重新检测。",
   "remoteNetworkObservedAt": "最近观测",
-  "remoteAboutTitle": "关于 OpenClaw Go",
+  "remoteAboutTitle": "关于 Cove-Go",
   "remoteAboutDescription": "用于 OpenClaw 与 DSH 的远程客户端。连接自己的主机，在两种后端之间切换。",
   "remoteAboutProject": "本项目",
   "remoteAboutVersion": "版本",
@@ -8650,7 +8650,7 @@
       }
     }
   },
-  "remoteAboutAttribution": "OpenClaw Go 基于 ccch1mneyyy 的 DSH Go 修改而来。应用代码以 AGPL-3.0 授权；第三方代码、名称与素材仍遵循各自的许可及使用条款。本项目不是 DeepSeek 官方产品。",
+  "remoteAboutAttribution": "Cove-Go 基于 ccch1mneyyy 的 DSH Go 修改而来。应用代码以 AGPL-3.0 授权；第三方代码、名称与素材仍遵循各自的许可及使用条款。本项目不是 DeepSeek 官方产品。",
   "remoteAboutLinkFailed": "无法打开链接，请使用浏览器重试。",
   "stateWorkspaceFilesHint": "已上传到当前工作区的文件：",
   "stateRemoteUploadNameInvalid": "文件名不受主机支持，请去掉特殊字符或缩短后再试",

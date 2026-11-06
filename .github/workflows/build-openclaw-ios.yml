@@ -1,9 +1,9 @@
-name: Build OpenClaw Go iOS
+name: Build Cove-Go iOS
 on:
   workflow_dispatch:
   push:
     branches: [openclaw]
-    paths: ['app/**', 'packages/openclaw_client/**', 'tooling/build-openclaw-ipa.sh', 'tooling/openclaw_icon.swift', '.github/workflows/build-openclaw-ios.yml']
+    paths: ['app/**', 'packages/openclaw_client/**', 'tooling/build-openclaw-ipa.sh', 'tooling/openclaw_icon.swift', 'tooling/assets/**', '.github/workflows/build-openclaw-ios.yml']
 permissions:
   contents: read
 jobs:
@@ -26,8 +26,8 @@ jobs:
       - run: bash tooling/build-openclaw-ipa.sh
       - uses: actions/upload-artifact@v4
         with:
-          name: OpenClaw-Go-0.1.13-build14-${{ github.sha }}-unsigned
+          name: Cove-Go-0.1.14-build15-${{ github.sha }}-unsigned
           path: |
-            build/openclaw/*0.1.13-build14*-unsigned.ipa
-            build/openclaw/*0.1.13-build14*-unsigned.ipa.sha256
+            build/openclaw/Cove-Go-0.1.14-build15*-unsigned.ipa
+            build/openclaw/Cove-Go-0.1.14-build15*-unsigned.ipa.sha256
           if-no-files-found: error

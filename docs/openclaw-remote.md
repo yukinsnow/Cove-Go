@@ -1,4 +1,4 @@
-# OpenClaw Go：双后端远程客户端
+# Cove-Go：双后端远程客户端
 
 [English](openclaw-remote.en.md)
 
@@ -46,8 +46,8 @@ macOS + Xcode + Flutter 3.47.9：
 bash tooling/build-openclaw-ipa.sh
 ```
 
-输出 `build/openclaw/OpenClaw-Go-0.1.13-build14-<提交号>-unsigned.ipa`，需要自己的签名/安装流程。
-仓库的 `Build OpenClaw Go iOS` workflow 仅上传构建 Artifact，不创建 Release。
+输出 `build/openclaw/Cove-Go-0.1.14-build15-<提交号>-unsigned.ipa`，需要自己的签名/安装流程。
+仓库的 `Build Cove-Go iOS` workflow 仅上传构建 Artifact，不创建 Release。
 Linux 上不能运行 Xcode 或证明 iPhone 实机可用。
 
 ## 当前尚未完成的集成
@@ -55,7 +55,7 @@ Linux 上不能运行 Xcode 或证明 iPhone 实机可用。
 - OpenClaw 原生工具审批/提问面板、语音、内联 widget 与设备能力调用。
 - OpenClaw 历史分页（当前读取最近 150 条）。
 - DSH 功能在 iOS 真机上的端到端验收；安卓本机运行、无障碍手机操控不属于 iOS 远程能力。
-- 构建入口已换用独立网络图标，禁用原品牌与原版桌宠并从 IPA 中排除对应素材；新的小伙伴为独立绘制；原 DSH 开发入口不变。详见 `ASSETS.md`。
+- 构建入口已换用确认的海洋终端图标（D9 配色＋D14 海浪），禁用原品牌与原版桌宠并从 IPA 中排除对应素材；新的小伙伴为独立绘制；原 DSH 开发入口不变。详见 `ASSETS.md`。
 
 ## 验证
 
@@ -73,7 +73,7 @@ python3 app/tool/l10n_merge.py --check
 - 远程主机页始终提供“添加 OpenClaw 主机”和“通过 SSH 添加 OpenClaw 主机”。每个 Gateway 各自保存令牌、设备身份、SSH 隧道、历史与草稿；原生页面切换不主动断开其他 Gateway。iOS 挂起时仍不保证后台长连接。
 - 旧的单 Gateway 配置会复制到安全存储中的 `legacy` 主机，目录提交成功后才清理旧键。设备身份沿用，避免无故重新配对；新增主机使用独立身份。
 - OpenClaw 与 SSH 行左滑可露出右侧删除，或长按打开删除菜单；操作仍需确认。只删除手机上的对应连接，不删除服务器或对话。DSH Remote 没有原生删除接口，手势引导到控制台执行真实管理，不伪造本地删除。
-- 设置中的“关于 OpenClaw Go”显示构建版本、项目主页、作者，以及原 DSH Go 项目和作者，可点击链接在浏览器打开。
+- 设置中的“关于 Cove-Go”显示构建版本、项目主页、作者，以及原 DSH Go 项目和作者，可点击链接在浏览器打开。
 
 ## 图片恢复与输入键盘
 
@@ -83,3 +83,7 @@ python3 app/tool/l10n_merge.py --check
 - 两端设置中的“换行键发送”默认关闭。打开后软件键盘显示发送动作；中文候选输入、未连接、提交中等状态不会误发送，硬件 Shift+Enter 保留换行。选择持久保存在本机，独立于硬件 Enter 设置。
 
 这些行为由模拟 Gateway、widget 与加密快照测试覆盖，不能替代 iPhone 真机键盘/相册验证。
+
+## Cove-Go 品牌
+
+产品名称统一为 `Cove-Go`，不使用中文别名。图标采用 D9 深海配色＋D14 海浪。仅变更显示品牌；现有 GitHub 仓库地址、iOS Bundle ID、Gateway 协议 client ID、设备身份和安全存储键保持不变，以保留安装与配对连续性。原 DSH Go 项目署名保留。

@@ -14361,7 +14361,7 @@ class L10nEn extends L10n {
   String get remoteNetworkObservedAt => 'Last checked';
 
   @override
-  String get remoteAboutTitle => 'About OpenClaw Go';
+  String get remoteAboutTitle => 'About Cove-Go';
 
   @override
   String get remoteAboutDescription =>
@@ -14391,7 +14391,7 @@ class L10nEn extends L10n {
 
   @override
   String get remoteAboutAttribution =>
-      'OpenClaw Go is a modified version of DSH Go by ccch1mneyyy. The app code is licensed under AGPL-3.0; third-party code, names and assets remain subject to their respective licenses and terms. This is not an official DeepSeek product.';
+      'Cove-Go is a modified version of DSH Go by ccch1mneyyy. The app code is licensed under AGPL-3.0; third-party code, names and assets remain subject to their respective licenses and terms. This is not an official DeepSeek product.';
 
   @override
   String get remoteAboutLinkFailed => 'Could not open the link. Please try again with a browser.';

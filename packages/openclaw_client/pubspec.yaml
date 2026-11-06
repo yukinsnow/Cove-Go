@@ -1,5 +1,5 @@
 name: openclaw_client
-description: Native OpenClaw Gateway protocol client for OpenClaw Go.
+description: Native OpenClaw Gateway protocol client for Cove-Go.
 version: 0.1.0
 publish_to: none
 environment:
