@@ -77,6 +77,23 @@ class ClawController extends ChangeNotifier {
   String address = '', token = '', error = '', sessionKey = '';
   bool busy = false, sending = false, disposed = false, readingCache = false;
   List<Map<String, dynamic>> sessions = [], messages = [], models = [];
+  // Local echoes are not persisted as authoritative Gateway history.
+  final _outgoing = <_OutgoingPrompt>[];
+  List<Map<String, dynamic>> get visibleMessages => [
+    ...messages,
+    for (final prompt in _outgoing)
+      if (prompt.sessionKey == sessionKey) prompt.message,
+  ];
+
+  void _reconcileOutgoing() {
+    _outgoing.removeWhere((prompt) {
+      if (prompt.sessionKey != sessionKey) return false;
+      final users = messages.where((m) => m['role'] == 'user');
+      return users.any((m) => m['idempotencyKey'] == prompt.id || m['requestId'] == prompt.id) ||
+          users.where((m) => messageText(m) == messageText(prompt.message)).length > prompt.previousMatches;
+    });
+  }
+
   final Map<String, Map<String, dynamic>> tools = {};
   final Map<String, String> live = {};
   int _selection = 0, _historyRequest = 0, _connectionRevision = 0;
@@ -135,6 +152,7 @@ class ClawController extends ChangeNotifier {
           sessions = [];
           messages = [];
           _histories.clear();
+          _outgoing.clear();
           live.clear();
           tools.clear();
           models = [];
@@ -172,6 +190,7 @@ class ClawController extends ChangeNotifier {
     sessionKey = key;
     final selection = ++_selection;
     messages = _histories[key] ?? [];
+    _reconcileOutgoing();
     readingCache = messages.isNotEmpty;
     live.clear();
     tools.clear();
@@ -185,15 +204,19 @@ class ClawController extends ChangeNotifier {
     final history = await client.request('chat.history', {'sessionKey': key, 'limit': 150}) as Map;
     if (selection != _selection) return;
     messages = (history['messages'] as List? ?? []).map((e) => Map<String, dynamic>.from(e as Map)).toList();
+    _reconcileOutgoing();
     _rememberHistory();
     changed();
   }
 
-  Future<void> newSession() async {
+  Future<void> newSession({String? outgoingId}) async {
     final result = await client.request('sessions.create', {'agentId': 'main', 'idempotencyKey': wireId()}) as Map;
     final key = result['sessionKey'] ?? result['key'] ?? (result['session'] as Map?)?['key'];
     if (key is! String) throw StateError('Gateway did not return a session key');
     await refreshSessions();
+    for (final prompt in _outgoing) {
+      if (prompt.id == outgoingId) prompt.sessionKey = key;
+    }
     await select(key);
   }
 
@@ -204,6 +227,7 @@ class ClawController extends ChangeNotifier {
     final result = await client.request('chat.history', {'sessionKey': key, 'limit': 150}) as Map;
     if (selection != _selection || request != _historyRequest) return;
     messages = (result['messages'] as List? ?? []).map((e) => Map<String, dynamic>.from(e as Map)).toList();
+    _reconcileOutgoing();
     _rememberHistory();
     changed();
   }
@@ -215,26 +239,54 @@ class ClawController extends ChangeNotifier {
   }) async {
     if (sending) return;
     sending = true;
+    final connection = _connectionRevision;
+    final key = sessionKey;
+    final fingerprint = jsonEncode([key, text, queueMode, attachments]);
+    if (_submissionFingerprint != fingerprint) {
+      _submissionFingerprint = fingerprint;
+      _submissionId = wireId();
+    }
+    final id = _submissionId!;
+    final content = <Map<String, dynamic>>[
+      if (text.isNotEmpty) {'type': 'text', 'text': text},
+      for (final file in attachments)
+        {
+          'type': 'image',
+          'source': {'type': 'base64', 'media_type': file['mimeType'], 'data': file['content']},
+        },
+    ];
+    final prompt = _OutgoingPrompt(
+      sessionKey: key,
+      id: id,
+      message: {'role': 'user', 'content': content},
+      previousMatches: visibleMessages.where((m) => m['role'] == 'user' && messageText(m) == text).length,
+    );
+    _outgoing.add(prompt);
     changed();
     try {
-      if (sessionKey.isEmpty) await newSession();
-      final fingerprint = jsonEncode([sessionKey, text, queueMode, attachments]);
-      if (_submissionFingerprint != fingerprint) {
-        _submissionFingerprint = fingerprint;
-        _submissionId = wireId();
+      if (key.isEmpty) {
+        await newSession(outgoingId: id);
+        prompt.sessionKey = sessionKey;
+        _submissionFingerprint = jsonEncode([sessionKey, text, queueMode, attachments]);
+        changed();
       }
+      if (connection != _connectionRevision) throw StateError('Gateway changed during send');
       await client.request('chat.send', {
-        'sessionKey': sessionKey,
+        'sessionKey': prompt.sessionKey,
         'message': text,
-        'idempotencyKey': _submissionId,
+        'idempotencyKey': id,
         'queueMode': queueMode,
         if (attachments.isNotEmpty) 'attachments': attachments,
       });
+      if (connection != _connectionRevision) return;
       _submissionFingerprint = null;
       _submissionId = null;
-      // Admission succeeded. A history refresh failure must not invite a
-      // second submission of the already accepted user input.
+      // Keep the echo until history contains the actual user row. Admission
+      // can precede transcript persistence, especially for queued messages.
       unawaited(guard(history));
+    } catch (_) {
+      _outgoing.remove(prompt);
+      rethrow;
     } finally {
       sending = false;
       changed();
@@ -289,4 +341,12 @@ class ClawController extends ChangeNotifier {
     unawaited(client.dispose());
     super.dispose();
   }
+}
+
+class _OutgoingPrompt {
+  _OutgoingPrompt({required this.sessionKey, required this.id, required this.message, required this.previousMatches});
+  String sessionKey;
+  final String id;
+  final Map<String, dynamic> message;
+  final int previousMatches;
 }

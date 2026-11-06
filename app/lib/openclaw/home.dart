@@ -3,7 +3,6 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
-import 'package:gpt_markdown/gpt_markdown.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:openclaw_client/openclaw_client.dart';
 
@@ -11,13 +10,14 @@ import '../l10n/l10n.dart';
 import '../ui/theme/theme.dart';
 import '../ui/theme/app_icons.dart';
 import '../ui/chat/composer.dart';
+import '../ui/chat/render/markdown_body.dart';
 import '../ui/chat/chat_header.dart';
 import '../ui/chat/widgets/user_bubble.dart';
 import '../ui/shell/drawer/session_tile.dart';
 import '../ui/shell/page_frame.dart';
 import '../ui/common/status_dot.dart';
-import '../ui/common/glass_pill.dart';
 import 'controller.dart';
+import 'tool_activity.dart';
 import '../ui/remote/host_switcher.dart';
 import '../ui/remote/remote_screen.dart';
 import '../ui/shell/sessions_drawer.dart'
@@ -155,14 +155,32 @@ class ClawHomeState extends State<ClawHome> with WidgetsBindingObserver {
   Future<void> send() async {
     final text = input.text.trim();
     if (text.isEmpty && attachments.isEmpty) return;
+    if (c.sending) return;
     final files = List<Map<String, dynamic>>.from(attachments);
+    final host = c.address, token = c.token, session = c.sessionKey;
+    final selection = c.selectionRevision;
+    setState(() {
+      input.clear();
+      attachments.clear();
+    });
+    if (scroll.hasClients) scroll.jumpTo(0);
     await c.guard(() async {
-      await c.send(text, queueMode: queue, attachments: files);
-      if (mounted) {
-        setState(() {
-          if (input.text.trim() == text) input.clear();
-          attachments.removeWhere((file) => files.contains(file));
-        });
+      try {
+        await c.send(text, queueMode: queue, attachments: files);
+      } catch (_) {
+        // Do not overwrite a newer draft or restore it onto another host/chat.
+        if (mounted &&
+            c.address == host &&
+            c.token == token &&
+            (session.isEmpty ? c.selectionRevision <= selection + 1 : c.sessionKey == session) &&
+            input.text.isEmpty &&
+            attachments.isEmpty) {
+          setState(() {
+            input.text = text;
+            attachments.addAll(files);
+          });
+        }
+        rethrow;
       }
     });
   }
@@ -448,15 +466,6 @@ class ClawHomeState extends State<ClawHome> with WidgetsBindingObserver {
   Widget bubble(Map<String, dynamic> message) {
     final text = messageText(message), user = message['role'] == 'user';
     if (text.isEmpty) return const SizedBox.shrink();
-    if (message['role'] == 'toolResult' || message['role'] == 'tool') {
-      return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 5),
-        child: ExpansionTile(
-          title: Text('${message['toolName'] ?? context.l10n.ocTools}'),
-          children: [SelectableText(text)],
-        ),
-      );
-    }
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 12),
       child: user
@@ -464,7 +473,7 @@ class ClawHomeState extends State<ClawHome> with WidgetsBindingObserver {
           : Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                SelectionArea(child: GptMarkdown(text, style: AppType.chatBody(context))),
+                MarkdownBody(text: text),
                 IconButton(
                   visualDensity: VisualDensity.compact,
                   tooltip: context.l10n.ocCopy,
@@ -474,6 +483,36 @@ class ClawHomeState extends State<ClawHome> with WidgetsBindingObserver {
               ],
             ),
     );
+  }
+
+  List<Widget> messageRows() {
+    final rows = <Widget>[];
+    var tools = <GatewayToolEntry>[];
+    void flushTools() {
+      if (tools.isEmpty) return;
+      rows.add(GatewayToolActivity(entries: tools));
+      tools = [];
+    }
+
+    for (final message in c.visibleMessages) {
+      final role = message['role'];
+      final text = messageText(message);
+      if (role == 'toolResult' || role == 'tool') {
+        tools.add(
+          GatewayToolEntry(
+            name: '${message['toolName'] ?? message['name'] ?? context.l10n.ocTools}',
+            details: text.isEmpty ? c.toolText(message) : text,
+          ),
+        );
+      } else if (text.isNotEmpty) {
+        flushTools();
+        rows.add(bubble(message));
+      }
+      // Tool-call-only assistant envelopes have no visible body and do not
+      // split an otherwise consecutive block of tool results.
+    }
+    flushTools();
+    return rows;
   }
 
   Widget header(bool wide) {
@@ -635,7 +674,7 @@ class ClawHomeState extends State<ClawHome> with WidgetsBindingObserver {
                       actions: [TextButton(onPressed: () => c.connect(c.address, c.token), child: Text(l.ocReconnect))],
                     ),
                   Expanded(
-                    child: c.sessionKey.isEmpty
+                    child: c.sessionKey.isEmpty && c.visibleMessages.isEmpty
                         ? Center(
                             child: SingleChildScrollView(
                               child: Column(
@@ -671,33 +710,16 @@ class ClawHomeState extends State<ClawHome> with WidgetsBindingObserver {
                               keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
                               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                               children: [
-                                for (final message in c.messages) bubble(message),
+                                ...messageRows(),
                                 if (c.tools.isNotEmpty)
-                                  GlassPill(
-                                    child: Text('${l.ocTools} · ${c.tools.length}'),
-                                    onTap: () => showModalBottomSheet<void>(
-                                      context: context,
-                                      isScrollControlled: true,
-                                      builder: (ctx) => SafeArea(
-                                        child: SizedBox(
-                                          height: MediaQuery.sizeOf(ctx).height * .7,
-                                          child: ListView(
-                                            children: [
-                                              for (final tool in c.tools.values)
-                                                ExpansionTile(
-                                                  title: Text('${tool['name'] ?? l.ocTools} · ${tool['phase'] ?? ''}'),
-                                                  children: [
-                                                    Padding(
-                                                      padding: const EdgeInsets.all(16),
-                                                      child: SelectableText(c.toolText(tool)),
-                                                    ),
-                                                  ],
-                                                ),
-                                            ],
-                                          ),
+                                  GatewayToolActivity(
+                                    entries: [
+                                      for (final tool in c.tools.values)
+                                        GatewayToolEntry(
+                                          name: '${tool['name'] ?? l.ocTools}',
+                                          details: c.toolText(tool),
                                         ),
-                                      ),
-                                    ),
+                                    ],
                                   ),
                                 for (final text in c.live.values) bubble({'role': 'assistant', 'content': text}),
                               ].reversed.toList(),
