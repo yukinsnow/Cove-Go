@@ -96,7 +96,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('identity-host-switcher')));
     await tester.pumpAndSettle();
-    expect(find.byKey(const ValueKey('gateway-host-row')), findsOneWidget);
+    expect(find.byKey(const ValueKey('gateway-host-row-legacy')), findsOneWidget);
     expect(find.text('本机'), findsNothing);
     expect(find.text('DSH Remote'), findsNothing);
     // Picking a different protocol preserves the Gateway conversation owner.
@@ -112,7 +112,7 @@ void main() {
     showHostSheet(tester.element(find.byType(ModeHome)), onManage: () {});
     await tester.pumpAndSettle();
     expect(find.text('本机'), findsNothing);
-    await tester.tap(find.byKey(const ValueKey('gateway-host-row')));
+    await tester.tap(find.byKey(const ValueKey('gateway-host-row-legacy')));
     await tester.pumpAndSettle();
     expect(identical(tester.state(find.byType(ClawHome)), original), isTrue);
     expect(find.text('未连接'), findsWidgets);
@@ -134,7 +134,7 @@ void main() {
     await tester.tap(find.text('管理远程主机'));
     await tester.pumpAndSettle();
     expect(find.byType(RemoteScreen), findsOneWidget);
-    expect(find.byKey(const ValueKey('remote-gateway-host')), findsNothing);
+    expect(find.byKey(const ValueKey('remote-gateway-host-legacy')), findsNothing);
     await tester.tap(find.byKey(const ValueKey('add-gateway-host')));
     await tester.pumpAndSettle();
     expect(find.byType(RemoteScreen), findsOneWidget);
@@ -165,12 +165,18 @@ void main() {
     expect(find.text('管理远程主机'), findsOneWidget);
     await tester.tap(find.text('管理远程主机'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('删除 OpenClaw 主机'));
+    expect(find.text('删除 OpenClaw 主机'), findsNothing);
+    await tester.longPress(find.byKey(const ValueKey('remote-gateway-host-legacy')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('删除'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('取消'));
     await tester.pumpAndSettle();
     expect(state.c.address, isNotEmpty);
-    await tester.tap(find.text('删除 OpenClaw 主机'));
+    expect(find.text('删除 OpenClaw 主机'), findsNothing);
+    await tester.longPress(find.byKey(const ValueKey('remote-gateway-host-legacy')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('删除'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('删除').last);
     await tester.pumpAndSettle();
@@ -179,7 +185,7 @@ void main() {
     expect(state.c.address, isEmpty);
     expect(state.c.token, isEmpty);
     expect(state.c.sessions, isEmpty);
-    expect(find.byKey(const ValueKey('remote-gateway-host')), findsNothing);
+    expect(find.byKey(const ValueKey('remote-gateway-host-legacy')), findsNothing);
     await tester.tap(find.text('添加 OpenClaw 主机'));
     await tester.pumpAndSettle();
     expect(find.text('Gateway 地址（ws:// 或 wss://）'), findsOneWidget);

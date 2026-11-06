@@ -42,14 +42,14 @@ flutter run --target lib/main_openclaw.dart --dart-define=REMOTE_DUAL_APP=true
 ```
 
 On macOS with Xcode and Flutter 3.47.9, run `bash tooling/build-openclaw-ipa.sh`.
-The output is `build/openclaw/OpenClaw-Go-0.1.11-build12-<revision>-unsigned.ipa` for your own signing process.
+The output is `build/openclaw/OpenClaw-Go-0.1.12-build13-<revision>-unsigned.ipa` for your own signing process.
 The GitHub workflow uploads an artifact, not a public release. Linux cannot build
 with Xcode or prove iPhone functionality.
 
 ## Remaining integration
 
 OpenClaw approval/question forms, voice, inline widgets, device commands,
-history pagination (currently the latest 150 messages) and saved multi-Gateway profiles.
+and history pagination (currently the latest 150 messages).
 DSH Remote still needs end-to-end iPhone testing. Android local execution and
 accessibility-based phone control are not iOS remote features.
 The dual-backend build uses an original network icon, disables the upstream brand/mascots,
@@ -70,3 +70,19 @@ Protocol tests use a local mock Gateway, not user conversations or paid model ru
 ### SSH Gateway connections
 
 Choose or add an SSH profile in the Gateway connection form. Use a Gateway `ws://` address reachable from that SSH server (for example `ws://127.0.0.1:18789`). The encrypted SSH tunnel forwards the existing Gateway and never launches DSH. Passwords and private keys stay in secure storage; host fingerprints must be trusted. Legacy SSH hosts remain in the DSH section; Gateway-only profiles are excluded from DSH host switching. The Gateway web console uses the same tunnel without adding its token to the URL. Direct remote connections still require `wss://`.
+
+## Multiple OpenClaw hosts and About
+
+- Remote hosts always offers direct and SSH add actions. Each Gateway owns its credentials, device identity, SSH tunnel, history and draft. Switching native pages does not disconnect other Gateways; iOS suspension still does not guarantee background connections.
+- The legacy single-Gateway configuration is copied into a secure `legacy` profile. Old keys are cleaned only after the catalog is committed. Its paired identity is preserved; new profiles use separate identities.
+- Swipe OpenClaw/SSH rows left to reveal Delete on the right, or long-press for a deletion menu. Confirmation is required; only that phone-side connection is removed, not the server or conversations. DSH Remote has no native deletion API: its gesture routes to real console management instead of pretending to delete locally.
+- Settings → About OpenClaw Go shows the build version, project and author links, and original DSH Go project/author attribution. Links open in an external browser.
+
+## Image recovery and the input keyboard
+
+- History images are read from content blocks, `openclawDisplayContent` and `__openclaw.media`. Canonical `media://inbound` references use the current Gateway's authenticated media endpoint. Managed outgoing images request fresh download grants instead of reusing expired URLs. SSH connections use the current tunnel.
+- If an older Gateway echoes only text, sent images remain as display-only fallbacks across history refreshes and session switches. The existing encrypted, host-scoped snapshot budget still applies: 2 MiB per snapshot and at most 20 cached histories. This is not a full photo backup; images already lost by an older client cannot be recreated when the server has no reference, and large fallbacks can be evicted by the cache budget.
+- Both attachment entry points explicitly dismiss the keyboard before presenting their menu or native picker. Changing host/session during selection still retires the old pick.
+- Return to send defaults to off in both settings pages. Enabling it changes the software keyboard action to Send, guards active IME composition, disconnected and submitting states, and keeps hardware Shift+Enter as newline. The preference persists locally, independently of the hardware Enter setting.
+
+Mock-Gateway, widget and encrypted-snapshot tests cover these paths; iPhone keyboard and photo-picker behavior still needs real-device validation.

@@ -5358,8 +5358,8 @@
   "ocAddGateway": "添加 OpenClaw 主机",
   "ocRemoveGateway": "删除 OpenClaw 主机",
   "ocRemoveGatewayHelp": "从此手机删除连接地址和令牌并断开连接。服务器和对话不会删除。",
-  "ocManageRelayHosts": "添加或删除 DSH Remote 主机",
-  "ocManageRelayHostsHelp": "在 DSH Remote 控制台管理，返回后刷新列表",
+  "ocManageRelayHosts": "管理 DSH Remote 主机",
+  "ocManageRelayHostsHelp": "通过控制台添加或删除 DSH Remote 主机",
   "ocRemoveGatewayFailed": "未能删除连接，请重试。",
   "ocTransport": "连接方式",
   "ocDirect": "直接连接",
@@ -5375,6 +5375,8 @@
   "ocWhaleMascot": "DSH 小鲸鱼",
   "ocLobsterMascot": "OpenClaw 小龙虾",
   "ocMascotHint": "显示在原生对话输入栏上方，点击跳一下",
+  "ocAddGatewaySsh": "通过 SSH 添加 OpenClaw 主机",
+  "ocHostLoadFailed": "无法读取已保存的 OpenClaw 主机，请重新打开应用。",
   "performanceTitle": "性能",
   "performanceAuto": "自动",
   "performanceFull": "完整",
@@ -8618,6 +8620,30 @@
   "remoteNetworkFallbackPathUnverified": "尚未确认 WebRTC 路径类型",
   "remoteNetworkSnapshotHint": "显示最近一次确认的路径与延迟，刷新可重新检测。",
   "remoteNetworkObservedAt": "最近观测",
+  "remoteAboutTitle": "关于 OpenClaw Go",
+  "remoteAboutDescription": "用于 OpenClaw 与 DSH 的远程客户端。连接自己的主机，在两种后端之间切换。",
+  "remoteAboutProject": "本项目",
+  "remoteAboutVersion": "版本",
+  "remoteAboutHomepage": "项目主页",
+  "remoteAboutAuthor": "作者：{name}",
+  "@remoteAboutAuthor": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "remoteAboutUpstream": "上游项目",
+  "remoteAboutUpstreamAuthor": "上游作者：{name}",
+  "@remoteAboutUpstreamAuthor": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "remoteAboutAttribution": "OpenClaw Go 基于 ccch1mneyyy 的 DSH Go 修改而来。应用代码以 AGPL-3.0 授权；第三方代码、名称与素材仍遵循各自的许可及使用条款。本项目不是 DeepSeek 官方产品。",
+  "remoteAboutLinkFailed": "无法打开链接，请使用浏览器重试。",
   "stateWorkspaceFilesHint": "已上传到当前工作区的文件：",
   "stateRemoteUploadNameInvalid": "文件名不受主机支持，请去掉特殊字符或缩短后再试",
   "stateRemoteUploadWorkspaceUnavailable": "当前对话没有可写的工作目录",
@@ -8625,6 +8651,8 @@
   "stateRemoteUploadLimit": "主机拒绝了上传，请检查文件大小或稍后重试",
   "stateRemoteUploadUnsupported": "这台主机不支持文件上传，请更新主机上的 Remote 插件后重连",
   "stateRemoteUploadTooLarge": "文件超过远程上传协议的大小上限",
+  "returnKeySendsTitle": "换行键发送",
+  "returnKeySendsHint": "关闭时，软键盘换行键插入换行；开启后直接发送。外接键盘 Shift+Enter 仍可换行。",
   "riskDontShowAgain": "不再提示",
   "riskAskAi": "不确定？问 AI",
   "riskConfirmAlwaysAction": "始终免确认",

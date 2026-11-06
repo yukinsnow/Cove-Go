@@ -31,7 +31,17 @@ class GatewayHostEntry {
     this.configureInPlace,
     this.onRemove,
     this.openConsole,
+    this.id = 'legacy',
+    this.profiles,
+    this.changes,
+    this.addHost,
+    this.addSshHost,
   });
+  final String id;
+  final List<GatewayHostEntry> Function()? profiles;
+  final Listenable? changes;
+  final Future<void> Function(BuildContext)? addHost, addSshHost;
+  List<GatewayHostEntry> get hosts => profiles?.call() ?? (hasHost ? [this] : []);
   final String Function() name;
   final bool active;
   final VoidCallback onPick, onRemotePick, onConfigure;
@@ -144,88 +154,91 @@ class HostSheet extends ConsumerWidget {
       unawaited(navigator.push(MaterialPageRoute<void>(builder: (_) => const LocalInstallPage(useWhenDone: true))));
     }
 
-    return SafeArea(
-      top: false,
-      child: ConstrainedBox(
-        constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * 0.8),
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              SheetTitleBar(l10n.remoteSwitchHost),
-              SheetGroup(
-                margin: const EdgeInsets.fromLTRB(SheetTitleBar.inset, 0, SheetTitleBar.inset, 12),
-                children: [
-                  if (gateway != null && gateway.hasHost)
+    return ListenableBuilder(
+      listenable: gateway?.changes ?? const AlwaysStoppedAnimation(0),
+      builder: (context, _) => SafeArea(
+        top: false,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * 0.8),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                SheetTitleBar(l10n.remoteSwitchHost),
+                SheetGroup(
+                  margin: const EdgeInsets.fromLTRB(SheetTitleBar.inset, 0, SheetTitleBar.inset, 12),
+                  children: [
+                    for (final profile in gateway?.hosts ?? <GatewayHostEntry>[])
+                      SettingsTile(
+                        key: ValueKey('gateway-host-row-${profile.id}'),
+                        icon: AppIcons.remoteHost,
+                        tinted: false,
+                        title: profile.name(),
+                        subtitle: 'Gateway',
+                        trailing: profile.active ? Icon(AppIcons.selected) : null,
+                        onTap: () {
+                          Navigator.of(context).pop();
+                          profile.onPick();
+                        },
+                      ),
+                    if (gateway == null && defaultTargetPlatform != TargetPlatform.iOS)
+                      _HostRow(
+                        host: HostRef.local,
+                        title: l10n.commonThisPhone,
+                        subtitle: l10n.remoteThisPhoneDsh,
+                        active: active.isLocal,
+                        onTap: localMissing ? installLocal : () => pick(HostRef.local),
+                      ),
+                    for (final h in ssh)
+                      _HostRow(
+                        host: HostRef.ssh(h.id),
+                        title: h.name,
+                        subtitle: 'SSH · ${h.address}',
+                        active: gateway?.active != true && active == HostRef.ssh(h.id),
+                        onTap: () => pick(HostRef.ssh(h.id)),
+                      ),
+                    for (final h in relayHosts)
+                      _HostRow(
+                        host: HostRef.relay(h.id, name: h.name),
+                        title: h.name,
+                        subtitle: h.platform == null
+                            ? l10n.remoteRemoteLabel
+                            : l10n.remoteRemotePlatform(RelayHost.platformLabel(h.platform!)),
+                        active: gateway?.active != true && active == HostRef.relay(h.id),
+                        relay: h,
+                        onTap: () => pick(HostRef.relay(h.id, name: h.name)),
+                      ),
+                  ],
+                ),
+                if (relayHosts.length > 1)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(SheetTitleBar.inset + 8, 0, SheetTitleBar.inset + 8, 12),
+                    child: Text(
+                      l10n.remoteRelaySwitchWarning,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(color: DshColors.of(context).textTertiary),
+                    ),
+                  ),
+                SheetGroup(
+                  margin: const EdgeInsets.fromLTRB(SheetTitleBar.inset, 0, SheetTitleBar.inset, 12),
+                  children: [
                     SettingsTile(
-                      key: const ValueKey('gateway-host-row'),
-                      icon: AppIcons.remoteHost,
+                      icon: ssh.isEmpty && relayHosts.isEmpty ? AppIcons.add : AppIcons.configure,
                       tinted: false,
-                      title: gateway.name(),
-                      subtitle: 'Gateway',
-                      trailing: gateway.active ? Icon(AppIcons.selected) : null,
+                      title: gateway != null || ssh.isNotEmpty || relayHosts.isNotEmpty
+                          ? l10n.remoteManageHosts
+                          : l10n.remoteConnectComputer,
+                      subtitle: ssh.isEmpty && relayHosts.isEmpty ? l10n.remoteConnectionMethods : null,
                       onTap: () {
                         Navigator.of(context).pop();
-                        gateway.onPick();
+                        onManage();
                       },
                     ),
-                  if (gateway == null && defaultTargetPlatform != TargetPlatform.iOS)
-                    _HostRow(
-                      host: HostRef.local,
-                      title: l10n.commonThisPhone,
-                      subtitle: l10n.remoteThisPhoneDsh,
-                      active: active.isLocal,
-                      onTap: localMissing ? installLocal : () => pick(HostRef.local),
-                    ),
-                  for (final h in ssh)
-                    _HostRow(
-                      host: HostRef.ssh(h.id),
-                      title: h.name,
-                      subtitle: 'SSH · ${h.address}',
-                      active: gateway?.active != true && active == HostRef.ssh(h.id),
-                      onTap: () => pick(HostRef.ssh(h.id)),
-                    ),
-                  for (final h in relayHosts)
-                    _HostRow(
-                      host: HostRef.relay(h.id, name: h.name),
-                      title: h.name,
-                      subtitle: h.platform == null
-                          ? l10n.remoteRemoteLabel
-                          : l10n.remoteRemotePlatform(RelayHost.platformLabel(h.platform!)),
-                      active: gateway?.active != true && active == HostRef.relay(h.id),
-                      relay: h,
-                      onTap: () => pick(HostRef.relay(h.id, name: h.name)),
-                    ),
-                ],
-              ),
-              if (relayHosts.length > 1)
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(SheetTitleBar.inset + 8, 0, SheetTitleBar.inset + 8, 12),
-                  child: Text(
-                    l10n.remoteRelaySwitchWarning,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(color: DshColors.of(context).textTertiary),
-                  ),
+                  ],
                 ),
-              SheetGroup(
-                margin: const EdgeInsets.fromLTRB(SheetTitleBar.inset, 0, SheetTitleBar.inset, 12),
-                children: [
-                  SettingsTile(
-                    icon: ssh.isEmpty && relayHosts.isEmpty ? AppIcons.add : AppIcons.configure,
-                    tinted: false,
-                    title: gateway != null || ssh.isNotEmpty || relayHosts.isNotEmpty
-                        ? l10n.remoteManageHosts
-                        : l10n.remoteConnectComputer,
-                    subtitle: ssh.isEmpty && relayHosts.isEmpty ? l10n.remoteConnectionMethods : null,
-                    onTap: () {
-                      Navigator.of(context).pop();
-                      onManage();
-                    },
-                  ),
-                ],
-              ),
-              const SizedBox(height: 4),
-            ],
+                const SizedBox(height: 4),
+              ],
+            ),
           ),
         ),
       ),

@@ -1,0 +1,22 @@
+{
+  "remoteAboutTitle": "About OpenClaw Go",
+  "remoteAboutDescription": "A remote client for OpenClaw and DSH. Connect to your own hosts and switch between the two backends.",
+  "remoteAboutProject": "Project",
+  "remoteAboutVersion": "Version",
+  "remoteAboutHomepage": "Project homepage",
+  "remoteAboutAuthor": "Author: {name}",
+  "@remoteAboutAuthor": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "remoteAboutUpstream": "Upstream project",
+  "remoteAboutUpstreamAuthor": "Upstream author: {name}",
+  "@remoteAboutUpstreamAuthor": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "remoteAboutAttribution": "OpenClaw Go is a modified version of DSH Go by ccch1mneyyy. The app code is licensed under AGPL-3.0; third-party code, names and assets remain subject to their respective licenses and terms. This is not an official DeepSeek product.",
+  "remoteAboutLinkFailed": "Could not open the link. Please try again with a browser."
+}

@@ -15557,13 +15557,13 @@ abstract class L10n {
   /// No description provided for @ocManageRelayHosts.
   ///
   /// In zh, this message translates to:
-  /// **'添加或删除 DSH Remote 主机'**
+  /// **'管理 DSH Remote 主机'**
   String get ocManageRelayHosts;
 
   /// No description provided for @ocManageRelayHostsHelp.
   ///
   /// In zh, this message translates to:
-  /// **'在 DSH Remote 控制台管理，返回后刷新列表'**
+  /// **'通过控制台添加或删除 DSH Remote 主机'**
   String get ocManageRelayHostsHelp;
 
   /// No description provided for @ocRemoveGatewayFailed.
@@ -15655,6 +15655,18 @@ abstract class L10n {
   /// In zh, this message translates to:
   /// **'显示在原生对话输入栏上方，点击跳一下'**
   String get ocMascotHint;
+
+  /// No description provided for @ocAddGatewaySsh.
+  ///
+  /// In zh, this message translates to:
+  /// **'通过 SSH 添加 OpenClaw 主机'**
+  String get ocAddGatewaySsh;
+
+  /// No description provided for @ocHostLoadFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'无法读取已保存的 OpenClaw 主机，请重新打开应用。'**
+  String get ocHostLoadFailed;
 
   /// No description provided for @performanceTitle.
   ///
@@ -24962,6 +24974,66 @@ abstract class L10n {
   /// **'最近观测'**
   String get remoteNetworkObservedAt;
 
+  /// No description provided for @remoteAboutTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'关于 OpenClaw Go'**
+  String get remoteAboutTitle;
+
+  /// No description provided for @remoteAboutDescription.
+  ///
+  /// In zh, this message translates to:
+  /// **'用于 OpenClaw 与 DSH 的远程客户端。连接自己的主机，在两种后端之间切换。'**
+  String get remoteAboutDescription;
+
+  /// No description provided for @remoteAboutProject.
+  ///
+  /// In zh, this message translates to:
+  /// **'本项目'**
+  String get remoteAboutProject;
+
+  /// No description provided for @remoteAboutVersion.
+  ///
+  /// In zh, this message translates to:
+  /// **'版本'**
+  String get remoteAboutVersion;
+
+  /// No description provided for @remoteAboutHomepage.
+  ///
+  /// In zh, this message translates to:
+  /// **'项目主页'**
+  String get remoteAboutHomepage;
+
+  /// No description provided for @remoteAboutAuthor.
+  ///
+  /// In zh, this message translates to:
+  /// **'作者：{name}'**
+  String remoteAboutAuthor(String name);
+
+  /// No description provided for @remoteAboutUpstream.
+  ///
+  /// In zh, this message translates to:
+  /// **'上游项目'**
+  String get remoteAboutUpstream;
+
+  /// No description provided for @remoteAboutUpstreamAuthor.
+  ///
+  /// In zh, this message translates to:
+  /// **'上游作者：{name}'**
+  String remoteAboutUpstreamAuthor(String name);
+
+  /// No description provided for @remoteAboutAttribution.
+  ///
+  /// In zh, this message translates to:
+  /// **'OpenClaw Go 基于 ccch1mneyyy 的 DSH Go 修改而来。应用代码以 AGPL-3.0 授权；第三方代码、名称与素材仍遵循各自的许可及使用条款。本项目不是 DeepSeek 官方产品。'**
+  String get remoteAboutAttribution;
+
+  /// No description provided for @remoteAboutLinkFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'无法打开链接，请使用浏览器重试。'**
+  String get remoteAboutLinkFailed;
+
   /// No description provided for @stateWorkspaceFilesHint.
   ///
   /// In zh, this message translates to:
@@ -25003,6 +25075,18 @@ abstract class L10n {
   /// In zh, this message translates to:
   /// **'文件超过远程上传协议的大小上限'**
   String get stateRemoteUploadTooLarge;
+
+  /// No description provided for @returnKeySendsTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'换行键发送'**
+  String get returnKeySendsTitle;
+
+  /// No description provided for @returnKeySendsHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'关闭时，软键盘换行键插入换行；开启后直接发送。外接键盘 Shift+Enter 仍可换行。'**
+  String get returnKeySendsHint;
 
   /// No description provided for @riskDontShowAgain.
   ///

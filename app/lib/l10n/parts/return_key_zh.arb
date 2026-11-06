@@ -1,0 +1,4 @@
+{
+  "returnKeySendsTitle": "换行键发送",
+  "returnKeySendsHint": "关闭时，软键盘换行键插入换行；开启后直接发送。外接键盘 Shift+Enter 仍可换行。"
+}

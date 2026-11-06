@@ -4,6 +4,10 @@ import 'dart:io';
 import 'dart:ui' as drawing;
 
 import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
+import 'package:dsh_app/state/settings_state.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:dsh_app/ui/chat/composer.dart';
 
 import 'package:dsh_app/openclaw/controller.dart';
 import 'package:dsh_app/state/offline_snapshot.dart';
@@ -25,8 +29,14 @@ import 'package:openclaw_client/openclaw_client.dart';
 import '../support/test_fonts.dart';
 
 class MemorySnapshots extends OfflineSnapshotStore {
+  final snapshots = <String, Map<String, dynamic>>{};
   @override
-  Future<void> write(String scope, Map<String, dynamic> snapshot) async {}
+  Future<void> write(String scope, Map<String, dynamic> snapshot) async {
+    snapshots[scope] = Map<String, dynamic>.from(jsonDecode(jsonEncode(snapshot)) as Map);
+  }
+
+  @override
+  Future<Map<String, dynamic>?> read(String scope) async => snapshots[scope];
 }
 
 class SlowGateway extends GatewayClient {
@@ -350,6 +360,145 @@ void main() {
     expect(tester.getSize(find.byType(GatewayToolActivity)).height, lessThanOrEqualTo(52));
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('attachment entry hides the keyboard before opening native picker', (tester) async {
+    final calls = <String>[];
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.textInput, (call) async {
+      calls.add(call.method);
+      return null;
+    });
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+      const MethodChannel('plugins.flutter.io/image_picker'),
+      (call) async {
+        expect(calls, contains('TextInput.hide'));
+        return null;
+      },
+    );
+    addTearDown(() {
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.textInput, null);
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        const MethodChannel('plugins.flutter.io/image_picker'),
+        null,
+      );
+    });
+    final ui = UiController(gateway)..sessionKey = 'a';
+    await tester.pumpWidget(home(ui, buildLightTheme()));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byType(TextField));
+    await tester.pump();
+    final state = tester.state<ClawHomeState>(find.byType(ClawHome));
+    expect(state.composerFocus.hasFocus, isTrue);
+    calls.clear();
+    await state.attach();
+    await tester.pumpAndSettle();
+    expect(calls, contains('TextInput.hide'));
+    expect(state.composerFocus.hasFocus, isFalse);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('OpenClaw composer follows persisted Return-to-send preference', (tester) async {
+    SharedPreferences.setMockInitialValues({'return_key_sends': true});
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+      const MethodChannel('plugins.it_nomads.com/flutter_secure_storage'),
+      (call) async => call.method == 'readAll' ? <String, String>{} : null,
+    );
+    addTearDown(
+      () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        const MethodChannel('plugins.it_nomads.com/flutter_secure_storage'),
+        null,
+      ),
+    );
+    final ui = UiController(gateway)..sessionKey = 'a';
+    await tester.pumpWidget(home(ui, buildLightTheme()));
+    await tester.pumpAndSettle();
+    final scope = ProviderScope.containerOf(tester.element(find.byType(ClawHome)));
+    await tester.runAsync(() async {
+      for (var i = 0; i < 50 && !scope.read(settingsProvider).loaded; i++) {
+        await Future<void>.delayed(Duration.zero);
+      }
+    });
+    await tester.pumpAndSettle();
+    expect(scope.read(settingsProvider).returnKeySends, isTrue);
+    expect(tester.widget<Composer>(find.byType(Composer)).returnKeySends, isTrue);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  test('plain-text history preserves admitted image through refresh and session re-entry', () async {
+    final sending = c.send(
+      'look',
+      attachments: [
+        {'type': 'image', 'mimeType': 'image/png', 'content': SlowGateway.png},
+      ],
+    );
+    gateway.rows = [
+      {'role': 'user', 'id': 'message-1', 'content': 'look'},
+    ];
+    gateway.admission.complete({});
+    await sending;
+    await c.history();
+    expect(c.visibleMessages, hasLength(1));
+    expect(gatewayImages(c.visibleMessages.single), hasLength(1));
+    await c.history();
+    expect(gatewayImages(c.visibleMessages.single), hasLength(1));
+    gateway.rows = [];
+    await c.select('b');
+    expect(c.visibleMessages, isEmpty);
+    gateway.rows = [
+      {'role': 'user', 'id': 'message-1', 'content': 'look'},
+    ];
+    await c.select('a');
+    expect(gatewayImages(c.visibleMessages.single), hasLength(1));
+    // A canonical image replaces fallback bytes, rather than rendering twice.
+    gateway.rows = [
+      {
+        'role': 'user',
+        'id': 'message-1',
+        'content': 'look',
+        '__openclaw': {
+          'media': [
+            {'kind': 'image', 'path': 'media://inbound/a.png'},
+          ],
+        },
+      },
+    ];
+    await c.history();
+    expect(gatewayImages(c.visibleMessages.single).single['url'], 'media://inbound/a.png');
+    expect(c.visibleMessages.single['_localImages'], isNull);
+  });
+
+  test('image fallback survives a fresh controller restoring its host-scoped snapshot', () async {
+    final cache = MemorySnapshots();
+    final writer = ClawController(client: gateway, snapshots: cache)..sessionKey = 'a';
+    final sending = writer.send(
+      'saved',
+      attachments: [
+        {'mimeType': 'image/png', 'content': SlowGateway.png},
+      ],
+    );
+    gateway.rows = [
+      {'id': 'saved-image', 'role': 'user', 'content': 'saved'},
+    ];
+    gateway.admission.complete({});
+    await sending;
+    await writer.history();
+    final fresh = ClawController(snapshots: cache);
+    addTearDown(fresh.dispose);
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(
+      const MethodChannel('plugins.it_nomads.com/flutter_secure_storage'),
+      (call) async => null,
+    );
+    addTearDown(
+      () => TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(
+        const MethodChannel('plugins.it_nomads.com/flutter_secure_storage'),
+        null,
+      ),
+    );
+    await fresh.load();
+    expect(fresh.sessionKey, 'a');
+    expect(gatewayImages(fresh.visibleMessages.single), hasLength(1));
+    expect(gatewayImages(fresh.visibleMessages.single).single['source']['data'], SlowGateway.png);
+    writer.dispose();
   });
 
   test('echo is synchronous and survives admission and stale history until actual echo', () async {

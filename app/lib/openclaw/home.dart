@@ -17,6 +17,7 @@ import '../ui/shell/drawer/session_tile.dart';
 import '../ui/shell/page_frame.dart';
 import '../ui/common/status_dot.dart';
 import 'controller.dart';
+import 'about_page.dart';
 import 'appearance_settings.dart';
 import 'mascot_settings.dart';
 import 'mascot_stage.dart';
@@ -24,6 +25,7 @@ import 'tool_activity.dart';
 import 'images.dart';
 import 'ssh_tunnel.dart';
 import '../state/hosts_state.dart';
+import '../state/settings_state.dart';
 import '../remote/ssh/ssh_transport.dart';
 import '../remote/ssh/ssh_link.dart';
 import '../ui/remote/host_key_dialog.dart';
@@ -34,7 +36,6 @@ import '../ui/shell/sessions_drawer.dart'
     show IdentityBar, HostIdentityPresentation, DrawerBrandHeader, SessionDrawerSurface;
 import '../ui/shell/drawer/drawer_filter_bar.dart';
 import '../ui/shell/adaptive/adaptive_layout.dart';
-import '../state/app_info.dart';
 
 import 'dart:math' as math;
 
@@ -43,15 +44,16 @@ import '../state/drawer_view_state.dart' show DrawerFilter, SessionDay, sessionD
 import '../ui/shell/session_search_page.dart';
 import '../ui/web/web_view_page.dart';
 
-class ClawHome extends StatefulWidget {
-  const ClawHome({super.key, required this.onLanguage, this.controller});
+class ClawHome extends ConsumerStatefulWidget {
+  const ClawHome({super.key, required this.onLanguage, this.controller, this.ownsController = true});
   final ClawController? controller;
+  final bool ownsController;
   final VoidCallback onLanguage;
   @override
   ClawHomeState createState() => ClawHomeState();
 }
 
-class ClawHomeState extends State<ClawHome> with WidgetsBindingObserver {
+class ClawHomeState extends ConsumerState<ClawHome> with WidgetsBindingObserver {
   late final c = widget.controller ?? ClawController();
   final scaffoldKey = GlobalKey<ScaffoldState>();
   final input = TextEditingController(), scroll = ScrollController(keepScrollOffset: false);
@@ -115,14 +117,14 @@ class ClawHomeState extends State<ClawHome> with WidgetsBindingObserver {
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     c.removeListener(update);
-    c.dispose();
+    if (widget.ownsController) c.dispose();
     composerFocus.dispose();
     input.dispose();
     scroll.dispose();
     super.dispose();
   }
 
-  Future<void> settings({BuildContext? from}) async {
+  Future<void> settings({BuildContext? from, bool requireSsh = false}) async {
     final url = TextEditingController(text: c.address), secret = TextEditingController(text: c.token);
     String? selectedSsh = c.sshId;
     final container = ProviderScope.containerOf(from ?? context, listen: false);
@@ -133,6 +135,18 @@ class ClawHomeState extends State<ClawHome> with WidgetsBindingObserver {
       return;
     }
     if (selectedSsh != null && container.read(hostsProvider).sshById(selectedSsh) == null) selectedSsh = null;
+    if (requireSsh && selectedSsh == null) {
+      final saved = await Navigator.of(from ?? context)
+          .push<SshHostConfig>(MaterialPageRoute(builder: (_) => const SshHostFormPage(gatewayOnly: true)));
+      if (!mounted || saved == null || (from != null && !from.mounted)) {
+        url.dispose();
+        secret.dispose();
+        return;
+      }
+      selectedSsh = saved.id;
+      if (url.text.isEmpty) url.text = 'ws://127.0.0.1:18789';
+    }
+
     final result = await showDialog<(String, String)>(
       context: from ?? context,
       builder: (ctx) => StatefulBuilder(
@@ -198,13 +212,22 @@ class ClawHomeState extends State<ClawHome> with WidgetsBindingObserver {
     await Future<void>.delayed(const Duration(milliseconds: 300));
     url.dispose();
     secret.dispose();
-    if (result != null && !c.busy) {
+    if (mounted && result != null && !c.busy) {
       c.sshId = selectedSsh;
       await c.connect(result.$1, result.$2);
     }
   }
 
   Future<void> attach() => c.guard(() async {
+    final host = c.address, credential = c.token, session = c.sessionKey, selection = c.selectionRevision;
+    bool current() =>
+        mounted &&
+        c.address == host &&
+        c.token == credential &&
+        c.sessionKey == session &&
+        c.selectionRevision == selection;
+    await hideKeyboard();
+    if (!current()) return;
     final file = await ImagePicker().pickImage(source: ImageSource.gallery, maxWidth: 2048, imageQuality: 85);
     if (file == null) return;
     final bytes = await file.readAsBytes();
@@ -221,8 +244,7 @@ class ClawHomeState extends State<ClawHome> with WidgetsBindingObserver {
             ? 'image/jpeg'
             : null);
     if (mime == null) throw StateError('Choose a JPEG or PNG image');
-    if (!mounted) return;
-    final host = c.address, credential = c.token, session = c.sessionKey, selection = c.selectionRevision;
+    if (!mounted || !current()) return;
     final confirmed = await Navigator.of(context).push<bool>(
       MaterialPageRoute(
         builder: (_) => GatewayImageSelection(image: MemoryImage(bytes), name: file.name),
@@ -405,7 +427,6 @@ class ClawHomeState extends State<ClawHome> with WidgetsBindingObserver {
                       manageHosts();
                     },
                   ),
-                  SettingsTile(icon: AppIcons.info, title: AppInfo.displayVersion, subtitle: AppInfo.sourceRevision),
                 ],
               ),
               if (features)
@@ -439,6 +460,13 @@ class ClawHomeState extends State<ClawHome> with WidgetsBindingObserver {
                 title: l.commonSettings,
                 children: [
                   SettingsTile(icon: AppIcons.translate, title: l.ocEnglish, onTap: widget.onLanguage),
+                  SettingsTile(
+                    icon: AppIcons.info,
+                    title: l.remoteAboutTitle,
+                    onTap: () =>
+                        Navigator.of(pageContext)
+                            .push(MaterialPageRoute<void>(builder: (_) => const RemoteAboutPage())),
+                  ),
                   SettingsTile(
                     icon: AppIcons.info,
                     title: l.ocLicenses,
@@ -587,7 +615,14 @@ class ClawHomeState extends State<ClawHome> with WidgetsBindingObserver {
             spacing: 8,
             runSpacing: 8,
             children: [
-              for (final image in images) GatewayImage(block: image, client: c.client, sessionKey: c.sessionKey),
+              for (final image in images)
+                GatewayImage(
+                  block: image,
+                  client: c.client,
+                  sessionKey: c.sessionKey,
+                  address: c.transportAddress ?? c.address,
+                  token: c.token,
+                ),
             ],
           );
     return Padding(
@@ -866,6 +901,7 @@ class ClawHomeState extends State<ClawHome> with WidgetsBindingObserver {
                           onTapOutside: (_) => composerFocus.unfocus(),
                           child: Composer(
                             controller: input,
+                            returnKeySends: ref.watch(settingsProvider.select((s) => s.returnKeySends)),
                             focusNode: composerFocus,
                             connected: c.connected,
                             running: c.live.isNotEmpty,

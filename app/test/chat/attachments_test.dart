@@ -1,5 +1,3 @@
-import 'dart:typed_data';
-
 import 'package:dsh_app/state/attachments.dart';
 import 'package:dsh_app/state/chat_state.dart';
 import 'package:dsh_app/ui/chat/chat_screen.dart';
@@ -7,6 +5,7 @@ import 'package:dsh_app/ui/chat/empty_state.dart';
 import 'package:dsh_app/ui/chat/widgets/attachments.dart';
 import 'package:dsh_app/ui/theme/app_icons.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'support/harness.dart';
@@ -77,6 +76,24 @@ void main() {
       expect(find.byType(ComposerTray), findsOneWidget);
       expect(find.text('notes.md'), findsOneWidget);
       expect(find.text('MD · 5 B'), findsOneWidget);
+    });
+
+    testWidgets('attachment menu explicitly dismisses focused keyboard', (tester) async {
+      final harness = ChatHarness(session: 's1');
+      await pumpScreen(tester, harness);
+      await tester.tap(find.byType(TextField));
+      await pumpFrames(tester);
+      final calls = <String>[];
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.textInput, (call) async {
+        calls.add(call.method);
+        return null;
+      });
+      addTearDown(() => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.textInput, null));
+      await tester.tap(find.bySemanticsLabel('添加图片或文件'));
+      await pumpFrames(tester);
+      expect(calls, contains('TextInput.hide'));
+      expect(find.text('文件'), findsOneWidget);
+      expect(tester.widget<TextField>(find.byType(TextField)).focusNode!.hasFocus, isFalse);
     });
 
     testWidgets('an attachment alone can be sent, and the tray empties', (tester) async {

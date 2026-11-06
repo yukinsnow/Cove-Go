@@ -34,8 +34,8 @@
   "ocAddGateway": "添加 OpenClaw 主机",
   "ocRemoveGateway": "删除 OpenClaw 主机",
   "ocRemoveGatewayHelp": "从此手机删除连接地址和令牌并断开连接。服务器和对话不会删除。",
-  "ocManageRelayHosts": "添加或删除 DSH Remote 主机",
-  "ocManageRelayHostsHelp": "在 DSH Remote 控制台管理，返回后刷新列表",
+  "ocManageRelayHosts": "管理 DSH Remote 主机",
+  "ocManageRelayHostsHelp": "通过控制台添加或删除 DSH Remote 主机",
   "ocRemoveGatewayFailed": "未能删除连接，请重试。",
   "ocTransport": "连接方式",
   "ocDirect": "直接连接",
@@ -50,5 +50,7 @@
   "ocNightMode": "夜间",
   "ocWhaleMascot": "DSH 小鲸鱼",
   "ocLobsterMascot": "OpenClaw 小龙虾",
-  "ocMascotHint": "显示在原生对话输入栏上方，点击跳一下"
+  "ocMascotHint": "显示在原生对话输入栏上方，点击跳一下",
+  "ocAddGatewaySsh": "通过 SSH 添加 OpenClaw 主机",
+  "ocHostLoadFailed": "无法读取已保存的 OpenClaw 主机，请重新打开应用。"
 }

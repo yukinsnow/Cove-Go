@@ -46,14 +46,14 @@ macOS + Xcode + Flutter 3.47.9：
 bash tooling/build-openclaw-ipa.sh
 ```
 
-输出 `build/openclaw/OpenClaw-Go-0.1.11-build12-<提交号>-unsigned.ipa`，需要自己的签名/安装流程。
+输出 `build/openclaw/OpenClaw-Go-0.1.12-build13-<提交号>-unsigned.ipa`，需要自己的签名/安装流程。
 仓库的 `Build OpenClaw Go iOS` workflow 仅上传构建 Artifact，不创建 Release。
 Linux 上不能运行 Xcode 或证明 iPhone 实机可用。
 
 ## 当前尚未完成的集成
 
 - OpenClaw 原生工具审批/提问面板、语音、内联 widget 与设备能力调用。
-- OpenClaw 历史分页（当前读取最近 150 条）、多个 Gateway 的保存列表。
+- OpenClaw 历史分页（当前读取最近 150 条）。
 - DSH 功能在 iOS 真机上的端到端验收；安卓本机运行、无障碍手机操控不属于 iOS 远程能力。
 - 构建入口已换用独立网络图标，禁用原品牌与原版桌宠并从 IPA 中排除对应素材；新的小伙伴为独立绘制；原 DSH 开发入口不变。详见 `ASSETS.md`。
 
@@ -67,3 +67,19 @@ python3 app/tool/l10n_merge.py --check
 ```
 
 协议单测使用本地模拟 Gateway，不连接用户的真实会话、不自动批准设备、不产生模型费用。
+
+## 多 OpenClaw 主机与关于
+
+- 远程主机页始终提供“添加 OpenClaw 主机”和“通过 SSH 添加 OpenClaw 主机”。每个 Gateway 各自保存令牌、设备身份、SSH 隧道、历史与草稿；原生页面切换不主动断开其他 Gateway。iOS 挂起时仍不保证后台长连接。
+- 旧的单 Gateway 配置会复制到安全存储中的 `legacy` 主机，目录提交成功后才清理旧键。设备身份沿用，避免无故重新配对；新增主机使用独立身份。
+- OpenClaw 与 SSH 行左滑可露出右侧删除，或长按打开删除菜单；操作仍需确认。只删除手机上的对应连接，不删除服务器或对话。DSH Remote 没有原生删除接口，手势引导到控制台执行真实管理，不伪造本地删除。
+- 设置中的“关于 OpenClaw Go”显示构建版本、项目主页、作者，以及原 DSH Go 项目和作者，可点击链接在浏览器打开。
+
+## 图片恢复与输入键盘
+
+- 历史图片读取消息块、`openclawDisplayContent` 与 `__openclaw.media`。`media://inbound` 通过当前 Gateway 的认证媒体接口读取；托管输出图片重新申请下载凭证，不复用过期地址。SSH 连接沿用当前隧道。
+- 旧 Gateway 回账只返回文字时，已发送图片保留为显示专用回退；刷新、切换会话后继续使用，并受原有按主机隔离的加密快照预算限制（每个快照 2 MiB，最多 20 个历史会话）。这不是完整相册备份；旧版已丢失、服务端也没有媒体引用的图片无法凭空恢复，大图回退也可能因缓存预算被淘汰。
+- OpenClaw 和 DSH 的附件入口在打开菜单或系统相册前显式收起键盘；选择期间切换主机/会话仍会废弃旧选择。
+- 两端设置中的“换行键发送”默认关闭。打开后软件键盘显示发送动作；中文候选输入、未连接、提交中等状态不会误发送，硬件 Shift+Enter 保留换行。选择持久保存在本机，独立于硬件 Enter 设置。
+
+这些行为由模拟 Gateway、widget 与加密快照测试覆盖，不能替代 iPhone 真机键盘/相册验证。

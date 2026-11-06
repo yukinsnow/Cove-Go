@@ -55,6 +55,7 @@ class Composer extends StatefulWidget {
     this.onContentInserted,
     this.maxLines = 6,
     this.hardwareEnterSends = false,
+    this.returnKeySends = false,
   });
 
   final TextEditingController controller;
@@ -121,6 +122,9 @@ class Composer extends StatefulWidget {
   /// Opt-in physical Enter-to-send; never changes the software IME action.
   final bool hardwareEnterSends;
 
+  /// Opt-in software Return-to-send, independent of physical Enter behavior.
+  final bool returnKeySends;
+
   /// Editor lines for a page whose [pageContext] still carries the keyboard
   /// inset: six, or as many as fit in two fifths of the height above the
   /// keyboard at the current text size, never under two (two keep newlines
@@ -160,6 +164,14 @@ class _ComposerState extends State<Composer> {
     widget.onStop();
   }
 
+  void _submitReturn(String _) {
+    if (!widget.returnKeySends || (widget.voice?.active ?? false)) return;
+    final value = widget.controller.value;
+    if (value.composing.isValid && !value.composing.isCollapsed) return;
+    if (value.text.trim().isEmpty && !widget.hasAttachments) return;
+    _send();
+  }
+
   /// Hardware keyboards: Ctrl/⌘+Enter sends; optionally plain Enter does too.
   /// Shift+Enter remains a new line. IME composition never sends.
   /// Two consecutive Esc presses within 500 ms stop the turn. The pair is
@@ -174,6 +186,21 @@ class _ComposerState extends State<Composer> {
     final keys = HardwareKeyboard.instance;
     final key = event.logicalKey;
     if (key != LogicalKeyboardKey.escape) _lastEscape = null;
+    // A send IME action can also affect physical Enter on some platforms.
+    // Keep Shift+Enter a literal newline regardless of that action.
+    if (widget.returnKeySends &&
+        keys.isShiftPressed &&
+        !keys.isControlPressed &&
+        !keys.isMetaPressed &&
+        !keys.isAltPressed &&
+        (key == LogicalKeyboardKey.enter || key == LogicalKeyboardKey.numpadEnter)) {
+      if (!(widget.voice?.active ?? false)) {
+        final value = widget.controller.value;
+        final selection = value.selection;
+        if (selection.isValid) widget.controller.value = value.replaced(selection, '\n');
+      }
+      return KeyEventResult.handled;
+    }
     final sendEnter =
         keys.isControlPressed ||
         keys.isMetaPressed ||
@@ -375,7 +402,12 @@ class _ComposerState extends State<Composer> {
                         minLines: 1,
                         maxLines: widget.maxLines,
                         keyboardType: TextInputType.multiline,
-                        textInputAction: TextInputAction.newline,
+                        textInputAction: widget.returnKeySends ? TextInputAction.send : TextInputAction.newline,
+                        // The default finalizer clears composition before onSubmitted,
+                        // hiding an active IME candidate from our guard. Keep both
+                        // composition and focus intact until an explicit send is safe.
+                        onEditingComplete: widget.returnKeySends ? () {} : null,
+                        onSubmitted: widget.returnKeySends ? _submitReturn : null,
                         textCapitalization: TextCapitalization.sentences,
                         style: textStyle,
                         cursorColor: theme.colorScheme.primary,

@@ -152,8 +152,8 @@ void main() {
     expect(find.text('OpenClaw'), findsOneWidget);
     expect(find.text('OpenClaw Gateway'), findsOneWidget);
     expect(find.text('SSH 主机'), findsNothing);
-    await tester.ensureVisible(find.byKey(const ValueKey('gateway-console')));
-    await tester.tap(find.byKey(const ValueKey('gateway-console')));
+    await tester.ensureVisible(find.byKey(const ValueKey('gateway-console-legacy')));
+    await tester.tap(find.byKey(const ValueKey('gateway-console-legacy')));
     expect(consoles, 1);
     final boundary = capture.currentContext!.findRenderObject()! as RenderRepaintBoundary;
     await tester.runAsync(() async {
@@ -169,7 +169,7 @@ void main() {
       tester.getSemantics(find.byKey(const ValueKey('remote-row-mac'))).flagsCollection.isSelected,
       isNot(Tristate.isTrue),
     );
-    await tester.tap(find.byKey(const ValueKey('remote-gateway-host')));
+    await tester.tap(find.byKey(const ValueKey('remote-gateway-host-legacy')));
     await frames(tester);
     expect(picks, 1);
     await tester.tap(find.byTooltip('编辑').first);
@@ -182,14 +182,19 @@ void main() {
     await secrets.write(SshSecrets.passwordKey(sampleSsh.id), 'test-password');
     final container = await pump(tester, const RemoteScreen());
     await frames(tester);
-    final delete = find.byTooltip('删除这台主机').first;
-    await tester.ensureVisible(delete);
-    await tester.tap(delete);
+    final row = find.byKey(ValueKey('ssh-delete-${sampleSsh.id}'));
+    expect(find.byTooltip('删除这台主机'), findsNothing);
+    await tester.ensureVisible(row);
+    await tester.drag(row, const Offset(-130, 0));
+    await frames(tester);
+    await tester.tap(find.text('删除'));
     await frames(tester);
     await tester.tap(find.text('取消'));
     await frames(tester);
     expect(container.read(hostsProvider).sshById(sampleSsh.id), isNotNull);
-    await tester.tap(delete);
+    await tester.longPress(row);
+    await frames(tester);
+    await tester.tap(find.text('删除'));
     await frames(tester);
     await tester.tap(find.text('删除').last);
     await frames(tester);

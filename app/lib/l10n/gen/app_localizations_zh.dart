@@ -8466,10 +8466,10 @@ class L10nZh extends L10n {
   String get ocRemoveGatewayHelp => '从此手机删除连接地址和令牌并断开连接。服务器和对话不会删除。';
 
   @override
-  String get ocManageRelayHosts => '添加或删除 DSH Remote 主机';
+  String get ocManageRelayHosts => '管理 DSH Remote 主机';
 
   @override
-  String get ocManageRelayHostsHelp => '在 DSH Remote 控制台管理，返回后刷新列表';
+  String get ocManageRelayHostsHelp => '通过控制台添加或删除 DSH Remote 主机';
 
   @override
   String get ocRemoveGatewayFailed => '未能删除连接，请重试。';
@@ -8515,6 +8515,12 @@ class L10nZh extends L10n {
 
   @override
   String get ocMascotHint => '显示在原生对话输入栏上方，点击跳一下';
+
+  @override
+  String get ocAddGatewaySsh => '通过 SSH 添加 OpenClaw 主机';
+
+  @override
+  String get ocHostLoadFailed => '无法读取已保存的 OpenClaw 主机，请重新打开应用。';
 
   @override
   String get performanceTitle => '性能';
@@ -13644,6 +13650,41 @@ class L10nZh extends L10n {
   String get remoteNetworkObservedAt => '最近观测';
 
   @override
+  String get remoteAboutTitle => '关于 OpenClaw Go';
+
+  @override
+  String get remoteAboutDescription => '用于 OpenClaw 与 DSH 的远程客户端。连接自己的主机，在两种后端之间切换。';
+
+  @override
+  String get remoteAboutProject => '本项目';
+
+  @override
+  String get remoteAboutVersion => '版本';
+
+  @override
+  String get remoteAboutHomepage => '项目主页';
+
+  @override
+  String remoteAboutAuthor(String name) {
+    return '作者：$name';
+  }
+
+  @override
+  String get remoteAboutUpstream => '上游项目';
+
+  @override
+  String remoteAboutUpstreamAuthor(String name) {
+    return '上游作者：$name';
+  }
+
+  @override
+  String get remoteAboutAttribution =>
+      'OpenClaw Go 基于 ccch1mneyyy 的 DSH Go 修改而来。应用代码以 AGPL-3.0 授权；第三方代码、名称与素材仍遵循各自的许可及使用条款。本项目不是 DeepSeek 官方产品。';
+
+  @override
+  String get remoteAboutLinkFailed => '无法打开链接，请使用浏览器重试。';
+
+  @override
   String get stateWorkspaceFilesHint => '已上传到当前工作区的文件：';
 
   @override
@@ -13663,6 +13704,12 @@ class L10nZh extends L10n {
 
   @override
   String get stateRemoteUploadTooLarge => '文件超过远程上传协议的大小上限';
+
+  @override
+  String get returnKeySendsTitle => '换行键发送';
+
+  @override
+  String get returnKeySendsHint => '关闭时，软键盘换行键插入换行；开启后直接发送。外接键盘 Shift+Enter 仍可换行。';
 
   @override
   String get riskDontShowAgain => '不再提示';

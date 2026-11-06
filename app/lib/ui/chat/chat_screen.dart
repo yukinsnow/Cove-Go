@@ -793,6 +793,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> with WidgetsBindingObse
   // 附件
 
   Future<void> _attach() async {
+    _focus.unfocus();
+    FocusManager.instance.primaryFocus?.unfocus();
+    await SystemChannels.textInput.invokeMethod<void>('TextInput.hide');
+    if (!mounted) return;
     final room = maxAttachments - _drafts.length;
     final client = ref.read(activeConnectionProvider).value?.client;
     // A draft or connection that changes away and back still retires this pick.
@@ -1833,6 +1837,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> with WidgetsBindingObse
                                 else
                                   Composer(
                                     hardwareEnterSends: ref.watch(settingsProvider.select((s) => s.hardwareEnterSends)),
+                                    returnKeySends: ref.watch(settingsProvider.select((s) => s.returnKeySends)),
                                     controller: _input,
                                     // The page's context: Scaffold drops the keyboard inset below.
                                     maxLines: Composer.linesFor(context),

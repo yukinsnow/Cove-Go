@@ -21,6 +21,7 @@ import '../theme/app_icons.dart';
 import '../theme/theme.dart';
 import '../web/web_view_page.dart';
 import 'host_switcher.dart';
+import 'host_delete_gesture.dart';
 import 'host_key_dialog.dart';
 import 'host_status.dart';
 import 'link_progress.dart';
@@ -109,85 +110,72 @@ class _RemoteScreenState extends ConsumerState<RemoteScreen> {
     final gateway = ref.watch(gatewayHostEntryProvider);
     final signedIn = ref.watch(relayAccountProvider.select((a) => a.value?.signedIn ?? false));
     void push(Widget page) => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => page));
-    return AppPage.list(
-      title: l10n.commonRemoteHost,
-      subtitle: Text(gateway == null ? l10n.remoteHostsIntro : l10n.ocRemoteHostsIntro),
-      actions: gateway == null ? const [AskAiButton(AskAiTopic.remote)] : const [],
-      children: [
-        if (gateway?.active != true) _ActiveCard(active: active),
-        if (gateway != null)
-          SettingsSection(
-            title: 'OpenClaw',
-            children: [
-              if (gateway.hasHost)
+    return ListenableBuilder(
+      listenable: gateway?.changes ?? const AlwaysStoppedAnimation(0),
+      builder: (context, _) => AppPage.list(
+        title: l10n.commonRemoteHost,
+        subtitle: Text(gateway == null ? l10n.remoteHostsIntro : l10n.ocRemoteHostsIntro),
+        actions: gateway == null ? const [AskAiButton(AskAiTopic.remote)] : const [],
+        children: [
+          if (gateway?.active != true) _ActiveCard(active: active),
+          if (gateway != null)
+            SettingsSection(
+              title: 'OpenClaw',
+              children: [
+                for (final profile in gateway.hosts) _GatewayRows(entry: profile),
                 SettingsTile(
-                  key: const ValueKey('remote-gateway-host'),
-                  icon: AppIcons.remoteHost,
+                  key: const ValueKey('add-gateway-host'),
+                  icon: AppIcons.add,
                   tinted: false,
-                  title: gateway.name(),
-                  subtitle: 'OpenClaw Gateway',
-                  value: gateway.active ? Icon(AppIcons.selected, color: Theme.of(context).colorScheme.primary) : null,
-                  chevron: false,
+                  title: l10n.ocAddGateway,
                   onTap: () async {
-                    await Navigator.of(context).maybePop();
-                    gateway.onPick();
-                  },
-                  trailing: _EdgeIconButton(
-                    icon: const Icon(AppIcons.configure, size: 20),
-                    tooltip: l10n.commonEdit,
-                    onPressed: () async {
-                      if (gateway.configureInPlace != null) {
-                        await gateway.configureInPlace!(context);
-                        if (mounted) setState(() {});
-                      } else {
-                        gateway.onConfigure();
-                      }
-                    },
-                  ),
-                ),
-              if (gateway.hasHost && gateway.onRemove != null)
-                SettingsTile(
-                  icon: AppIcons.delete,
-                  tinted: false,
-                  title: l10n.ocRemoveGateway,
-                  onTap: () async {
-                    final confirmed = await showAppDialog<bool>(
-                      context: context,
-                      builder: (dialog) => AlertDialog(
-                        title: Text(l10n.ocRemoveGateway),
-                        content: Text(l10n.ocRemoveGatewayHelp),
-                        actions: [
-                          TextButton(onPressed: () => Navigator.pop(dialog, false), child: Text(l10n.commonCancel)),
-                          FilledButton(onPressed: () => Navigator.pop(dialog, true), child: Text(l10n.commonDelete)),
-                        ],
-                      ),
-                    );
-                    if (confirmed != true) return;
-                    try {
-                      await gateway.onRemove!();
-                    } catch (_) {
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.ocRemoveGatewayFailed)));
-                      }
+                    if (gateway.addHost != null) {
+                      await gateway.addHost!(context);
+                    } else if (gateway.configureInPlace != null) {
+                      await gateway.configureInPlace!(context);
+                    } else {
+                      gateway.onConfigure();
                     }
                     if (mounted) setState(() {});
                   },
                 ),
-              if (gateway.hasHost && gateway.openConsole != null)
-                SettingsTile(
-                  key: const ValueKey('gateway-console'),
-                  icon: AppIcons.openExternal,
-                  title: l10n.ocGatewayConsole,
-                  onTap: () => gateway.openConsole!(context),
-                ),
-              for (final h in ssh.where((h) => h.gatewayOnly))
+                if (gateway.addSshHost != null)
+                  SettingsTile(
+                    key: const ValueKey('add-gateway-ssh-host'),
+                    icon: AppIcons.add,
+                    tinted: false,
+                    title: l10n.ocAddGatewaySsh,
+                    onTap: () async {
+                      await gateway.addSshHost!(context);
+                      if (mounted) setState(() {});
+                    },
+                  ),
+                for (final h in ssh.where((h) => h.gatewayOnly))
+                  _SshRow(
+                    config: h,
+                    active: false,
+                    onTap: () => push(SshHostFormPage(existing: h)),
+                    onEdit: () => push(SshHostFormPage(existing: h)),
+                    onDelete: () async {
+                      if (await _confirmHostDelete(context, h.name)) {
+                        await ref.read(hostsProvider.notifier).removeSsh(h.id);
+                      }
+                    },
+                  ),
+              ],
+            ),
+          _RelaySection(
+            onUse: (h) => _use(context, ref, h),
+            onManage: () => _openConsole(context),
+            sshChildren: [
+              for (final h in ssh.where((h) => !h.gatewayOnly))
                 _SshRow(
                   config: h,
-                  active: false,
-                  onTap: () => push(SshHostFormPage(existing: h)),
+                  active: gateway?.active != true && active == HostRef.ssh(h.id),
+                  onTap: () => _use(context, ref, HostRef.ssh(h.id)),
                   onEdit: () => push(SshHostFormPage(existing: h)),
                   onDelete: () async {
-                    final ok = await showAppDialog<bool>(
+                    final confirmed = await showAppDialog<bool>(
                       context: context,
                       builder: (dialog) => AlertDialog(
                         title: Text(l10n.remoteDeleteHostTitle(h.name)),
@@ -198,76 +186,35 @@ class _RemoteScreenState extends ConsumerState<RemoteScreen> {
                         ],
                       ),
                     );
-                    if (ok == true) await ref.read(hostsProvider.notifier).removeSsh(h.id);
+                    if (confirmed == true) await ref.read(hostsProvider.notifier).removeSsh(h.id);
                   },
                 ),
-              if (!gateway.hasHost)
-                SettingsTile(
-                  key: const ValueKey('add-gateway-host'),
-                  icon: AppIcons.add,
-                  tinted: false,
-                  title: l10n.ocAddGateway,
-                  onTap: () async {
-                    if (gateway.configureInPlace != null) {
-                      await gateway.configureInPlace!(context);
-                      if (mounted) setState(() {});
-                    } else {
-                      gateway.onConfigure();
-                    }
-                  },
-                ),
+              SettingsTile(
+                icon: AppIcons.add,
+                tinted: false,
+                spot: Spots.addSshHost,
+                title: l10n.ocAddDshSsh,
+                subtitle: ssh.isEmpty ? l10n.remoteSshDirect : null,
+                onTap: () => unawaited(_addSsh(context, ref)),
+              ),
             ],
           ),
-        _RelaySection(
-          onUse: (h) => _use(context, ref, h),
-          onManage: () => _openConsole(context),
-          sshChildren: [
-            for (final h in ssh.where((h) => !h.gatewayOnly))
-              _SshRow(
-                config: h,
-                active: gateway?.active != true && active == HostRef.ssh(h.id),
-                onTap: () => _use(context, ref, HostRef.ssh(h.id)),
-                onEdit: () => push(SshHostFormPage(existing: h)),
-                onDelete: () async {
-                  final confirmed = await showAppDialog<bool>(
-                    context: context,
-                    builder: (dialog) => AlertDialog(
-                      title: Text(l10n.remoteDeleteHostTitle(h.name)),
-                      content: Text(l10n.remoteDeleteHostBody),
-                      actions: [
-                        TextButton(onPressed: () => Navigator.pop(dialog, false), child: Text(l10n.commonCancel)),
-                        FilledButton(onPressed: () => Navigator.pop(dialog, true), child: Text(l10n.commonDelete)),
-                      ],
-                    ),
-                  );
-                  if (confirmed == true) await ref.read(hostsProvider.notifier).removeSsh(h.id);
-                },
-              ),
-            SettingsTile(
-              icon: AppIcons.add,
-              tinted: false,
-              spot: Spots.addSshHost,
-              title: l10n.ocAddDshSsh,
-              subtitle: ssh.isEmpty ? l10n.remoteSshDirect : null,
-              onTap: () => unawaited(_addSsh(context, ref)),
+          // Only meaningful once there is a host to come back to.
+          if (ssh.isNotEmpty || signedIn)
+            SettingsSection(
+              title: l10n.remoteStartupSection,
+              children: [
+                SettingsSwitchTile(
+                  key: const ValueKey('remote-auto-connect'),
+                  spot: Spots.remoteAutoConnect,
+                  subtitle: l10n.remoteAutoConnectOnStartupHint,
+                  value: ref.watch(remoteAutoConnectProvider),
+                  onChanged: (value) => unawaited(ref.read(remoteAutoConnectProvider.notifier).set(value)),
+                ),
+              ],
             ),
-          ],
-        ),
-        // Only meaningful once there is a host to come back to.
-        if (ssh.isNotEmpty || signedIn)
-          SettingsSection(
-            title: l10n.remoteStartupSection,
-            children: [
-              SettingsSwitchTile(
-                key: const ValueKey('remote-auto-connect'),
-                spot: Spots.remoteAutoConnect,
-                subtitle: l10n.remoteAutoConnectOnStartupHint,
-                value: ref.watch(remoteAutoConnectProvider),
-                onChanged: (value) => unawaited(ref.read(remoteAutoConnectProvider.notifier).set(value)),
-              ),
-            ],
-          ),
-      ],
+        ],
+      ),
     );
   }
 }
@@ -467,37 +414,37 @@ class _SshRow extends ConsumerWidget {
   final SshHostConfig config;
   final bool active;
   final VoidCallback onTap;
-  final VoidCallback onEdit, onDelete;
+  final VoidCallback onEdit;
+  final Future<void> Function() onDelete;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = context.l10n;
     final view = active ? watchHostStatus(ref, HostRef.ssh(config.id)) : null;
-    return Semantics(
-      selected: active,
-      inMutuallyExclusiveGroup: true,
-      child: SettingsTile(
-        icon: hostKindIcon(HostKind.ssh),
-        tinted: false,
-        title: config.name,
-        subtitle: config.address,
-        onTap: onTap,
-        value: view == null ? null : _HostState(view),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _EdgeIconButton(
-              icon: const Icon(AppIcons.configure, size: 20),
-              tooltip: l10n.commonEdit,
-              onPressed: onEdit,
-              nudge: false,
-            ),
-            _EdgeIconButton(
-              icon: const Icon(AppIcons.delete, size: 20),
-              tooltip: l10n.remoteDeleteHost,
-              onPressed: onDelete,
-            ),
-          ],
+    return HostDeleteGesture(
+      key: ValueKey('ssh-delete-${config.id}'),
+      onDelete: onDelete,
+      child: Semantics(
+        selected: active,
+        inMutuallyExclusiveGroup: true,
+        child: SettingsTile(
+          icon: hostKindIcon(HostKind.ssh),
+          tinted: false,
+          title: config.name,
+          subtitle: config.address,
+          onTap: onTap,
+          value: view == null ? null : _HostState(view),
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _EdgeIconButton(
+                icon: const Icon(AppIcons.configure, size: 20),
+                tooltip: l10n.commonEdit,
+                onPressed: onEdit,
+                nudge: false,
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -583,10 +530,29 @@ class _RelaySection extends ConsumerWidget {
           )
         else
           for (final h in account.hosts)
-            _RelayRow(
-              host: h,
-              active: ref.watch(gatewayHostEntryProvider)?.active != true && active == HostRef.relay(h.id),
-              onTap: h.online || active == HostRef.relay(h.id) ? () => onUse(HostRef.relay(h.id, name: h.name)) : null,
+            HostDeleteGesture(
+              key: ValueKey('relay-delete-${h.id}'),
+              onDelete: () async {
+                final go = await showAppDialog<bool>(
+                  context: context,
+                  builder: (dialog) => AlertDialog(
+                    title: Text(l10n.remoteDeleteHostTitle(h.name)),
+                    content: Text(l10n.ocManageRelayHostsHelp),
+                    actions: [
+                      TextButton(onPressed: () => Navigator.pop(dialog, false), child: Text(l10n.commonCancel)),
+                      FilledButton(onPressed: () => Navigator.pop(dialog, true), child: Text(l10n.ocManageRelayHosts)),
+                    ],
+                  ),
+                );
+                if (go == true && context.mounted) onManage();
+              },
+              child: _RelayRow(
+                host: h,
+                active: ref.watch(gatewayHostEntryProvider)?.active != true && active == HostRef.relay(h.id),
+                onTap: h.online || active == HostRef.relay(h.id)
+                    ? () => onUse(HostRef.relay(h.id, name: h.name))
+                    : null,
+              ),
             ),
         SettingsTile(
           icon: AppIcons.configure,
@@ -817,6 +783,87 @@ class _RelayRow extends ConsumerWidget {
         trailing: active ? Icon(AppIcons.selected, size: 20, color: scheme.primary) : const SizedBox(width: 20),
         chevron: false,
       ),
+    );
+  }
+}
+
+Future<bool> _confirmHostDelete(BuildContext context, String name, {bool gateway = false}) async {
+  final l = context.l10n;
+  return await showAppDialog<bool>(
+        context: context,
+        builder: (dialog) => AlertDialog(
+          title: Text(l.remoteDeleteHostTitle(name)),
+          content: Text(gateway ? l.ocRemoveGatewayHelp : l.remoteDeleteHostBody),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(dialog, false), child: Text(l.commonCancel)),
+            FilledButton(onPressed: () => Navigator.pop(dialog, true), child: Text(l.commonDelete)),
+          ],
+        ),
+      ) ==
+      true;
+}
+
+class _GatewayRows extends StatefulWidget {
+  const _GatewayRows({required this.entry});
+  final GatewayHostEntry entry;
+  @override
+  State<_GatewayRows> createState() => _GatewayRowsState();
+}
+
+class _GatewayRowsState extends State<_GatewayRows> {
+  @override
+  Widget build(BuildContext context) {
+    final entry = widget.entry, l = context.l10n;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        HostDeleteGesture(
+          key: ValueKey('gateway-delete-${entry.id}'),
+          onDelete: () async {
+            if (entry.onRemove == null || !await _confirmHostDelete(context, entry.name(), gateway: true)) return;
+            try {
+              await entry.onRemove!();
+            } catch (_) {
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l.ocRemoveGatewayFailed)));
+              }
+            }
+          },
+          child: SettingsTile(
+            key: ValueKey('remote-gateway-host-${entry.id}'),
+            icon: AppIcons.remoteHost,
+            tinted: false,
+            title: entry.name(),
+            subtitle: 'OpenClaw Gateway',
+            chevron: false,
+            value: entry.active ? Icon(AppIcons.selected, color: Theme.of(context).colorScheme.primary) : null,
+            onTap: () {
+              Navigator.of(context).maybePop();
+              entry.onPick();
+            },
+            trailing: _EdgeIconButton(
+              icon: const Icon(AppIcons.configure, size: 20),
+              tooltip: l.commonEdit,
+              onPressed: () async {
+                if (entry.configureInPlace != null) {
+                  await entry.configureInPlace!(context);
+                } else {
+                  entry.onConfigure();
+                }
+                if (mounted) setState(() {});
+              },
+            ),
+          ),
+        ),
+        if (entry.openConsole != null)
+          SettingsTile(
+            key: ValueKey('gateway-console-${entry.id}'),
+            icon: AppIcons.openExternal,
+            title: l.ocGatewayConsole,
+            subtitle: entry.name(),
+            onTap: () => entry.openConsole!(context),
+          ),
+      ],
     );
   }
 }

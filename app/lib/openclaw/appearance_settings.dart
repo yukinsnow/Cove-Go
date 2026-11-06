@@ -18,6 +18,7 @@ class RemoteAppearanceSettings extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l = context.l10n;
     final mode = ref.watch(settingsProvider.select((s) => s.themeMode));
+    final returnKeySends = ref.watch(settingsProvider.select((s) => s.returnKeySends));
     final pets = ref.watch(mascotSettingsProvider);
     return SettingsSection(
       title: l.hubSettingsAppearance,
@@ -33,6 +34,14 @@ class RemoteAppearanceSettings extends ConsumerWidget {
           ],
           selected: mode,
           onChanged: (value) => unawaited(ref.read(settingsProvider.notifier).setThemeMode(value)),
+        ),
+        SettingsSwitchTile(
+          key: const ValueKey('remote-return-key-sends-switch'),
+          icon: AppIcons.enterKey,
+          title: l.returnKeySendsTitle,
+          subtitle: l.returnKeySendsHint,
+          value: returnKeySends,
+          onChanged: (value) => unawaited(ref.read(settingsProvider.notifier).setReturnKeySends(value)),
         ),
         for (final pet in RemoteMascot.values)
           SettingsSwitchTile(

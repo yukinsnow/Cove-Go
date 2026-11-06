@@ -1,61 +1,104 @@
 import 'dart:convert';
+import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:openclaw_client/openclaw_client.dart';
 
 import '../l10n/l10n.dart';
+import 'image_blocks.dart';
 import '../ui/chat/artifact_preview.dart' show ImageViewerPage;
 import '../ui/common/display_image.dart';
 import '../ui/theme/app_icons.dart';
 
-/// History can omit image bytes and expose an artifact reference instead.
-List<Map> gatewayImages(Map message) {
-  final content = message['content'];
-  return [
-    if (content is List)
-      for (final block in content.whereType<Map>())
-        if (block['type'] == 'image' || block['type'] == 'image_url') block,
-  ];
-}
+export 'image_blocks.dart';
 
-ImageProvider? _imageUrl(dynamic value) {
-  if (value is! String || value.isEmpty) return null;
-  if (value.startsWith('data:image/')) {
-    return MemoryImage(UriData.parse(value).contentAsBytes());
-  }
-  final uri = Uri.tryParse(value);
-  if (uri != null && (uri.scheme == 'https' || uri.scheme == 'http') && uri.host.isNotEmpty) {
-    return NetworkImage(value);
-  }
-  return null;
-}
-
-Future<ImageProvider?> _loadImage(Map block, GatewayClient client, String sessionKey) async {
+/// Only send the Gateway credential to the exact configured origin. Never
+/// follow redirects with it or infer filesystem URLs from private paths.
+Future<ImageProvider?> loadGatewayImage(
+  Map block,
+  GatewayClient client,
+  String sessionKey, {
+  String? address,
+  String token = '',
+}) async {
+  const maxBytes = 12 * 1024 * 1024;
   final source = block['source'];
   final data = block['data'] ?? (source is Map ? source['data'] : null);
   if (data is String && data.isNotEmpty) return MemoryImage(base64Decode(data));
-  final artifact = block['artifactId'];
+  dynamic value;
+  final reference = gatewayImageReference(block);
+  final managed = reference == null
+      ? null
+      : RegExp(r'^/api/chat/media/outgoing/[^/]+/([0-9a-fA-F-]{36})/(?:full|thumbnail)$').firstMatch(reference);
+  final artifact = block['artifactId'] ?? (managed == null ? null : 'artifact_managed_image_${managed[1]}');
   if (artifact is String && artifact.isNotEmpty) {
     final result = await client.request('artifacts.download', {'sessionKey': sessionKey, 'artifactId': artifact});
     if (result is Map) {
       if (result['encoding'] == 'base64' && result['data'] is String) {
         return MemoryImage(base64Decode(result['data'] as String));
       }
-      return _imageUrl(result['url']);
+      value = result['url'];
     }
   }
   final imageUrl = block['image_url'];
-  return _imageUrl(
-    block['url'] ?? (imageUrl is Map ? imageUrl['url'] : imageUrl) ?? (source is Map ? source['url'] : null),
-  );
+  value ??= block['url'] ?? (imageUrl is Map ? imageUrl['url'] : imageUrl) ?? (source is Map ? source['url'] : source);
+  if (value is! String || value.isEmpty) return null;
+  if (value.startsWith('data:image/')) return MemoryImage(UriData.parse(value).contentAsBytes());
+  var uri = Uri.tryParse(value);
+  final gateway = address == null ? null : Uri.tryParse(address);
+  final origin = gateway != null && ['ws', 'wss'].contains(gateway.scheme) && gateway.host.isNotEmpty
+      ? gateway.replace(scheme: gateway.scheme == 'wss' ? 'https' : 'http', query: null, fragment: null)
+      : null;
+  if (uri?.scheme == 'media' && uri?.host == 'inbound' && origin != null) {
+    uri = origin.replace(
+      path: '${origin.path.replaceFirst(RegExp(r'/+$'), '')}/__openclaw__/assistant-media',
+      queryParameters: {'source': value, 'sessionKey': sessionKey},
+    );
+  } else if (uri != null && !uri.hasScheme && origin != null && value.startsWith('/') && !value.startsWith('//')) {
+    final base = origin.path.replaceFirst(RegExp(r'/+$'), '');
+    uri = origin.replace(path: base + uri.path, query: uri.hasQuery ? uri.query : null);
+  }
+  if (uri == null || !['https', 'http'].contains(uri.scheme) || uri.host.isEmpty || uri.userInfo.isNotEmpty) {
+    return null;
+  }
+  final sameOrigin =
+      origin != null && uri.scheme == origin.scheme && uri.host == origin.host && uri.port == origin.port;
+  if (!sameOrigin) return NetworkImage(uri.toString());
+  final http = HttpClient()..connectionTimeout = const Duration(seconds: 15);
+  try {
+    final request = await http.getUrl(uri).timeout(const Duration(seconds: 15));
+    request.followRedirects = false;
+    if (token.isNotEmpty) request.headers.set(HttpHeaders.authorizationHeader, 'Bearer $token');
+    final response = await request.close().timeout(const Duration(seconds: 30));
+    if (response.statusCode != 200 || response.contentLength > maxBytes) return null;
+    final bytes = BytesBuilder(copy: false);
+    await for (final chunk in response.timeout(const Duration(seconds: 30))) {
+      if (bytes.length + chunk.length > maxBytes) return null;
+      bytes.add(chunk);
+    }
+    return MemoryImage(bytes.takeBytes());
+  } finally {
+    http.close(force: true);
+  }
 }
 
 class GatewayImage extends StatefulWidget {
-  const GatewayImage({super.key, required this.block, required this.client, required this.sessionKey, this.size = 144});
+  const GatewayImage({
+    super.key,
+    required this.block,
+    required this.client,
+    required this.sessionKey,
+    this.size = 144,
+    this.address,
+    this.token = '',
+  });
   final Map block;
   final GatewayClient client;
   final String sessionKey;
   final double size;
+  final String? address;
+  final String token;
 
   @override
   State<GatewayImage> createState() => _GatewayImageState();
@@ -75,12 +118,20 @@ class _GatewayImageState extends State<GatewayImage> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.block != widget.block ||
         oldWidget.client != widget.client ||
-        oldWidget.sessionKey != widget.sessionKey) {
+        oldWidget.sessionKey != widget.sessionKey ||
+        oldWidget.address != widget.address ||
+        oldWidget.token != widget.token) {
       _load();
     }
   }
 
-  void _load() => _image = _loadImage(widget.block, widget.client, widget.sessionKey);
+  void _load() => _image = loadGatewayImage(
+    widget.block,
+    widget.client,
+    widget.sessionKey,
+    address: widget.address,
+    token: widget.token,
+  );
 
   @override
   Widget build(BuildContext context) {

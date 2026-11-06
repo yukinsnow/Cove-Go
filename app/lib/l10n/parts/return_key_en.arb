@@ -1,0 +1,4 @@
+{
+  "returnKeySendsTitle": "Return key sends",
+  "returnKeySendsHint": "When off, the software keyboard's Return key inserts a newline; when on, it sends. Shift+Enter on a hardware keyboard still inserts a newline."
+}

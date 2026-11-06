@@ -8923,10 +8923,10 @@ class L10nEn extends L10n {
       'Remove the connection URL and token from this phone and disconnect. The server and conversations are not deleted.';
 
   @override
-  String get ocManageRelayHosts => 'Add or remove DSH Remote hosts';
+  String get ocManageRelayHosts => 'Manage DSH Remote hosts';
 
   @override
-  String get ocManageRelayHostsHelp => 'Manage in the DSH Remote console, then refresh this list';
+  String get ocManageRelayHostsHelp => 'Add or remove DSH Remote hosts through the console';
 
   @override
   String get ocRemoveGatewayFailed => 'Could not delete the connection. Please try again.';
@@ -8973,6 +8973,12 @@ class L10nEn extends L10n {
 
   @override
   String get ocMascotHint => 'Show above the native chat input; tap to hop';
+
+  @override
+  String get ocAddGatewaySsh => 'Add OpenClaw host via SSH';
+
+  @override
+  String get ocHostLoadFailed => 'Could not load saved OpenClaw hosts. Please reopen the app.';
 
   @override
   String get performanceTitle => 'Performance';
@@ -14350,6 +14356,42 @@ class L10nEn extends L10n {
   String get remoteNetworkObservedAt => 'Last checked';
 
   @override
+  String get remoteAboutTitle => 'About OpenClaw Go';
+
+  @override
+  String get remoteAboutDescription =>
+      'A remote client for OpenClaw and DSH. Connect to your own hosts and switch between the two backends.';
+
+  @override
+  String get remoteAboutProject => 'Project';
+
+  @override
+  String get remoteAboutVersion => 'Version';
+
+  @override
+  String get remoteAboutHomepage => 'Project homepage';
+
+  @override
+  String remoteAboutAuthor(String name) {
+    return 'Author: $name';
+  }
+
+  @override
+  String get remoteAboutUpstream => 'Upstream project';
+
+  @override
+  String remoteAboutUpstreamAuthor(String name) {
+    return 'Upstream author: $name';
+  }
+
+  @override
+  String get remoteAboutAttribution =>
+      'OpenClaw Go is a modified version of DSH Go by ccch1mneyyy. The app code is licensed under AGPL-3.0; third-party code, names and assets remain subject to their respective licenses and terms. This is not an official DeepSeek product.';
+
+  @override
+  String get remoteAboutLinkFailed => 'Could not open the link. Please try again with a browser.';
+
+  @override
   String get stateWorkspaceFilesHint => 'Files uploaded to the current workspace:';
 
   @override
@@ -14371,6 +14413,13 @@ class L10nEn extends L10n {
 
   @override
   String get stateRemoteUploadTooLarge => 'The file exceeds the remote upload protocol\'s size limit';
+
+  @override
+  String get returnKeySendsTitle => 'Return key sends';
+
+  @override
+  String get returnKeySendsHint =>
+      'When off, the software keyboard\'s Return key inserts a newline; when on, it sends. Shift+Enter on a hardware keyboard still inserts a newline.';
 
   @override
   String get riskDontShowAgain => 'Don’t show again';

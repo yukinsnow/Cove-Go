@@ -21,6 +21,7 @@ class AppSettings {
     this.phoneStorage = false,
     this.webPhoneLayout = true,
     this.hardwareEnterSends = false,
+    this.returnKeySends = false,
     this.chatTextScale = 1.0,
     this.foldCompletedTurns = true,
     this.visualReplies = true,
@@ -48,8 +49,11 @@ class AppSettings {
   /// official layout untouched, e.g. to check a plugin that restyles it.
   final bool webPhoneLayout;
 
-  /// Hardware Enter sends; Shift+Enter and the software keyboard still insert newlines.
+  /// Hardware Enter sends; Shift+Enter still inserts a newline.
   final bool hardwareEnterSends;
+
+  /// The software keyboard's Return action sends instead of inserting a newline.
+  final bool returnKeySends;
 
   /// Size of chat content relative to the system setting (header and
   /// composer keep theirs). One of [chatTextScales].
@@ -84,6 +88,7 @@ class AppSettings {
     bool? phoneStorage,
     bool? webPhoneLayout,
     bool? hardwareEnterSends,
+    bool? returnKeySends,
     double? chatTextScale,
     bool? foldCompletedTurns,
     bool? visualReplies,
@@ -98,6 +103,7 @@ class AppSettings {
     phoneStorage: phoneStorage ?? this.phoneStorage,
     webPhoneLayout: webPhoneLayout ?? this.webPhoneLayout,
     hardwareEnterSends: hardwareEnterSends ?? this.hardwareEnterSends,
+    returnKeySends: returnKeySends ?? this.returnKeySends,
     chatTextScale: chatTextScale ?? this.chatTextScale,
     foldCompletedTurns: foldCompletedTurns ?? this.foldCompletedTurns,
     visualReplies: visualReplies ?? this.visualReplies,
@@ -122,6 +128,7 @@ class SettingsController extends Notifier<AppSettings> {
   static const _phoneStorageKey = 'phone_storage';
   static const _webPhoneLayoutKey = 'web_phone_layout';
   static const _hardwareEnterKey = 'hardware_enter_sends';
+  static const _returnKeyKey = 'return_key_sends';
   static const _chatTextScaleKey = 'chat_text_scale';
   static const _foldTurnsKey = 'fold_completed_turns';
   static const _visualRepliesKey = 'visual_replies';
@@ -168,6 +175,7 @@ class SettingsController extends Notifier<AppSettings> {
       phoneStorage: prefs.getBool(_phoneStorageKey) ?? false,
       webPhoneLayout: prefs.getBool(_webPhoneLayoutKey) ?? true,
       hardwareEnterSends: prefs.getBool(_hardwareEnterKey) ?? false,
+      returnKeySends: prefs.getBool(_returnKeyKey) ?? false,
       chatTextScale: _knownScale(prefs.getDouble(_chatTextScaleKey)),
       foldCompletedTurns: prefs.getBool(_foldTurnsKey) ?? true,
       visualReplies: prefs.getBool(_visualRepliesKey) ?? true,
@@ -254,6 +262,14 @@ class SettingsController extends Notifier<AppSettings> {
     state = state.copyWith(hardwareEnterSends: value);
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_hardwareEnterKey, value);
+  }
+
+  Future<void> setReturnKeySends(bool value) async {
+    await _loaded;
+    if (!ref.mounted) return;
+    state = state.copyWith(returnKeySends: value);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_returnKeyKey, value);
   }
 
   Future<void> setAutoStartLocal(bool value) async {

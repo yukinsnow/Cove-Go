@@ -34,8 +34,8 @@
   "ocAddGateway": "Add OpenClaw host",
   "ocRemoveGateway": "Delete OpenClaw host",
   "ocRemoveGatewayHelp": "Remove the connection URL and token from this phone and disconnect. The server and conversations are not deleted.",
-  "ocManageRelayHosts": "Add or remove DSH Remote hosts",
-  "ocManageRelayHostsHelp": "Manage in the DSH Remote console, then refresh this list",
+  "ocManageRelayHosts": "Manage DSH Remote hosts",
+  "ocManageRelayHostsHelp": "Add or remove DSH Remote hosts through the console",
   "ocRemoveGatewayFailed": "Could not delete the connection. Please try again.",
   "ocTransport": "Connection method",
   "ocDirect": "Direct connection",
@@ -50,5 +50,7 @@
   "ocNightMode": "Night",
   "ocWhaleMascot": "DSH whale",
   "ocLobsterMascot": "OpenClaw lobster",
-  "ocMascotHint": "Show above the native chat input; tap to hop"
+  "ocMascotHint": "Show above the native chat input; tap to hop",
+  "ocAddGatewaySsh": "Add OpenClaw host via SSH",
+  "ocHostLoadFailed": "Could not load saved OpenClaw hosts. Please reopen the app."
 }

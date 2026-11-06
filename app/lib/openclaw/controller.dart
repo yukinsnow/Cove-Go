@@ -6,11 +6,20 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:openclaw_client/openclaw_client.dart';
 
 import '../state/offline_snapshot.dart';
+import 'image_blocks.dart';
 
 class ClawController extends ChangeNotifier {
-  ClawController({GatewayClient? client, OfflineSnapshotStore? snapshots})
-    : client = client ?? GatewayClient(),
-      snapshots = snapshots ?? OfflineSnapshotStore();
+  ClawController({
+    GatewayClient? client,
+    OfflineSnapshotStore? snapshots,
+    this.profileId,
+    FlutterSecureStorage? storage,
+  }) : client = client ?? GatewayClient(),
+       snapshots = snapshots ?? OfflineSnapshotStore(),
+       storage = storage ?? const FlutterSecureStorage();
+  final String? profileId;
+  String _key(String name) => profileId == null ? 'claw.$name' : 'claw.host.$profileId.$name';
+  Future<void> Function()? onConfigured;
   final OfflineSnapshotStore snapshots;
   String? sshId;
   String? _sessionSshId;
@@ -18,7 +27,13 @@ class ClawController extends ChangeNotifier {
   Future<String> Function(String, String?)? resolveAddress;
   Future<void> Function()? closeTransport;
   final _histories = <String, List<Map<String, dynamic>>>{};
-  String get _cacheScope => OfflineSnapshotStore.digest(['gateway', address, token, ?sshId]);
+  String get _cacheScope => OfflineSnapshotStore.digest([
+    'gateway',
+    address,
+    token,
+    ?sshId,
+    if (profileId != null && profileId != 'legacy') profileId!,
+  ]);
 
   Future<void> _save() {
     final histories = Map<String, List<Map<String, dynamic>>>.of(_histories);
@@ -77,12 +92,13 @@ class ClawController extends ChangeNotifier {
   }
 
   final GatewayClient client;
-  final storage = const FlutterSecureStorage();
+  final FlutterSecureStorage storage;
   StreamSubscription<Map<String, dynamic>>? _events;
   String address = '', token = '', error = '', sessionKey = '';
   bool busy = false, sending = false, disposed = false, readingCache = false;
   List<Map<String, dynamic>> sessions = [], messages = [], models = [];
-  // Local echoes are not persisted as authoritative Gateway history.
+  // Pending echoes are transient. Once matched, display-only image fallbacks
+  // may be retained in the encrypted, host-scoped offline snapshot.
   final _outgoing = <_OutgoingPrompt>[];
   List<Map<String, dynamic>> get visibleMessages => [
     ...messages,
@@ -90,12 +106,52 @@ class ClawController extends ChangeNotifier {
       if (prompt.sessionKey == sessionKey) prompt.message,
   ];
 
+  void _retainImages(Map<String, dynamic> row, Map previous) {
+    final images = gatewayImages(previous);
+    // Canonical references take precedence; only keep display-only local bytes
+    // for older Gateways that replace the admitted image with plain text.
+    if (images.isNotEmpty && !gatewayImages(row).any(gatewayImageUsable)) {
+      row['_localImages'] = images;
+    }
+  }
+
+  void _replaceHistory(List rows) {
+    final previous = messages;
+    messages = rows.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+    final used = <int>{};
+    for (final row in messages) {
+      final id = row['id'] ?? row['messageId'] ?? row['idempotencyKey'] ?? row['requestId'];
+      var match = -1;
+      for (var i = 0; i < previous.length; i++) {
+        final old = previous[i];
+        if (!used.contains(i) &&
+            old['role'] == row['role'] &&
+            (id != null
+                ? [old['id'], old['messageId'], old['idempotencyKey'], old['requestId']].contains(id)
+                : messageText(old) == messageText(row))) {
+          match = i;
+          break;
+        }
+      }
+      if (match >= 0) {
+        used.add(match);
+        _retainImages(row, previous[match]);
+      }
+    }
+    _reconcileOutgoing();
+  }
+
   void _reconcileOutgoing() {
     _outgoing.removeWhere((prompt) {
       if (prompt.sessionKey != sessionKey) return false;
-      final users = messages.where((m) => m['role'] == 'user');
-      return users.any((m) => m['idempotencyKey'] == prompt.id || m['requestId'] == prompt.id) ||
-          users.where((m) => messageText(m) == messageText(prompt.message)).length > prompt.previousMatches;
+      final users = messages.where((m) => m['role'] == 'user').toList();
+      final keyed = users.where((m) => m['idempotencyKey'] == prompt.id || m['requestId'] == prompt.id);
+      final sameText = users.where((m) => messageText(m) == messageText(prompt.message)).toList();
+      final row =
+          keyed.firstOrNull ?? (sameText.length > prompt.previousMatches ? sameText[prompt.previousMatches] : null);
+      if (row == null) return false;
+      _retainImages(row, prompt.message);
+      return true;
     });
   }
 
@@ -113,9 +169,9 @@ class ClawController extends ChangeNotifier {
 
   Future<void> load() async {
     final revision = _connectionRevision;
-    final savedAddress = await storage.read(key: 'claw.address') ?? '';
-    final savedToken = await storage.read(key: 'claw.token') ?? '';
-    final savedSsh = await storage.read(key: 'claw.sshId');
+    final savedAddress = await storage.read(key: _key('address')) ?? '';
+    final savedToken = await storage.read(key: _key('token')) ?? '';
+    final savedSsh = await storage.read(key: _key('sshId'));
     if (disposed || revision != _connectionRevision) return;
     sshId = _sessionSshId = savedSsh;
     address = savedAddress;
@@ -148,8 +204,19 @@ class ClawController extends ChangeNotifier {
       try {
         await _events?.cancel();
         _events = client.events.listen(_onEvent);
-        final identity = await DeviceIdentity.create(await storage.read(key: 'claw.identity'));
-        await storage.write(key: 'claw.identity', value: await identity.exportSeed());
+        final uri = Uri.tryParse(url.trim());
+        if (uri == null ||
+            !['ws', 'wss'].contains(uri.scheme) ||
+            uri.host.isEmpty ||
+            uri.userInfo.isNotEmpty ||
+            uri.hasQuery ||
+            uri.hasFragment ||
+            (sshId == null && uri.scheme == 'ws' && !['localhost', '127.0.0.1', '::1'].contains(uri.host)) ||
+            (sshId != null && uri.scheme != 'ws')) {
+          throw const FormatException('Use a secure Gateway URL without credentials or query parameters');
+        }
+        final identity = await DeviceIdentity.create(await storage.read(key: _key('identity')));
+        await storage.write(key: _key('identity'), value: await identity.exportSeed());
         final changedHost = address != url.trim() || token != secret.trim() || _sessionSshId != sshId;
         _sessionSshId = sshId;
         address = url.trim();
@@ -170,6 +237,10 @@ class ClawController extends ChangeNotifier {
           await _restore();
           changed();
         }
+        await storage.write(key: _key('sshId'), value: sshId);
+        await storage.write(key: _key('address'), value: address);
+        await storage.write(key: _key('token'), value: token);
+        await onConfigured?.call();
         await client.disconnect();
         transportAddress = null;
         transportAddress = await resolveAddress?.call(address, sshId) ?? address;
@@ -178,9 +249,6 @@ class ClawController extends ChangeNotifier {
           return;
         }
         await client.connect(transportAddress!, token, identity);
-        await storage.write(key: 'claw.sshId', value: sshId);
-        await storage.write(key: 'claw.address', value: address);
-        await storage.write(key: 'claw.token', value: token);
         await client.request('sessions.subscribe');
         await refreshSessions();
         if (sessionKey.isNotEmpty) await select(sessionKey);
@@ -199,12 +267,13 @@ class ClawController extends ChangeNotifier {
     busy = true;
     changed();
     try {
-      await storage.delete(key: 'claw.sshId');
+      await storage.delete(key: _key('sshId'));
       sshId = null;
       transportAddress = null;
       await closeTransport?.call();
-      await storage.delete(key: 'claw.address');
-      await storage.delete(key: 'claw.token');
+      await storage.delete(key: _key('address'));
+      await storage.delete(key: _key('token'));
+      await storage.delete(key: _key('identity'));
       await _events?.cancel();
       _events = null;
       await client.disconnect();
@@ -251,8 +320,7 @@ class ClawController extends ChangeNotifier {
     if (selection != _selection) return;
     final history = await client.request('chat.history', {'sessionKey': key, 'limit': 150}) as Map;
     if (selection != _selection) return;
-    messages = (history['messages'] as List? ?? []).map((e) => Map<String, dynamic>.from(e as Map)).toList();
-    _reconcileOutgoing();
+    _replaceHistory(history['messages'] as List? ?? []);
     _rememberHistory();
     changed();
   }
@@ -274,8 +342,7 @@ class ClawController extends ChangeNotifier {
     if (key.isEmpty || !connected) return;
     final result = await client.request('chat.history', {'sessionKey': key, 'limit': 150}) as Map;
     if (selection != _selection || request != _historyRequest) return;
-    messages = (result['messages'] as List? ?? []).map((e) => Map<String, dynamic>.from(e as Map)).toList();
-    _reconcileOutgoing();
+    _replaceHistory(result['messages'] as List? ?? []);
     _rememberHistory();
     changed();
   }

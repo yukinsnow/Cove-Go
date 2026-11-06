@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../l10n/l10n.dart';
 import '../../openclaw/appearance_settings.dart';
+import '../../openclaw/about_page.dart';
 import '../../openclaw/mascot_settings.dart';
 import '../../runtime/local_footprint.dart';
 import '../../runtime/runtime_state.dart';
@@ -322,7 +323,7 @@ class SettingsScreen extends ConsumerWidget {
               value: newVersion
                   ? UpdateBadge(l10n.hubAboutNewVersion)
                   : Text(update.current.name, style: AppType.tabular(Theme.of(context).textTheme.bodyMedium!)),
-              onTap: () => _push(context, const AboutPage()),
+              onTap: () => _push(context, ref.read(dualRemoteUiProvider) ? const RemoteAboutPage() : const AboutPage()),
             ),
           ],
         ),

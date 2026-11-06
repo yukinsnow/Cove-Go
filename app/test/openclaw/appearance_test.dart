@@ -116,7 +116,7 @@ void main() {
     );
     await tester.pumpWidget(const ProviderScope(child: OpenClawApp()));
     await tester.pump();
-    final container = ProviderScope.containerOf(tester.element(find.byType(ClawHome)));
+    final container = ProviderScope.containerOf(tester.element(find.byType(OpenClawApp)));
     await container.read(settingsProvider.notifier).setThemeMode(ThemeMode.dark);
     gate.complete();
     await tester.pumpAndSettle();
