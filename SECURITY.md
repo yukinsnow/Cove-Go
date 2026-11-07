@@ -6,7 +6,7 @@
 
 ## 如何私密报告
 
-打开仓库的 [Security Advisories](https://github.com/ccch1mneyyy/dsh-go/security/advisories) 页面：
+打开仓库的 [Security Advisories](https://github.com/yukinsnow/Cove-Go/security/advisories) 页面：
 
 - 如果有 **Report a vulnerability**，使用该入口发送私密报告。
 - 如果没有该入口，请先开一个只询问“如何私密联系维护者”的 Issue，等待私密联系方式。不要在该 Issue 中描述漏洞细节、附上复现数据或公布受影响的部署地址。
@@ -16,7 +16,7 @@
 ## 报告中包含什么
 
 - App 版本、构建号、相关引擎或插件版本；源码问题注明提交。
-- Android 版本、ABI，以及本机、SSH 或 DSH Remote 连接方式。
+- iOS / Android 版本、ABI，以及 OpenClaw、SSH 或 DSH Remote 连接方式。
 - 问题影响、触发条件和最小复现步骤。
 - 使用虚构内容、测试账号或合成夹具的复现材料，以及必要的脱敏日志。
 - 已验证和未验证的范围；若已检查其他版本，写明结果。

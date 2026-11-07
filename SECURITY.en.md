@@ -6,7 +6,7 @@ Keep exploit details, credentials, private keys, real user data and complete dia
 
 ## Report privately
 
-Open this repository's [Security Advisories](https://github.com/ccch1mneyyy/dsh-go/security/advisories) page:
+Open this repository's [Security Advisories](https://github.com/yukinsnow/Cove-Go/security/advisories) page:
 
 - If **Report a vulnerability** is available, use it to submit a private report.
 - If it is unavailable, open an issue asking only how to contact the maintainer privately, then wait for a private contact route. Do not describe the vulnerability, attach reproduction data or identify an affected deployment in that public issue.
@@ -16,7 +16,7 @@ A `SECURITY.md` file does not enable GitHub's private vulnerability reporting fe
 ## What to include
 
 - App version, build number, and relevant engine or plugin versions. Include a commit for source-level reports.
-- Android version, ABI, and whether the connection is local, SSH or DSH Remote.
+- iOS / Android version, ABI, and whether the connection uses OpenClaw, SSH or DSH Remote.
 - Impact, preconditions and minimal reproduction steps.
 - A reproduction using fictional content, test accounts or synthetic fixtures, plus only the necessary redacted logs.
 - What you have and have not verified, including results from other versions if available.

@@ -42,7 +42,7 @@ flutter run --target lib/main_openclaw.dart --dart-define=REMOTE_DUAL_APP=true
 ```
 
 On macOS with Xcode and Flutter 3.47.9, run `bash tooling/build-openclaw-ipa.sh`.
-The output is `build/openclaw/Cove-Go-0.1.14-build15-<revision>-unsigned.ipa` for your own signing process.
+The output is `build/openclaw/Cove-Go-0.1.15-build16-<revision>-unsigned.ipa` for your own signing process.
 The GitHub workflow uploads an artifact, not a public release. Linux cannot build
 with Xcode or prove iPhone functionality.
 
@@ -89,4 +89,8 @@ Mock-Gateway, widget and encrypted-snapshot tests cover these paths; iPhone keyb
 
 ## Cove-Go branding
 
-The product name is `Cove-Go` in every language, with no separate Chinese name. Its ocean-terminal icon combines the D9 palette with D14 waves. This is a display-brand change only: repository URLs, iOS bundle ID, Gateway protocol client ID, device identities and secure-storage keys remain unchanged for installation and pairing continuity. Original DSH Go attribution is retained.
+The product name is `Cove-Go` in every language, with no separate Chinese name. Its ocean-terminal icon combines the D9 palette with D14 waves. This is a display-brand change only: the repository was renamed to `yukinsnow/Cove-Go` for the 0.1.15 public release, with `openclaw` as the default branch. GitHub redirects the old repository URLs, including the homepage link in the already-built binary. The iOS bundle ID, Gateway protocol client ID, device identities and secure-storage keys remain unchanged for installation and pairing continuity. Original DSH Go attribution is retained.
+
+## Public release
+
+The current test release is [v0.1.15](https://github.com/yukinsnow/Cove-Go/releases/tag/v0.1.15). Its binary corresponds exactly to tagged commit `6708c24dc8dbdc51fdaadcd4cacfdb06bf798545`; subsequent README changes do not alter it. The landing page now describes this derivative rather than advertising upstream Android local-engine features or restricted mascots as Cove-Go features. See the [README](../README.en.md) for downloads, signing, verification scope and licensing boundaries.

@@ -7,7 +7,7 @@
 本仓库目前**不接受任何外部 Pull Request**（代码、文档、配置、模板都不接收）。
 
 - 外部 PR 会被入口检查自动关闭，见 `.github/workflows/pr-gate.yml`。
-- 想提功能建议、改进想法或反馈问题：请[开 Issue](https://github.com/ccch1mneyyy/dsh-Go/issues/new/choose)，写清使用场景和期望的行为。
+- 想提功能建议、改进想法或反馈问题：请[开 Issue](https://github.com/yukinsnow/Cove-Go/issues/new/choose)，写清使用场景和期望的行为。
 - 维护者自己（及其代理）的内部 PR 不受影响。
 
 这是暂时限制，恢复接收外部 PR 时会更新本页。
@@ -18,7 +18,7 @@
 
 ## 提交问题
 
-使用仓库的 Bug 或功能建议模板。说明 App 版本、Android 版本、主机连接方式，以及可以重复的最小步骤。界面问题附截图或短视频；提交前检查并遮盖隐私信息。
+使用仓库的 Bug 或功能建议模板。说明 App 版本、iOS / Android 版本、主机连接方式，以及可以重复的最小步骤。界面问题附截图或短视频；提交前检查并遮盖隐私信息。
 
 涉及凭据泄漏、越权访问、未授权操作或其他安全问题，请按 [SECURITY.md](SECURITY.md) 私密报告。
 

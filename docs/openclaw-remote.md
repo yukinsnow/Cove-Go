@@ -46,7 +46,7 @@ macOS + Xcode + Flutter 3.47.9：
 bash tooling/build-openclaw-ipa.sh
 ```
 
-输出 `build/openclaw/Cove-Go-0.1.14-build15-<提交号>-unsigned.ipa`，需要自己的签名/安装流程。
+输出 `build/openclaw/Cove-Go-0.1.15-build16-<提交号>-unsigned.ipa`，需要自己的签名/安装流程。
 仓库的 `Build Cove-Go iOS` workflow 仅上传构建 Artifact，不创建 Release。
 Linux 上不能运行 Xcode 或证明 iPhone 实机可用。
 
@@ -86,4 +86,8 @@ python3 app/tool/l10n_merge.py --check
 
 ## Cove-Go 品牌
 
-产品名称统一为 `Cove-Go`，不使用中文别名。图标采用 D9 深海配色＋D14 海浪。仅变更显示品牌；现有 GitHub 仓库地址、iOS Bundle ID、Gateway 协议 client ID、设备身份和安全存储键保持不变，以保留安装与配对连续性。原 DSH Go 项目署名保留。
+产品名称统一为 `Cove-Go`，不使用中文别名。图标采用 D9 深海配色＋D14 海浪。仅变更显示品牌；GitHub 仓库已于 0.1.15 公开发行整理时改名为 `yukinsnow/Cove-Go`，默认分支为 `openclaw`，旧仓库 URL 由 GitHub 重定向；已发布二进制中的旧项目主页链接可继续通过重定向访问。iOS Bundle ID、Gateway 协议 client ID、设备身份和安全存储键保持不变，以保留安装与配对连续性。原 DSH Go 项目署名保留。
+
+## 公开发行
+
+当前测试版见 [v0.1.15](https://github.com/yukinsnow/Cove-Go/releases/tag/v0.1.15)。发布包精确对应标签提交 `6708c24dc8dbdc51fdaadcd4cacfdb06bf798545`；标签后的 README 整理不改变二进制。首页已改为本衍生版专用介绍，不再把上游 Android 本机引擎或受限吉祥物展示为 Cove-Go 功能。下载、签名、已验证范围和许可边界见 [README](../README.md)。

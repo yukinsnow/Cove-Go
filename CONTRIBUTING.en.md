@@ -7,7 +7,7 @@
 This repository currently **does not accept any external pull requests** (code, docs, configuration or templates).
 
 - External PRs are closed automatically by the intake check, see `.github/workflows/pr-gate.yml`.
-- For feature ideas, improvements or bug reports, please [open an issue](https://github.com/ccch1mneyyy/dsh-Go/issues/new/choose) with the use case and expected behavior.
+- For feature ideas, improvements or bug reports, please [open an issue](https://github.com/yukinsnow/Cove-Go/issues/new/choose) with the use case and expected behavior.
 - Internal PRs by the maintainer (and maintainer agents) are unaffected.
 
 This is temporary; this page will be updated when external PRs reopen.
@@ -18,7 +18,7 @@ Contributions through issues are welcome — bug reports, documentation and tran
 
 ## Report an issue
 
-Use the repository's bug report or feature request template. Include the app version, Android version, host connection type and minimal repeatable steps. Add a screenshot or short recording for interface issues, after reviewing and redacting private information.
+Use the repository's bug report or feature request template. Include the app version, iOS / Android version, host connection type and minimal repeatable steps. Add a screenshot or short recording for interface issues, after reviewing and redacting private information.
 
 For credential exposure, unauthorized access or actions, and other security issues, follow [SECURITY.en.md](SECURITY.en.md) for private reporting.
 
