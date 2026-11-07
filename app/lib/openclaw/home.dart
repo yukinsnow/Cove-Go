@@ -518,11 +518,18 @@ class ClawHomeState extends ConsumerState<ClawHome> with WidgetsBindingObserver 
       final name = category is String ? category : '';
       (groups[name] ??= []).add(session);
     }
-    // Keep uncategorized conversations after the Gateway's named groups.
-    final ungrouped = groups.remove('');
-    if (ungrouped != null) groups[''] = ungrouped;
+    // Groups follow their newest conversation, not catalog/manual order.
+    // Preserve catalog order only for ties (including empty groups).
+    final catalogOrder = groups.keys.toList();
+    int latest(List<Map<String, dynamic>> sessions) =>
+        sessions.isEmpty ? -1 : updatedAt(sessions.first)?.millisecondsSinceEpoch ?? 0;
+    final orderedGroups = groups.entries.toList()
+      ..sort((a, b) {
+        final byActivity = latest(b.value).compareTo(latest(a.value));
+        return byActivity != 0 ? byActivity : catalogOrder.indexOf(a.key).compareTo(catalogOrder.indexOf(b.key));
+      });
     final rows = <Widget>[
-      for (final group in groups.entries) ...[
+      for (final group in orderedGroups) ...[
         DrawerEyebrow(group.key.isEmpty ? l.remoteWorkspaceUngrouped : group.key),
         for (final session in group.value)
           SessionTile(

@@ -163,7 +163,12 @@ void main() {
       expect(find.text('Research'), findsOneWidget);
       expect(find.text('Work'), findsOneWidget);
       expect(find.text('Empty'), findsOneWidget);
-      expect(tester.getTopLeft(find.text('Research')).dy, lessThan(tester.getTopLeft(find.text('Work')).dy));
+      expect(
+        tester.getTopLeft(find.text('Work')).dy,
+        lessThan(tester.getTopLeft(find.text('Research')).dy),
+        reason: 'newest member wins over Gateway catalog order',
+      );
+      expect(tester.getTopLeft(find.text('Research')).dy, lessThan(tester.getTopLeft(find.text('Empty')).dy));
       expect(
         find.descendant(of: find.byType(SessionTile), matching: find.byType(CircularProgressIndicator)),
         findsOneWidget,
@@ -177,6 +182,15 @@ void main() {
         await settle();
       }
 
+      await emit({
+        'sessionKey': 'beta',
+        'updatedAt': DateTime.now().add(const Duration(minutes: 1)).millisecondsSinceEpoch,
+      });
+      expect(
+        tester.getTopLeft(find.text('Research')).dy,
+        lessThan(tester.getTopLeft(find.text('Work')).dy),
+        reason: 'background updates reorder groups immediately',
+      );
       await emit({'sessionKey': 'beta', 'hasActiveRun': false, 'status': 'done'});
       expect(
         find.descendant(of: find.byType(SessionTile), matching: find.byType(CircularProgressIndicator)),
@@ -197,6 +211,17 @@ void main() {
         reason: 'omitted activity must not clear the running flag',
       );
       expect(find.text('Renamed task'), findsOneWidget);
+      expect(
+        tester.getTopLeft(find.text('Renamed task')).dy,
+        lessThan(tester.getTopLeft(find.descendant(of: find.byType(SessionTile), matching: find.text('连接后的对话'))).dy),
+        reason: 'members also sort newest first',
+      );
+      await emit({'sessionKey': 'beta', 'category': null});
+      expect(
+        tester.getTopLeft(find.text('未分组')).dy,
+        lessThan(tester.getTopLeft(find.text('Work')).dy),
+        reason: 'ungrouped participates in the same activity order',
+      );
       await emit({'sessionKey': 'beta', 'hasActiveRun': false, 'status': 'failed'});
       expect(
         find.descendant(of: find.byType(SessionTile), matching: find.byType(CircularProgressIndicator)),
