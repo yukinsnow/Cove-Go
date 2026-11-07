@@ -26,8 +26,8 @@ jobs:
       - run: bash tooling/build-openclaw-ipa.sh
       - uses: actions/upload-artifact@v4
         with:
-          name: Cove-Go-0.1.14-build15-${{ github.sha }}-unsigned
+          name: Cove-Go-0.1.15-build16-${{ github.sha }}-unsigned
           path: |
-            build/openclaw/Cove-Go-0.1.14-build15*-unsigned.ipa
-            build/openclaw/Cove-Go-0.1.14-build15*-unsigned.ipa.sha256
+            build/openclaw/Cove-Go-0.1.15-build16*-unsigned.ipa
+            build/openclaw/Cove-Go-0.1.15-build16*-unsigned.ipa.sha256
           if-no-files-found: error

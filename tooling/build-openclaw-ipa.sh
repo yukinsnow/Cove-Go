@@ -42,14 +42,14 @@ PY
 swift "$ROOT/tooling/openclaw_icon.swift" "$PWD/ios/Runner/Assets.xcassets/AppIcon.appiconset"
 flutter pub get
 python3 tool/l10n_merge.py
-flutter build ios --release --no-codesign --target lib/main_openclaw.dart --dart-define=REMOTE_DUAL_APP=true --build-name 0.1.14 --build-number 15 --dart-define=DSH_APP_VERSION=0.1.14+15 --dart-define=APP_SOURCE_REVISION="$(git rev-parse --short=12 HEAD) / ${GITHUB_RUN_ID:-local}"
+flutter build ios --release --no-codesign --target lib/main_openclaw.dart --dart-define=REMOTE_DUAL_APP=true --build-name 0.1.15 --build-number 16 --dart-define=DSH_APP_VERSION=0.1.15+16 --dart-define=APP_SOURCE_REVISION="$(git rev-parse --short=12 HEAD) / ${GITHUB_RUN_ID:-local}"
 # Fresh temporary payload; never deletes an existing checkout path.
 OUT="$ROOT/build/openclaw"
 mkdir -p "$OUT"
 STAGE="$(mktemp -d)"
 mkdir -p "$STAGE/Payload"
 cp -R build/ios/iphoneos/Runner.app "$STAGE/Payload/"
-IPA="Cove-Go-0.1.14-build15-$(git rev-parse --short=12 HEAD)-unsigned.ipa"
+IPA="Cove-Go-0.1.15-build16-$(git rev-parse --short=12 HEAD)-unsigned.ipa"
 (cd "$STAGE" && zip -qry "$OUT/$IPA" Payload)
 python3 - "$OUT/$IPA" <<'PYVERIFY'
 import hashlib,json,sys,zipfile,plistlib
@@ -58,7 +58,7 @@ p=Path(sys.argv[1])
 with zipfile.ZipFile(p) as z:
     assert z.testzip() is None
     info=plistlib.loads(z.read('Payload/Runner.app/Info.plist'))
-    assert (info['CFBundleShortVersionString'], info['CFBundleVersion']) == ('0.1.14','15')
+    assert (info['CFBundleShortVersionString'], info['CFBundleVersion']) == ('0.1.15','16')
     assert info['CFBundleDisplayName'] == 'Cove-Go'
     assert info['CFBundleName'] == 'Cove-Go'
 Path(str(p)+'.sha256').write_text(hashlib.sha256(p.read_bytes()).hexdigest()+'  '+p.name+'\n')

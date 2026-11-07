@@ -24,6 +24,7 @@ class SessionTile extends StatelessWidget {
     required this.onLongPress,
     this.pending,
     this.unread = false,
+    this.runningSpinner = false,
     this.pinned = false,
     this.indent = 0,
     this.selecting = false,
@@ -32,6 +33,9 @@ class SessionTile extends StatelessWidget {
 
   final String title;
   final bool running;
+
+  /// OpenClaw uses a progress ring; DSH keeps its existing breathing dot.
+  final bool runningSpinner;
 
   /// The open conversation (soft fill; ignored while selecting).
   final bool current;
@@ -74,7 +78,14 @@ class SessionTile extends StatelessWidget {
         key: const ValueKey('pending'),
         style: theme.textTheme.labelMedium?.copyWith(color: colors.warning, fontWeight: FontWeight.w500),
       ),
-      (_, true, _) => const StatusDot(key: ValueKey('running'), tone: StatusTone.busy, size: dot),
+      (_, true, _) =>
+        runningSpinner
+            ? const SizedBox.square(
+                key: ValueKey('running'),
+                dimension: 16,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            : const StatusDot(key: ValueKey('running'), tone: StatusTone.busy, size: dot),
       (_, _, true) => _UnreadDot(key: const ValueKey('unread'), color: scheme.onSurfaceVariant),
       _ => null,
     };

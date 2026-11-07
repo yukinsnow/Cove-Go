@@ -38,12 +38,14 @@ void main() {
         'displayName': '连接后的对话',
         'updatedAt': DateTime.now().millisecondsSinceEpoch,
         'model': 'test/example',
+        'category': 'Work',
       },
       {
         'key': 'beta',
         'displayName': '运行中的对话',
         'updatedAt': DateTime.now().subtract(const Duration(days: 1)).millisecondsSinceEpoch,
         'hasActiveRun': true,
+        'category': 'Research',
       },
     ];
     await tester.runAsync(() async {
@@ -63,6 +65,14 @@ void main() {
           final payload = switch (frame['method']) {
             'connect' => {'type': 'hello-ok', 'protocol': 4},
             'sessions.list' => {'sessions': sessions},
+            'sessions.groups.list' => {
+              'groups': [
+                {'name': 'Work', 'position': 0},
+                {'name': 'Research', 'position': 1},
+                {'name': 'Empty', 'position': 2},
+              ],
+              'sectionOrder': ['category:Research', 'category:Work'],
+            },
             'models.list' => {'models': <dynamic>[]},
             'chat.history' => {
               'messages': [
@@ -109,7 +119,7 @@ void main() {
       expect(find.byType(DrawerBrandHeader), findsOneWidget);
       expect(find.byType(NewChatButton), findsOneWidget);
       expect(find.byType(SessionSearchBar), findsOneWidget);
-      expect(find.byType(SessionFilterRow), findsOneWidget);
+      expect(find.byType(SessionFilterRow), findsNothing);
       expect(find.byType(IdentityBar), findsOneWidget);
       expect(find.byType(SessionDrawerSurface), findsOneWidget);
       expect(tester.getSize(find.byType(SessionDrawerSurface)).width, 320);
@@ -146,10 +156,54 @@ void main() {
       expect(find.byType(ChatHeader), findsOneWidget);
       expect(tester.widget<ChatHeader>(find.byType(ChatHeader)).useDshState, isFalse);
       await checkDrawer();
-      expect(find.text('今天'), findsOneWidget);
-      expect(find.text('昨天'), findsOneWidget);
-      expect(find.text('未读 1'), findsOneWidget);
+      expect(find.text('今天'), findsNothing);
+      expect(find.text('昨天'), findsNothing);
+      expect(find.textContaining('未读'), findsNothing);
+      expect(find.byKey(const ValueKey('unread')), findsNothing);
+      expect(find.text('Research'), findsOneWidget);
+      expect(find.text('Work'), findsOneWidget);
+      expect(find.text('Empty'), findsOneWidget);
+      expect(tester.getTopLeft(find.text('Research')).dy, lessThan(tester.getTopLeft(find.text('Work')).dy));
+      expect(
+        find.descendant(of: find.byType(SessionTile), matching: find.byType(CircularProgressIndicator)),
+        findsOneWidget,
+      );
+      // A background session changes state without opening it or reloading history.
+      Future<void> emit(Map<String, dynamic> payload) async {
+        await tester.runAsync(() async {
+          peers.last.add(jsonEncode({'type': 'event', 'event': 'sessions.changed', 'payload': payload}));
+          await Future<void>.delayed(const Duration(milliseconds: 30));
+        });
+        await settle();
+      }
+
+      await emit({'sessionKey': 'beta', 'hasActiveRun': false, 'status': 'done'});
+      expect(
+        find.descendant(of: find.byType(SessionTile), matching: find.byType(CircularProgressIndicator)),
+        findsNothing,
+      );
+      await emit({
+        'sessionKey': 'beta',
+        'session': {'hasActiveRun': true, 'status': 'running'},
+      });
+      expect(
+        find.descendant(of: find.byType(SessionTile), matching: find.byType(CircularProgressIndicator)),
+        findsOneWidget,
+      );
+      await emit({'sessionKey': 'beta', 'category': 'Work', 'displayName': 'Renamed task'});
+      expect(
+        controller.isSessionRunning(controller.sessions.last),
+        isTrue,
+        reason: 'omitted activity must not clear the running flag',
+      );
+      expect(find.text('Renamed task'), findsOneWidget);
+      await emit({'sessionKey': 'beta', 'hasActiveRun': false, 'status': 'failed'});
+      expect(
+        find.descendant(of: find.byType(SessionTile), matching: find.byType(CircularProgressIndicator)),
+        findsNothing,
+      );
       if (attempt == 1) {
+        await emit({'sessionKey': 'beta', 'hasActiveRun': true, 'status': 'running'});
         final boundary = capture.currentContext!.findRenderObject()! as RenderRepaintBoundary;
         await tester.runAsync(() async {
           final image = await boundary.toImage(pixelRatio: 2);

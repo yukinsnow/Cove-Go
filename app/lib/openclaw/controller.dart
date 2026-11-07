@@ -47,7 +47,12 @@ class ClawController extends ChangeNotifier {
 
   Future<void> _save() {
     final histories = Map<String, List<Map<String, dynamic>>>.of(_histories);
-    Map<String, dynamic> snapshot() => {'sessions': sessions, 'selected': sessionKey, 'histories': histories};
+    Map<String, dynamic> snapshot() => {
+      'sessions': sessions,
+      'groups': sessionGroups,
+      'selected': sessionKey,
+      'histories': histories,
+    };
     // Prefer recent conversations when the aggregate exceeds the disk budget.
     while (utf8.encode(jsonEncode(snapshot())).length > OfflineSnapshotStore.maxBytes && histories.isNotEmpty) {
       final oldest = histories.keys.firstWhere((key) => key != sessionKey, orElse: () => histories.keys.first);
@@ -73,6 +78,7 @@ class ClawController extends ChangeNotifier {
     }
     try {
       sessions = (cached['sessions'] as List).map((e) => Map<String, dynamic>.from(e as Map)).toList();
+      sessionGroups = (cached['groups'] as List? ?? []).whereType<String>().toList();
       _histories.clear();
       for (final entry in (cached['histories'] as Map).entries) {
         _histories[entry.key as String] = (entry.value as List)
@@ -84,6 +90,7 @@ class ClawController extends ChangeNotifier {
       readingCache = messages.isNotEmpty;
     } on Object {
       sessions = [];
+      sessionGroups = [];
       messages = [];
       sessionKey = '';
       _histories.clear();
@@ -107,6 +114,16 @@ class ClawController extends ChangeNotifier {
   String address = '', token = '', error = '', sessionKey = '';
   bool busy = false, sending = false, disposed = false, readingCache = false;
   List<Map<String, dynamic>> sessions = [], messages = [], models = [];
+  List<String> sessionGroups = [];
+  int _sessionRefresh = 0, _sessionEvents = 0;
+
+  /// Aggregate direct activity is authoritative; descendants may still be working.
+  bool isSessionRunning(Map<String, dynamic> session) {
+    if (session['hasActiveSubagentRun'] == true) return true;
+    if (session['hasActiveRun'] is bool) return session['hasActiveRun'] == true;
+    return session['status'] == 'running' || session['status'] == 'queued';
+  }
+
   // Pending echoes are transient. Once matched, display-only image fallbacks
   // may be retained in the encrypted, host-scoped offline snapshot.
   final _outgoing = <_OutgoingPrompt>[];
@@ -246,6 +263,7 @@ class ClawController extends ChangeNotifier {
             ++_selection;
             sessionKey = '';
             sessions = [];
+            sessionGroups = [];
             messages = [];
             _histories.clear();
             _outgoing.clear();
@@ -329,6 +347,7 @@ class ClawController extends ChangeNotifier {
       ++_selection;
       address = token = error = sessionKey = '';
       sessions = [];
+      sessionGroups = [];
       messages = [];
       models = [];
       _histories.clear();
@@ -347,9 +366,39 @@ class ClawController extends ChangeNotifier {
   }
 
   Future<void> refreshSessions() async {
+    final connection = _connectionRevision, request = ++_sessionRefresh;
+    final events = _sessionEvents;
+    bool current() => !disposed && !_removing && connection == _connectionRevision && request == _sessionRefresh;
     final result =
         await client.request('sessions.list', {'limit': 100, 'includeGlobal': false, 'includeUnknown': false}) as Map;
+    if (!current()) return;
+    // A newer event must not be overwritten by an older in-flight snapshot.
+    if (events != _sessionEvents) return refreshSessions();
     sessions = (result['sessions'] as List? ?? []).map((e) => Map<String, dynamic>.from(e as Map)).toList();
+    changed();
+    try {
+      final catalog = await client.request('sessions.groups.list') as Map;
+      if (!current()) return;
+      final names = <String>[
+        for (final group in catalog['groups'] as List? ?? [])
+          if (group is Map && group['name'] is String) group['name'] as String,
+      ];
+      final order = (catalog['sectionOrder'] as List? ?? []).whereType<String>();
+      sessionGroups = <String>{
+        for (final id in order)
+          if (id.startsWith('category:') && names.contains(id.substring(9))) id.substring(9),
+        ...names,
+      }.toList();
+    } on GatewayException catch (e) {
+      // Older Gateways may not implement the optional catalog RPC. Row categories
+      // still group correctly; authentication and transport errors remain visible.
+      final unsupported =
+          e.code == 'METHOD_NOT_FOUND' ||
+          (e.code == 'INVALID_REQUEST' && e.message.toLowerCase().contains('unknown method'));
+      if (!unsupported) rethrow;
+      if (current()) sessionGroups = [];
+    }
+    if (!current()) return;
     unawaited(_save());
     changed();
   }
@@ -477,7 +526,46 @@ class ClawController extends ChangeNotifier {
       return;
     }
     final p = frame['payload'];
-    if (p is! Map || p['sessionKey'] != sessionKey) return;
+    if (p is! Map) return;
+    if (event == 'sessions.changed' || event == 'sessions.updated') {
+      ++_sessionEvents;
+      final key = p['sessionKey'];
+      final row = sessions.where((row) => row['key'] == key).firstOrNull;
+      if (key is! String || row == null || p['reason'] == 'delete' || p['reason'] == 'groups') {
+        unawaited(guard(refreshSessions));
+      } else {
+        final snapshot = p['session'];
+        if (snapshot is Map) row.addAll(Map<String, dynamic>.from(snapshot));
+        // Incremental omission means unchanged, including aggregate activity.
+        for (final field in [
+          'category',
+          'displayName',
+          'label',
+          'updatedAt',
+          'status',
+          'hasActiveRun',
+          'hasActiveSubagentRun',
+        ]) {
+          if (p.containsKey(field)) row[field] = p[field];
+        }
+        if (snapshot is! Map &&
+            ![
+              'category',
+              'displayName',
+              'label',
+              'updatedAt',
+              'status',
+              'hasActiveRun',
+              'hasActiveSubagentRun',
+            ].any(p.containsKey)) {
+          unawaited(guard(refreshSessions));
+        }
+        unawaited(_save());
+        changed();
+      }
+      return;
+    }
+    if (p['sessionKey'] != sessionKey) return;
     if (event == 'chat') {
       final run = '${p['runId']}';
       if (p['state'] == 'delta') {

@@ -204,7 +204,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 600));
     final dynamic state = tester.state(find.byType(ClawHome));
     state.c.sessions = <Map<String, dynamic>>[
-      {'key': 'one', 'displayName': 'Alpha'},
+      {'key': 'one', 'displayName': 'Alpha', 'category': 'Projects'},
       {'key': 'two', 'displayName': 'Beta', 'hasActiveRun': true},
     ];
     state.c.changed();
@@ -217,11 +217,13 @@ void main() {
     expect(find.byType(IdentityBar), findsOneWidget);
     expect(find.text('English / 中文'), findsNothing);
     expect(tester.getTopLeft(find.byType(IdentityBar)).dy, greaterThan(650));
-    await tester.tap(find.text('运行中'));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 600));
-    expect(find.text('Alpha'), findsNothing);
+    expect(find.text('Projects'), findsOneWidget);
+    expect(find.text('未分组'), findsOneWidget);
+    expect(find.text('Alpha'), findsOneWidget);
     expect(find.text('Beta'), findsOneWidget);
+    expect(find.text('运行中'), findsNothing);
+    expect(find.textContaining('未读'), findsNothing);
+    expect(find.byKey(const ValueKey('unread')), findsNothing);
     await tester.tap(find.byType(SessionSearchBar));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 600));

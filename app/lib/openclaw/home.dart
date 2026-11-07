@@ -40,7 +40,6 @@ import '../ui/shell/adaptive/adaptive_layout.dart';
 import 'dart:math' as math;
 
 import '../ui/settings/settings_widgets.dart';
-import '../state/drawer_view_state.dart' show DrawerFilter, SessionDay, sessionDayOf, sessionDayLabels;
 import '../ui/shell/session_search_page.dart';
 import '../ui/web/web_view_page.dart';
 
@@ -59,12 +58,6 @@ class ClawHomeState extends ConsumerState<ClawHome> with WidgetsBindingObserver 
   final input = TextEditingController(), scroll = ScrollController(keepScrollOffset: false);
   final attachments = <Map<String, dynamic>>[];
   String queue = 'followup';
-  DrawerFilter filter = DrawerFilter.all;
-  final seen = <String, Object?>{};
-  bool isUnread(Map<String, dynamic> session) =>
-      session['key'] != c.sessionKey &&
-      session['updatedAt'] != null &&
-      (!seen.containsKey(session['key']) || seen[session['key']] != session['updatedAt']);
   final composerFocus = FocusNode();
   final gatewayTunnel = GatewaySshTunnel();
   @override
@@ -383,7 +376,8 @@ class ClawHomeState extends ConsumerState<ClawHome> with WidgetsBindingObserver 
                 if (sessionTitle(session).toLowerCase().contains(query))
                   SessionTile(
                     title: sessionTitle(session),
-                    running: session['hasActiveRun'] == true,
+                    running: c.connected && c.isSessionRunning(session),
+                    runningSpinner: true,
                     current: session['key'] == c.sessionKey,
                     onLongPress: null,
                     onTap: () {
@@ -503,33 +497,10 @@ class ClawHomeState extends ConsumerState<ClawHome> with WidgetsBindingObserver 
           children: [
             const Icon(AppIcons.conversations, size: 18),
             const SizedBox(width: 8),
-            Expanded(
-              child: PopupMenuButton<DrawerFilter>(
-                onSelected: (value) => setState(() => filter = value),
-                itemBuilder: (_) => [
-                  PopupMenuItem(value: DrawerFilter.all, child: Text(l.remoteWorkspaceAllChats)),
-                  PopupMenuItem(value: DrawerFilter.running, child: Text(l.commonRunning)),
-                ],
-                child: Row(
-                  children: [
-                    Flexible(child: Text(l.remoteWorkspaceAllChats, style: theme.textTheme.titleSmall)),
-                    const Icon(AppIcons.expand, size: 18),
-                  ],
-                ),
-              ),
-            ),
+            Expanded(child: Text(l.remoteWorkspaceAllChats, style: theme.textTheme.titleSmall)),
             DrawerViewButton(onTap: () => openSettings(features: true)),
           ],
         ),
-      ),
-      SessionFilterRow(
-        enabled: (value) => value != DrawerFilter.pending,
-        selected: filter,
-        label: (value) {
-          final count = value == DrawerFilter.unread ? c.sessions.where(isUnread).length : 0;
-          return count > 0 ? '${value.label} $count' : value.label;
-        },
-        onSelected: (value) => setState(() => filter = value),
       ),
     ];
     DateTime? updatedAt(Map<String, dynamic> session) {
@@ -538,41 +509,30 @@ class ClawHomeState extends ConsumerState<ClawHome> with WidgetsBindingObserver 
       return value is String ? DateTime.tryParse(value) : null;
     }
 
-    final visible =
-        c.sessions
-            .where(
-              (session) => switch (filter) {
-                DrawerFilter.all => true,
-                DrawerFilter.running => session['hasActiveRun'] == true,
-                // The sessions API does not expose approval state. Never borrow DSH's
-                // pending interactions or invent a Gateway approval from a running flag.
-                DrawerFilter.pending => false,
-                DrawerFilter.unread => isUnread(session),
-              },
-            )
-            .toList()
-          ..sort(
-            (a, b) => (updatedAt(b)?.millisecondsSinceEpoch ?? 0).compareTo(updatedAt(a)?.millisecondsSinceEpoch ?? 0),
-          );
-    final groups = <SessionDay?, List<Map<String, dynamic>>>{};
-    final now = DateTime.now();
+    final visible = List<Map<String, dynamic>>.of(
+      c.sessions,
+    )..sort((a, b) => (updatedAt(b)?.millisecondsSinceEpoch ?? 0).compareTo(updatedAt(a)?.millisecondsSinceEpoch ?? 0));
+    final groups = <String, List<Map<String, dynamic>>>{for (final name in c.sessionGroups) name: []};
     for (final session in visible) {
-      final at = updatedAt(session);
-      (groups[at == null ? null : sessionDayOf(at, now)] ??= []).add(session);
+      final category = session['category'];
+      final name = category is String ? category : '';
+      (groups[name] ??= []).add(session);
     }
+    // Keep uncategorized conversations after the Gateway's named groups.
+    final ungrouped = groups.remove('');
+    if (ungrouped != null) groups[''] = ungrouped;
     final rows = <Widget>[
       for (final group in groups.entries) ...[
-        if (group.key != null) DrawerEyebrow(sessionDayLabels[group.key]!),
+        DrawerEyebrow(group.key.isEmpty ? l.remoteWorkspaceUngrouped : group.key),
         for (final session in group.value)
           SessionTile(
             title: sessionTitle(session),
-            running: session['hasActiveRun'] == true,
+            running: c.connected && c.isSessionRunning(session),
+            runningSpinner: true,
             current: session['key'] == c.sessionKey,
-            unread: isUnread(session),
             onLongPress: null,
             onTap: () {
               closeSidebar();
-              seen[session['key'] as String] = session['updatedAt'];
               c.guard(() => c.select(session['key'] as String));
             },
           ),
