@@ -143,7 +143,7 @@ class DeviceAttachmentPicker implements AttachmentPicker {
 
   @override
   Future<List<DraftAttachment>> pickImages({required int limit}) async {
-    final picked = await ImagePicker().pickMultiImage(
+    final picked = await ImagePicker().pickMultipleMedia(
       maxWidth: _maxSide,
       maxHeight: _maxSide,
       imageQuality: _quality,
@@ -151,7 +151,20 @@ class DeviceAttachmentPicker implements AttachmentPicker {
       // No location/EXIF access needed: skips the media-location permission.
       requestFullMetadata: false,
     );
-    return [for (final x in picked.take(limit)) DraftAttachment.sniff(x.name, await x.readAsBytes())];
+    final attachments = <DraftAttachment>[];
+    var used = 0;
+    for (final x in picked.take(limit)) {
+      final budget = (maxMessageBytes - used).clamp(0, maxFileBytes);
+      if (await x.length() > budget) throw StateError(appL10n.stateAttachmentFileLimit(x.name));
+      final bytes = BytesBuilder(copy: false);
+      await for (final chunk in x.openRead()) {
+        if (chunk.length > budget - bytes.length) throw StateError(appL10n.stateAttachmentFileLimit(x.name));
+        bytes.add(chunk);
+      }
+      used += bytes.length;
+      attachments.add(DraftAttachment.sniff(x.name, bytes.takeBytes()));
+    }
+    return attachments;
   }
 
   @override

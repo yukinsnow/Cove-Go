@@ -4018,7 +4018,7 @@ class L10nEn extends L10n {
   String get chatInterrupted => 'Interrupted';
 
   @override
-  String get chatGallery => 'Photos';
+  String get chatGallery => 'Photos / videos';
 
   @override
   String get chatTakePhoto => 'Take photo';
@@ -8983,6 +8983,455 @@ class L10nEn extends L10n {
   @override
   String ocRemoveGatewayFailedCode(String code) {
     return 'Could not delete the connection. Please try again. Error code: $code';
+  }
+
+  @override
+  String get ocSelectSingleImage => 'Choose one image';
+
+  @override
+  String get ocSelectMultipleImages => 'Select multiple images';
+
+  @override
+  String ocAttachSelectedImages(int count) {
+    return 'Attach selected images ($count)';
+  }
+
+  @override
+  String get ocNotifications => 'iOS notifications';
+
+  @override
+  String get ocNotificationDone => 'Task completed. Tap to open the conversation.';
+
+  @override
+  String get ocNotificationFailed => 'Task failed or stopped. Tap to review.';
+
+  @override
+  String get ocNotificationAttention => 'New alert: your approval or answer is needed.';
+
+  @override
+  String get ocNotificationLimit =>
+      'Notifications require events to reach this device. Delivery is not guaranteed while iOS suspends or closes the app; APNs remote push is not configured.';
+
+  @override
+  String get ocNotificationPrivacy =>
+      'Completion, failure and attention alerts. No conversation content, host addresses or credentials on the lock screen.';
+
+  @override
+  String get ocNotificationPermission => 'Open system notification settings';
+
+  @override
+  String get ocNotificationPermissionHint =>
+      'Allow Cove-Go notifications in iOS Settings. Banners and sounds remain subject to Focus and system settings.';
+
+  @override
+  String get ocNotificationTest => 'Send test notification';
+
+  @override
+  String get ocNotificationTestBody => 'Test: Cove-Go can post local notifications.';
+
+  @override
+  String get ocPhotosVideos => 'Photos / videos';
+
+  @override
+  String ocAttachSelectedFiles(int count) {
+    return 'Attach selected files ($count)';
+  }
+
+  @override
+  String ocAttachmentTooLarge(String name, String limit) {
+    return '$name exceeds the attachment or message limit ($limit).';
+  }
+
+  @override
+  String get ocWorkspaceHint =>
+      'OpenClaw workspaces use server session groups. A group filters conversations; its optional directory only applies to new chats. Existing chat directories are unchanged.';
+
+  @override
+  String get ocWorkspaceReadOnly =>
+      'Group management requires a connected Gateway with group APIs and write permission. Existing groups can still be filtered.';
+
+  @override
+  String get ocMoveToGroup => 'Move conversation to group';
+
+  @override
+  String get ocWorkspaceDirectory => 'New chat directory';
+
+  @override
+  String get ocWorkspaceDirectoryHint =>
+      'Enter an absolute directory on the Gateway, not on this phone. Leave empty for the agent default. Saving selects the current checkout (not a new worktree). The Gateway validates permissions; existing conversations are not moved.';
+
+  @override
+  String get ocGroupRemoveBody =>
+      'Only removes the group. Conversations are retained and become ungrouped; directories and files are not deleted.';
+
+  @override
+  String get ocFeatureHubSubtitle => 'OpenClaw tools and conversation features, in one place';
+
+  @override
+  String get ocFeatureScopeChanged => 'Connection or conversation changed. Close this page and reopen it.';
+
+  @override
+  String get ocFeatureUnavailable =>
+      'This Gateway may not support the feature or your account may lack permission. No changes were made.';
+
+  @override
+  String get ocFeatureEmpty => 'No data in this scope yet';
+
+  @override
+  String get ocFeaturePreviewUnavailable => 'This format or size cannot be previewed here. Use the Gateway web UI.';
+
+  @override
+  String get ocFeatureDetailsSummary => 'Model, status, directory and usage';
+
+  @override
+  String get ocFeatureArtifactsSummary => 'List assistant-delivered outputs';
+
+  @override
+  String get ocFeatureArtifactsNote =>
+      'Only assistant-delivered artifacts are listed. Tap an item for metadata, bounded byte downloads, supported previews and system sharing. URL-only downloads use the Gateway web UI.';
+
+  @override
+  String get ocFeatureFilesNote =>
+      'Read-only files referenced by this conversation. Tap to preview; this is not a device-wide file manager.';
+
+  @override
+  String get ocFeatureWebOnly => 'Open Gateway web UI; no native page yet';
+
+  @override
+  String get ocFeatureExportSummary => 'Share recent display history as JSON';
+
+  @override
+  String get ocFeatureExportNote =>
+      'Exports up to 150 recent display messages returned by the Gateway. This is not a full transcript or ZIP backup. It can contain private conversation content and attachments. Tap below only when you want to open the system share sheet.';
+
+  @override
+  String get ocFeatureExportAction => 'Export JSON and open share sheet';
+
+  @override
+  String get ocFeatureProgressSummary => 'Read the current progress card and plan';
+
+  @override
+  String get ocFeatureSkillsSummary => 'Available skills and missing requirements';
+
+  @override
+  String get ocFeatureCronSummary => 'View scheduled and recurring jobs';
+
+  @override
+  String get ocFeatureReadOnly =>
+      'Read-only inventory. This page does not install, modify, run or remove items; use the Gateway web UI for management. Automation lists the first 100 jobs.';
+
+  @override
+  String get ocFeaturePluginsSummary => 'Plugin inventory and status';
+
+  @override
+  String get ocFeatureAgentsSummary => 'Configured agents on this Gateway';
+
+  @override
+  String get ocFeatureTools => 'Tools';
+
+  @override
+  String get ocFeatureSearchSummary => 'Find conversations by title';
+
+  @override
+  String get ocFeatureWorkspaceSummary => 'Filter groups and set new-chat directories';
+
+  @override
+  String get ocFeatureGatewayWeb => 'Gateway official interface; may require login';
+
+  @override
+  String get ocFeatureModelsSummary => 'Switch the current conversation model';
+
+  @override
+  String get ocFeatureArtifactDownloadNote =>
+      'Loads up to 20 MB from this Gateway only. URL-only and unsupported downloads are not fetched. Images and text can be previewed; sharing/saving requires the separate Share action.';
+
+  @override
+  String get ocFeatureLoadArtifact => 'Load attachment';
+
+  @override
+  String get ocFeatureShareArtifact => 'Share / save to Files';
+
+  @override
+  String get ocFeatureConfiguredAgents => 'Configured agents';
+
+  @override
+  String get ocUsageTitle => 'Model usage';
+
+  @override
+  String get ocUsageSummary => 'API balances, subscription quotas and per-model usage';
+
+  @override
+  String get ocUsageScope =>
+      'All agents and models visible to you on this Gateway only. Tokens / estimated cost are not provider billing. API wallets and subscription quotas are shown separately.';
+
+  @override
+  String get ocUsageWallets => 'API wallets and subscriptions';
+
+  @override
+  String get ocUsageModels => 'Gateway usage by model';
+
+  @override
+  String get ocUsagePluginMissing =>
+      'API Usage is unavailable or not permitted on this Gateway. Gateway usage statistics below remain independent.';
+
+  @override
+  String get ocUsageUnknown => 'Not provided';
+
+  @override
+  String get ocUsageBalance => 'Balance';
+
+  @override
+  String get ocUsageToday => 'Today';
+
+  @override
+  String get ocUsageTotal => 'Lifetime';
+
+  @override
+  String get ocUsageRequests => 'Requests';
+
+  @override
+  String get ocUsageInput => 'Input';
+
+  @override
+  String get ocUsageOutput => 'Output';
+
+  @override
+  String get ocUsageCache => 'Cache read';
+
+  @override
+  String get ocUsageCost => 'Estimated cost (USD)';
+
+  @override
+  String get ocUsageRefresh => 'Refresh';
+
+  @override
+  String get ocUsageUpdated => 'Data timestamp';
+
+  @override
+  String get ocUsage7d => 'Last 7 days';
+
+  @override
+  String get ocUsage30d => 'Last 30 days';
+
+  @override
+  String get ocUsage90d => 'Last 90 days';
+
+  @override
+  String get ocUsagePartial => 'Usage is incomplete, stale or still computing. Refresh later for a complete result.';
+
+  @override
+  String get ocUsageMissingCost => 'Some costs could not be estimated; this does not mean free.';
+
+  @override
+  String get ocUsageReset => 'Resets (device local time)';
+
+  @override
+  String get ocUsageUsed => 'Used';
+
+  @override
+  String get ocUsageNoDetail => 'This provider offers balance only, not usage details.';
+
+  @override
+  String get ocUsageSubscription => 'Subscription quota (not API wallet)';
+
+  @override
+  String get ocUsageBlocked => 'Account unavailable or quota limited';
+
+  @override
+  String get ocUsageEmpty => 'No model usage records for this period.';
+
+  @override
+  String get ocUsagePeriod => 'Reporting dates (UTC)';
+
+  @override
+  String get ocUsageFailed => 'Read failed. Retry or check Gateway permissions / plugin.';
+
+  @override
+  String get ocReceivedFileNote =>
+      'Download first, then use the system share sheet to save to Files or open. Up to 100 MB; never automatically installed or extracted. Filenames follow the Gateway; if an IPA was renamed ZIP, change it back to .ipa.';
+
+  @override
+  String get ocReceivedFileFailed =>
+      'Download or sharing failed. Retry, check session permissions, or check the 100 MB limit.';
+
+  @override
+  String get ocReceivedFileSave => 'Save to Files / Share';
+
+  @override
+  String get ocResync => 'Sync again';
+
+  @override
+  String get ocSyncFailed => 'Conversation sync failed';
+
+  @override
+  String get ocModelsEmpty => 'No models available';
+
+  @override
+  String get ocDetailsTurns => 'Recorded turns';
+
+  @override
+  String get ocDetailsSteps => 'Steps';
+
+  @override
+  String get ocDetailsChangedFiles => 'Changed files';
+
+  @override
+  String get ocDetailsUnavailable => 'Unavailable';
+
+  @override
+  String get ocDetailsTrajectory => 'Trajectory';
+
+  @override
+  String get ocDetailsChanges => 'Changes';
+
+  @override
+  String get ocDetailsFiles => 'Files';
+
+  @override
+  String get ocDetailsProgress => 'Progress';
+
+  @override
+  String get ocDetailsContext => 'Context';
+
+  @override
+  String get ocDetailsAssistant => 'Assistant';
+
+  @override
+  String get ocDetailsAttachment => 'Attachment';
+
+  @override
+  String get ocDetailsBytes => 'Bytes';
+
+  @override
+  String get ocDetailsCacheRead => 'Cache read tokens';
+
+  @override
+  String get ocDetailsCacheWrite => 'Cache write tokens';
+
+  @override
+  String get ocDetailsCachedHistory => 'Cached history may be incomplete.';
+
+  @override
+  String get ocDetailsChangesNote =>
+      'Only diffs explicitly recorded in tool results are shown, not the current workspace state.';
+
+  @override
+  String get ocDetailsChangesUnavailable => 'No recorded file diffs available.';
+
+  @override
+  String get ocDetailsContextLimit => 'Context limit';
+
+  @override
+  String get ocDetailsContextNote => 'Session metadata provided by the Gateway.';
+
+  @override
+  String get ocDetailsContextUnavailable => 'Full context content and its breakdown are unavailable.';
+
+  @override
+  String get ocDetailsDuration => 'Recorded duration';
+
+  @override
+  String get ocDetailsEarlierHistory => 'Earlier history fragment';
+
+  @override
+  String get ocDetailsFilesNote => 'Files explicitly referenced in loaded history, not a workspace browser.';
+
+  @override
+  String get ocDetailsFilesUnavailable => 'No file records available.';
+
+  @override
+  String get ocDetailsGroup => 'Group';
+
+  @override
+  String get ocDetailsHistoryEmpty => 'No history available.';
+
+  @override
+  String get ocDetailsHistoryNote =>
+      'Based on loaded history, which may only include recent records. Unrecorded calls and durations are not inferred.';
+
+  @override
+  String get ocDetailsInputTokens => 'Input tokens';
+
+  @override
+  String get ocDetailsMessage => 'Message';
+
+  @override
+  String get ocDetailsMimeType => 'MIME type';
+
+  @override
+  String get ocDetailsModel => 'Model';
+
+  @override
+  String get ocDetailsOutputTokens => 'Output tokens';
+
+  @override
+  String get ocDetailsPath => 'Path';
+
+  @override
+  String get ocDetailsPermission => 'Permission';
+
+  @override
+  String get ocDetailsProgressNote => 'Progress card recorded by the Gateway.';
+
+  @override
+  String get ocDetailsProgressUnavailable => 'No progress card available.';
+
+  @override
+  String get ocDetailsProvider => 'Provider';
+
+  @override
+  String get ocDetailsRecordedDiff => 'Recorded diff';
+
+  @override
+  String get ocDetailsResultMissing => 'Result not recorded';
+
+  @override
+  String get ocDetailsResultRecorded => 'Result recorded';
+
+  @override
+  String get ocDetailsSensitiveFile => 'Sensitive file content hidden';
+
+  @override
+  String get ocDetailsSession => 'Session';
+
+  @override
+  String get ocDetailsSessionId => 'Session ID';
+
+  @override
+  String get ocDetailsSessionKey => 'Session key';
+
+  @override
+  String get ocDetailsStatus => 'Status';
+
+  @override
+  String get ocDetailsToolError => 'Tool error';
+
+  @override
+  String get ocDetailsToolPrivacy => 'Only tool names and metadata are shown, not raw arguments or output.';
+
+  @override
+  String get ocDetailsToolReference => 'Tool reference';
+
+  @override
+  String get ocDetailsTotalTokens => 'Total tokens';
+
+  @override
+  String get ocDetailsUpdated => 'Updated';
+
+  @override
+  String get ocDetailsUser => 'User';
+
+  @override
+  String get ocDetailsWorkspace => 'Workspace';
+
+  @override
+  String ocDetailsTurn(int number) {
+    return 'Turn $number';
+  }
+
+  @override
+  String ocDetailsStepCount(int steps, int tools) {
+    return '$steps steps · $tools tool calls';
   }
 
   @override

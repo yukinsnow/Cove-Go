@@ -66,7 +66,7 @@ void main() {
 
       await tester.tap(find.bySemanticsLabel('添加图片或文件'));
       await pumpFrames(tester);
-      expect(find.text('相册'), findsOneWidget);
+      expect(find.text('图片／视频'), findsOneWidget);
       expect(find.text('拍照'), findsOneWidget);
       expect(find.text('文件'), findsOneWidget);
 
@@ -99,7 +99,7 @@ void main() {
     testWidgets('an attachment alone can be sent, and the tray empties', (tester) async {
       final harness = ChatHarness(session: 's1')..picker.images = [DraftAttachment.sniff('cat.png', tinyPng)];
       await pumpScreen(tester, harness);
-      await attachFrom(tester, '相册');
+      await attachFrom(tester, '图片／视频');
       expect(harness.picker.calls, ['images:$maxAttachments']);
 
       await tester.tap(find.byIcon(AppIcons.send));
@@ -154,6 +154,21 @@ void main() {
       expect(find.textContaining('超过 200 MB'), findsOneWidget);
     });
 
+    testWidgets('gallery video stages as a file instead of an inline image', (tester) async {
+      final video = DraftAttachment.sniff('clip.mp4', Uint8List.fromList([0, 0, 0, 24, 102, 116, 121, 112]));
+      final harness = ChatHarness(session: 's1')..picker.images = [video];
+      await pumpScreen(tester, harness);
+      await attachFrom(tester, '图片／视频');
+      expect(harness.picker.calls, ['images:9']);
+      expect(find.text('clip.mp4'), findsOneWidget);
+      await tester.enterText(find.byType(TextField), 'look at this');
+      await tester.tap(find.byIcon(AppIcons.send));
+      await pumpFrames(tester);
+      final sent = harness.controllers['s1']!.sentAttachments.single.single;
+      expect(sent.name, 'clip.mp4');
+      expect(sent.isImage, isFalse);
+    });
+
     testWidgets('a cancelled camera adds nothing', (tester) async {
       final harness = ChatHarness(session: 's1');
       await pumpScreen(tester, harness);
@@ -167,7 +182,7 @@ void main() {
       await pumpScreen(tester, harness);
       await tester.tap(find.bySemanticsLabel('添加图片或文件'));
       await pumpFrames(tester);
-      expect(find.text('相册'), findsNothing);
+      expect(find.text('图片／视频'), findsNothing);
     });
   });
 

@@ -14,6 +14,7 @@ blocked=('assets/whale/', 'assets/pets/deepy-whale/', 'assets/pets/whale-girl/',
 p.write_text('\n'.join(line for line in p.read_text().splitlines() if not any(b in line for b in blocked))+'\n')
 PYASSETS
 flutter create --platforms=ios --org io.github.yukinsnow --project-name dsh_app .
+python3 "$ROOT/tooling/setup-ios-notifications.py" "$PWD/ios/Runner"
 python3 - "$PWD/ios/Runner/Info.plist" <<'PY'
 import plistlib,sys
 p=sys.argv[1]
@@ -42,14 +43,14 @@ PY
 swift "$ROOT/tooling/openclaw_icon.swift" "$PWD/ios/Runner/Assets.xcassets/AppIcon.appiconset"
 flutter pub get
 python3 tool/l10n_merge.py
-flutter build ios --release --no-codesign --target lib/main_openclaw.dart --dart-define=REMOTE_DUAL_APP=true --build-name 0.1.15 --build-number 16 --dart-define=DSH_APP_VERSION=0.1.15+16 --dart-define=APP_SOURCE_REVISION="$(git rev-parse --short=12 HEAD) / ${GITHUB_RUN_ID:-local}"
+flutter build ios --release --no-codesign --target lib/main_openclaw.dart --dart-define=REMOTE_DUAL_APP=true --build-name 0.1.24 --build-number 25 --dart-define=DSH_APP_VERSION=0.1.24+25 --dart-define=APP_SOURCE_REVISION="$(git rev-parse --short=12 HEAD) / ${GITHUB_RUN_ID:-local}"
 # Fresh temporary payload; never deletes an existing checkout path.
 OUT="$ROOT/build/openclaw"
 mkdir -p "$OUT"
 STAGE="$(mktemp -d)"
 mkdir -p "$STAGE/Payload"
 cp -R build/ios/iphoneos/Runner.app "$STAGE/Payload/"
-IPA="Cove-Go-0.1.15-build16-$(git rev-parse --short=12 HEAD)-unsigned.ipa"
+IPA="Cove-Go-0.1.24-build25-$(git rev-parse --short=12 HEAD)-unsigned.ipa"
 (cd "$STAGE" && zip -qry "$OUT/$IPA" Payload)
 python3 - "$OUT/$IPA" <<'PYVERIFY'
 import hashlib,json,sys,zipfile,plistlib
@@ -58,7 +59,7 @@ p=Path(sys.argv[1])
 with zipfile.ZipFile(p) as z:
     assert z.testzip() is None
     info=plistlib.loads(z.read('Payload/Runner.app/Info.plist'))
-    assert (info['CFBundleShortVersionString'], info['CFBundleVersion']) == ('0.1.15','16')
+    assert (info['CFBundleShortVersionString'], info['CFBundleVersion']) == ('0.1.24','25')
     assert info['CFBundleDisplayName'] == 'Cove-Go'
     assert info['CFBundleName'] == 'Cove-Go'
 Path(str(p)+'.sha256').write_text(hashlib.sha256(p.read_bytes()).hexdigest()+'  '+p.name+'\n')

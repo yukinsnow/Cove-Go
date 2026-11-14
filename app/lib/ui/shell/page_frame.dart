@@ -36,9 +36,13 @@ class AppPage extends StatefulWidget {
     this.showLargeTitle = true,
     this.padBottom = true,
     this.solidBar = true,
+    this.onBack,
   });
 
   final String title;
+
+  /// Root-like modes can leave their mode rather than pop a nonexistent route.
+  final VoidCallback? onBack;
 
   /// Optional line under the large title (bodyMedium, secondary colour).
   final Widget? subtitle;
@@ -241,7 +245,7 @@ class _AppPageState extends State<AppPage> {
                         child: GlassIconButton(
                           icon: AppIcons.back,
                           tooltip: l10n.commonBack,
-                          onPressed: () => Navigator.of(context).maybePop(),
+                          onPressed: widget.onBack ?? () => Navigator.of(context).maybePop(),
                         ),
                       ),
                       middle: ValueListenableBuilder<double>(

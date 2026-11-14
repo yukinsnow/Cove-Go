@@ -209,3 +209,46 @@ class GatewayImageSelection extends StatelessWidget {
     ],
   );
 }
+
+/// Confirm a batch together; tap any thumbnail for the existing zoom viewer.
+class GatewayImagesSelection extends StatelessWidget {
+  const GatewayImagesSelection({super.key, required this.images});
+  final List<({ImageProvider image, String name})> images;
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: Text(context.l10n.ocSelectMultipleImages)),
+    body: GridView.builder(
+      padding: const EdgeInsets.all(16),
+      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+        maxCrossAxisExtent: 180,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
+      ),
+      itemCount: images.length,
+      itemBuilder: (ctx, index) => InkWell(
+        key: ValueKey('gateway-image-preview-$index'),
+        onTap: () => Navigator.of(context).push<void>(
+          MaterialPageRoute(
+            builder: (_) => ImageViewerPage(title: images[index].name, image: images[index].image),
+          ),
+        ),
+        child: Semantics(
+          label: images[index].name,
+          button: true,
+          child: Image(image: images[index].image, fit: BoxFit.cover),
+        ),
+      ),
+    ),
+    bottomNavigationBar: SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: FilledButton.icon(
+          onPressed: () => Navigator.of(context).pop(true),
+          icon: const Icon(AppIcons.done),
+          label: Text(context.l10n.ocAttachSelectedImages(images.length)),
+        ),
+      ),
+    ),
+  );
+}

@@ -50,6 +50,7 @@ class ClawController extends ChangeNotifier {
     Map<String, dynamic> snapshot() => {
       'sessions': sessions,
       'groups': sessionGroups,
+      'groupFilter': selectedGroup,
       'selected': sessionKey,
       'histories': histories,
     };
@@ -79,6 +80,7 @@ class ClawController extends ChangeNotifier {
     try {
       sessions = (cached['sessions'] as List).map((e) => Map<String, dynamic>.from(e as Map)).toList();
       sessionGroups = (cached['groups'] as List? ?? []).whereType<String>().toList();
+      selectedGroup = cached['groupFilter'] as String?;
       _histories.clear();
       for (final entry in (cached['histories'] as Map).entries) {
         _histories[entry.key as String] = (entry.value as List)
@@ -91,6 +93,8 @@ class ClawController extends ChangeNotifier {
     } on Object {
       sessions = [];
       sessionGroups = [];
+      selectedGroup = null;
+      groupCatalogSupported = false;
       messages = [];
       sessionKey = '';
       _histories.clear();
@@ -115,6 +119,93 @@ class ClawController extends ChangeNotifier {
   bool busy = false, sending = false, disposed = false, readingCache = false;
   List<Map<String, dynamic>> sessions = [], messages = [], models = [];
   List<String> sessionGroups = [];
+  String? selectedGroup;
+  bool groupCatalogSupported = false;
+  int get workspaceEpoch => _connectionRevision;
+  List<Map<String, dynamic>> get scopedSessions =>
+      selectedGroup == null ? sessions : sessions.where((s) => (s['category'] ?? '') == selectedGroup).toList();
+  void selectGroup(String? name) {
+    selectedGroup = name;
+    changed();
+    unawaited(_save());
+  }
+
+  void _checkWorkspaceEpoch(int epoch) {
+    if (disposed || _removing || epoch != _connectionRevision || !connected) {
+      throw StateError('Gateway changed during workspace operation');
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> groupDefaults() async {
+    final epoch = workspaceEpoch;
+    final result = await client.request('sessions.groups.defaults') as Map;
+    _checkWorkspaceEpoch(epoch);
+    return (result['defaults'] as List? ?? []).whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList();
+  }
+
+  Future<void> addGroup(String name) async {
+    final epoch = workspaceEpoch;
+    await refreshSessions(); // Merge the current catalog; never put an outdated local-only list.
+    _checkWorkspaceEpoch(epoch);
+    await client.request('sessions.groups.put', {
+      'names': <String>{
+        ...sessionGroups,
+        ...sessions.map((s) => s['category']).whereType<String>().where((s) => s.isNotEmpty),
+        name,
+      }.toList(),
+    });
+    _checkWorkspaceEpoch(epoch);
+    await refreshSessions();
+    _checkWorkspaceEpoch(epoch);
+    if (!sessionGroups.contains(name)) throw StateError('Gateway did not retain the group');
+    selectGroup(name);
+  }
+
+  Future<void> renameGroup(String name, String to) async {
+    final epoch = workspaceEpoch;
+    await client.request('sessions.groups.rename', {'name': name, 'to': to});
+    _checkWorkspaceEpoch(epoch);
+    await refreshSessions();
+    _checkWorkspaceEpoch(epoch);
+    if (!sessionGroups.contains(to)) throw StateError('Gateway did not retain the group rename');
+    if (selectedGroup == name) selectGroup(to);
+  }
+
+  Future<void> deleteGroup(String name) async {
+    final epoch = workspaceEpoch;
+    await client.request('sessions.groups.delete', {'name': name});
+    _checkWorkspaceEpoch(epoch);
+    await refreshSessions();
+    _checkWorkspaceEpoch(epoch);
+    if (sessionGroups.contains(name) || sessions.any((s) => s['category'] == name)) {
+      throw StateError('Gateway did not remove the group');
+    }
+    if (selectedGroup == name) selectGroup(null);
+  }
+
+  Future<void> updateGroupDirectory(String name, String? cwd) async {
+    final epoch = workspaceEpoch;
+    await client.request('sessions.groups.update', {'name': name, 'cwd': cwd, 'worktree': false});
+    _checkWorkspaceEpoch(epoch);
+    final defaults = await groupDefaults();
+    _checkWorkspaceEpoch(epoch);
+    final actual = defaults.where((d) => d['name'] == name).firstOrNull;
+    if ((actual?['cwd'] ?? '') != (cwd ?? '') || actual?['worktree'] == true) {
+      throw StateError('Gateway did not retain the directory default');
+    }
+    changed();
+  }
+
+  Future<void> moveSessionGroup(String key, String? name) async {
+    final epoch = workspaceEpoch;
+    await client.request('sessions.patch', {'key': key, 'category': name});
+    _checkWorkspaceEpoch(epoch);
+    await refreshSessions();
+    _checkWorkspaceEpoch(epoch);
+    final row = sessions.where((s) => s['key'] == key).firstOrNull;
+    if (row == null || (row['category'] ?? '') != (name ?? '')) throw StateError('Gateway did not retain membership');
+  }
+
   int _sessionRefresh = 0, _sessionEvents = 0;
 
   /// Aggregate direct activity is authoritative; descendants may still be working.
@@ -134,6 +225,8 @@ class ClawController extends ChangeNotifier {
   ];
 
   void _retainImages(Map<String, dynamic> row, Map previous) {
+    final files = gatewayFiles(previous);
+    if (files.isNotEmpty && gatewayFiles(row).isEmpty) row['_localFiles'] = files;
     final images = gatewayImages(previous);
     // Canonical references take precedence; only keep display-only local bytes
     // for older Gateways that replace the admitted image with plain text.
@@ -261,9 +354,12 @@ class ClawController extends ChangeNotifier {
           token = secret.trim();
           if (changedHost) {
             ++_selection;
+            syncing = syncFailed = false;
             sessionKey = '';
             sessions = [];
             sessionGroups = [];
+            selectedGroup = null;
+            groupCatalogSupported = false;
             messages = [];
             _histories.clear();
             _outgoing.clear();
@@ -345,9 +441,12 @@ class ClawController extends ChangeNotifier {
       _events = null;
       await client.disconnect();
       ++_selection;
+      syncing = syncFailed = false;
       address = token = error = sessionKey = '';
       sessions = [];
       sessionGroups = [];
+      selectedGroup = null;
+      groupCatalogSupported = false;
       messages = [];
       models = [];
       _histories.clear();
@@ -369,16 +468,30 @@ class ClawController extends ChangeNotifier {
     final connection = _connectionRevision, request = ++_sessionRefresh;
     final events = _sessionEvents;
     bool current() => !disposed && !_removing && connection == _connectionRevision && request == _sessionRefresh;
-    final result =
-        await client.request('sessions.list', {'limit': 100, 'includeGlobal': false, 'includeUnknown': false}) as Map;
-    if (!current()) return;
-    // A newer event must not be overwritten by an older in-flight snapshot.
-    if (events != _sessionEvents) return refreshSessions();
-    sessions = (result['sessions'] as List? ?? []).map((e) => Map<String, dynamic>.from(e as Map)).toList();
+    final rows = <Map<String, dynamic>>[];
+    var offset = 0;
+    while (true) {
+      final result = await client.request('sessions.list', {
+        'limit': 100,
+        if (offset > 0) 'offset': offset,
+        'includeGlobal': false,
+        'includeUnknown': false,
+      }) as Map;
+      if (!current()) return;
+      if (events != _sessionEvents) return refreshSessions();
+      final page = (result['sessions'] as List? ?? []).whereType<Map>();
+      rows.addAll(page.map((e) => Map<String, dynamic>.from(e)));
+      if (result['hasMore'] != true) break;
+      final next = result['nextOffset'] as int? ?? offset + page.length;
+      if (next <= offset) throw StateError('Invalid Gateway pagination');
+      offset = next;
+    }
+    sessions = {for (final row in rows) row['key']: row}.values.toList();
     changed();
     try {
       final catalog = await client.request('sessions.groups.list') as Map;
       if (!current()) return;
+      groupCatalogSupported = true;
       final names = <String>[
         for (final group in catalog['groups'] as List? ?? [])
           if (group is Map && group['name'] is String) group['name'] as String,
@@ -396,12 +509,19 @@ class ClawController extends ChangeNotifier {
           e.code == 'METHOD_NOT_FOUND' ||
           (e.code == 'INVALID_REQUEST' && e.message.toLowerCase().contains('unknown method'));
       if (!unsupported) rethrow;
-      if (current()) sessionGroups = [];
+      if (current()) {
+        sessionGroups = [];
+        groupCatalogSupported = false;
+      }
     }
     if (!current()) return;
     unawaited(_save());
     changed();
   }
+
+  bool syncing = false, syncFailed = false;
+  int? _manualSyncSelection;
+  bool get resyncing => _manualSyncSelection == _selection;
 
   Future<void> select(String key) async {
     final previous = sessionKey;
@@ -414,23 +534,75 @@ class ClawController extends ChangeNotifier {
     tools.clear();
     changed();
     unawaited(_save());
-    if (!connected) return;
-    if (previous.isNotEmpty) await client.request('sessions.messages.unsubscribe', {'key': previous});
-    if (selection != _selection) return;
-    await client.request('sessions.messages.subscribe', {'key': key});
-    if (selection != _selection) return;
-    final history = await client.request('chat.history', {'sessionKey': key, 'limit': 150}) as Map;
-    if (selection != _selection) return;
-    _replaceHistory(history['messages'] as List? ?? []);
-    _rememberHistory();
+    if (!connected) {
+      syncing = false;
+      changed();
+      return;
+    }
+    syncing = true;
+    syncFailed = false;
     changed();
+    try {
+      if (previous.isNotEmpty) await client.request('sessions.messages.unsubscribe', {'key': previous});
+      if (selection != _selection) return;
+      await client.request('sessions.messages.subscribe', {'key': key});
+      if (selection != _selection) return;
+      await history();
+    } catch (_) {
+      // A retired request must not put its error banner onto the new chat.
+      if (selection != _selection) return;
+      syncFailed = true;
+      rethrow;
+    } finally {
+      if (selection == _selection) {
+        syncing = false;
+        changed();
+      }
+    }
+  }
+
+  /// Re-establish the subscription as well as history after a failed sync.
+  Future<void> resync() async {
+    if (resyncing || sessionKey.isEmpty) return;
+    final operation = select(sessionKey);
+    final selection = _selection;
+    _manualSyncSelection = selection;
+    changed();
+    try {
+      await operation;
+    } finally {
+      if (_manualSyncSelection == selection) _manualSyncSelection = null;
+      changed();
+    }
   }
 
   Future<void> newSession({String? outgoingId}) async {
-    final result = await client.request('sessions.create', {'agentId': 'main', 'idempotencyKey': wireId()}) as Map;
+    final epoch = workspaceEpoch;
+    final category = selectedGroup;
+    Map<String, dynamic>? defaults;
+    if (category != null && category.isNotEmpty) {
+      try {
+        defaults = (await groupDefaults()).where((d) => d['name'] == category).firstOrNull;
+      } on GatewayException catch (e) {
+        if (e.code != 'METHOD_NOT_FOUND' &&
+            !(e.code == 'INVALID_REQUEST' && e.message.toLowerCase().contains('unknown method'))) {
+          rethrow;
+        }
+      }
+      _checkWorkspaceEpoch(epoch);
+    }
+    final result = await client.request('sessions.create', {
+      'agentId': 'main',
+      'idempotencyKey': wireId(),
+      if (category != null && category.isNotEmpty) 'category': category,
+      if (defaults?['cwd'] is String) 'cwd': defaults!['cwd'],
+      if (defaults?['worktree'] == true) 'worktree': true,
+    }) as Map;
+    _checkWorkspaceEpoch(epoch);
     final key = result['sessionKey'] ?? result['key'] ?? (result['session'] as Map?)?['key'];
     if (key is! String) throw StateError('Gateway did not return a session key');
     await refreshSessions();
+    _checkWorkspaceEpoch(epoch);
     for (final prompt in _outgoing) {
       if (prompt.id == outgoingId) prompt.sessionKey = key;
     }
@@ -467,8 +639,12 @@ class ClawController extends ChangeNotifier {
       if (text.isNotEmpty) {'type': 'text', 'text': text},
       for (final file in attachments)
         {
-          'type': 'image',
-          'source': {'type': 'base64', 'media_type': file['mimeType'], 'data': file['content']},
+          'type': file['type'] ?? 'image',
+          'fileName': file['fileName'],
+          'mimeType': file['mimeType'],
+          'sizeBytes': file['sizeBytes'],
+          if (file['type'] == 'image' || file['type'] == null)
+            'source': {'type': 'base64', 'media_type': file['mimeType'], 'data': file['content']},
         },
     ];
     final prompt = _OutgoingPrompt(
@@ -566,7 +742,11 @@ class ClawController extends ChangeNotifier {
       return;
     }
     if (p['sessionKey'] != sessionKey) return;
-    if (event == 'chat') {
+    if (event == 'session.message') {
+      // Delivery mirrors (message tool attachments) can arrive before the run's
+      // final chat event; fetch the persisted display projection immediately.
+      unawaited(guard(history));
+    } else if (event == 'chat') {
       final run = '${p['runId']}';
       if (p['state'] == 'delta') {
         if (p['message'] != null) {

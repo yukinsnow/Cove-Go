@@ -7001,7 +7001,7 @@ abstract class L10n {
   /// No description provided for @chatGallery.
   ///
   /// In zh, this message translates to:
-  /// **'相册'**
+  /// **'图片／视频'**
   String get chatGallery;
 
   /// No description provided for @chatTakePhoto.
@@ -15673,6 +15673,846 @@ abstract class L10n {
   /// In zh, this message translates to:
   /// **'未能删除连接，请重试。错误代码：{code}'**
   String ocRemoveGatewayFailedCode(String code);
+
+  /// No description provided for @ocSelectSingleImage.
+  ///
+  /// In zh, this message translates to:
+  /// **'选择单张图片'**
+  String get ocSelectSingleImage;
+
+  /// No description provided for @ocSelectMultipleImages.
+  ///
+  /// In zh, this message translates to:
+  /// **'多选图片'**
+  String get ocSelectMultipleImages;
+
+  /// No description provided for @ocAttachSelectedImages.
+  ///
+  /// In zh, this message translates to:
+  /// **'添加所选图片（{count}）'**
+  String ocAttachSelectedImages(int count);
+
+  /// No description provided for @ocNotifications.
+  ///
+  /// In zh, this message translates to:
+  /// **'iOS 系统通知'**
+  String get ocNotifications;
+
+  /// No description provided for @ocNotificationDone.
+  ///
+  /// In zh, this message translates to:
+  /// **'任务已完成，点击查看会话。'**
+  String get ocNotificationDone;
+
+  /// No description provided for @ocNotificationFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'任务失败或已停止，点击查看。'**
+  String get ocNotificationFailed;
+
+  /// No description provided for @ocNotificationAttention.
+  ///
+  /// In zh, this message translates to:
+  /// **'收到新提醒，需要你确认或回答。'**
+  String get ocNotificationAttention;
+
+  /// No description provided for @ocNotificationLimit.
+  ///
+  /// In zh, this message translates to:
+  /// **'仅对设备实际收到的事件发通知。iOS 挂起或退出 App 后无法保证实时接收；未接入 APNs 远程推送。'**
+  String get ocNotificationLimit;
+
+  /// No description provided for @ocNotificationPrivacy.
+  ///
+  /// In zh, this message translates to:
+  /// **'任务完成、失败及待确认提醒；锁屏不显示对话内容、主机地址或凭据。'**
+  String get ocNotificationPrivacy;
+
+  /// No description provided for @ocNotificationPermission.
+  ///
+  /// In zh, this message translates to:
+  /// **'打开系统通知设置'**
+  String get ocNotificationPermission;
+
+  /// No description provided for @ocNotificationPermissionHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'请在 iOS 设置中允许 Cove-Go 通知。横幅与声音仍受专注模式和系统设置控制。'**
+  String get ocNotificationPermissionHint;
+
+  /// No description provided for @ocNotificationTest.
+  ///
+  /// In zh, this message translates to:
+  /// **'发送测试通知'**
+  String get ocNotificationTest;
+
+  /// No description provided for @ocNotificationTestBody.
+  ///
+  /// In zh, this message translates to:
+  /// **'通知测试：Cove-Go 已可发送本地通知。'**
+  String get ocNotificationTestBody;
+
+  /// No description provided for @ocPhotosVideos.
+  ///
+  /// In zh, this message translates to:
+  /// **'图片／视频'**
+  String get ocPhotosVideos;
+
+  /// No description provided for @ocAttachSelectedFiles.
+  ///
+  /// In zh, this message translates to:
+  /// **'添加所选附件（{count}）'**
+  String ocAttachSelectedFiles(int count);
+
+  /// No description provided for @ocAttachmentTooLarge.
+  ///
+  /// In zh, this message translates to:
+  /// **'{name} 超过附件或消息大小限制（{limit}）。'**
+  String ocAttachmentTooLarge(String name, String limit);
+
+  /// No description provided for @ocWorkspaceHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'OpenClaw 工作区使用服务端会话分组：分组用于筛选对话；可选目录仅用于新对话，不改变已有对话的工作目录。'**
+  String get ocWorkspaceHint;
+
+  /// No description provided for @ocWorkspaceReadOnly.
+  ///
+  /// In zh, this message translates to:
+  /// **'管理分组需要连接支持分组接口的 Gateway 并具备写入权限。已有分组仍可筛选。'**
+  String get ocWorkspaceReadOnly;
+
+  /// No description provided for @ocMoveToGroup.
+  ///
+  /// In zh, this message translates to:
+  /// **'将对话移至分组'**
+  String get ocMoveToGroup;
+
+  /// No description provided for @ocWorkspaceDirectory.
+  ///
+  /// In zh, this message translates to:
+  /// **'新对话工作目录'**
+  String get ocWorkspaceDirectory;
+
+  /// No description provided for @ocWorkspaceDirectoryHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'填写 Gateway 上的绝对目录，不是手机路径。留空使用助手默认目录。保存后使用当前目录（不新建 worktree）；由 Gateway 校验权限，不移动已有对话。'**
+  String get ocWorkspaceDirectoryHint;
+
+  /// No description provided for @ocGroupRemoveBody.
+  ///
+  /// In zh, this message translates to:
+  /// **'仅移除分组，对话保留并移至未分组；不会删除目录或文件。'**
+  String get ocGroupRemoveBody;
+
+  /// No description provided for @ocFeatureHubSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'OpenClaw 的对话与工具功能，都在这里'**
+  String get ocFeatureHubSubtitle;
+
+  /// No description provided for @ocFeatureScopeChanged.
+  ///
+  /// In zh, this message translates to:
+  /// **'连接或当前对话已变化，请返回后重新打开此页面。'**
+  String get ocFeatureScopeChanged;
+
+  /// No description provided for @ocFeatureUnavailable.
+  ///
+  /// In zh, this message translates to:
+  /// **'Gateway 可能不支持此接口，或当前账号缺少权限。未执行修改。'**
+  String get ocFeatureUnavailable;
+
+  /// No description provided for @ocFeatureEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前范围暂无数据'**
+  String get ocFeatureEmpty;
+
+  /// No description provided for @ocFeaturePreviewUnavailable.
+  ///
+  /// In zh, this message translates to:
+  /// **'此格式或大小暂不支持原生预览，请使用 Gateway 网页版。'**
+  String get ocFeaturePreviewUnavailable;
+
+  /// No description provided for @ocFeatureDetailsSummary.
+  ///
+  /// In zh, this message translates to:
+  /// **'模型、状态、目录与用量'**
+  String get ocFeatureDetailsSummary;
+
+  /// No description provided for @ocFeatureArtifactsSummary.
+  ///
+  /// In zh, this message translates to:
+  /// **'查看助手交付的产出文件'**
+  String get ocFeatureArtifactsSummary;
+
+  /// No description provided for @ocFeatureArtifactsNote.
+  ///
+  /// In zh, this message translates to:
+  /// **'仅列出助手交付的产出；点击可查看信息、加载字节型附件、预览支持的格式并通过系统分享。仅 URL 型下载请用 Gateway 网页版。'**
+  String get ocFeatureArtifactsNote;
+
+  /// No description provided for @ocFeatureFilesNote.
+  ///
+  /// In zh, this message translates to:
+  /// **'只读展示当前对话涉及的文件，点击可预览；不是整台设备的文件管理器。'**
+  String get ocFeatureFilesNote;
+
+  /// No description provided for @ocFeatureWebOnly.
+  ///
+  /// In zh, this message translates to:
+  /// **'打开 Gateway 网页版；暂无原生页面'**
+  String get ocFeatureWebOnly;
+
+  /// No description provided for @ocFeatureExportSummary.
+  ///
+  /// In zh, this message translates to:
+  /// **'以 JSON 分享近期显示记录'**
+  String get ocFeatureExportSummary;
+
+  /// No description provided for @ocFeatureExportNote.
+  ///
+  /// In zh, this message translates to:
+  /// **'导出 Gateway 返回的最近最多 150 条显示消息，不是完整会话或 ZIP 备份。可能包含私密对话与附件；确认需要后点击下方按钮打开系统分享。'**
+  String get ocFeatureExportNote;
+
+  /// No description provided for @ocFeatureExportAction.
+  ///
+  /// In zh, this message translates to:
+  /// **'导出 JSON 并打开分享'**
+  String get ocFeatureExportAction;
+
+  /// No description provided for @ocFeatureProgressSummary.
+  ///
+  /// In zh, this message translates to:
+  /// **'查看当前进度卡与计划'**
+  String get ocFeatureProgressSummary;
+
+  /// No description provided for @ocFeatureSkillsSummary.
+  ///
+  /// In zh, this message translates to:
+  /// **'可用技能与缺少的依赖'**
+  String get ocFeatureSkillsSummary;
+
+  /// No description provided for @ocFeatureCronSummary.
+  ///
+  /// In zh, this message translates to:
+  /// **'查看定时与周期任务'**
+  String get ocFeatureCronSummary;
+
+  /// No description provided for @ocFeatureReadOnly.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前为只读清单，不会安装、修改、运行或删除项目；管理操作请用 Gateway 网页版。自动化清单显示前 100 项。'**
+  String get ocFeatureReadOnly;
+
+  /// No description provided for @ocFeaturePluginsSummary.
+  ///
+  /// In zh, this message translates to:
+  /// **'插件清单与状态'**
+  String get ocFeaturePluginsSummary;
+
+  /// No description provided for @ocFeatureAgentsSummary.
+  ///
+  /// In zh, this message translates to:
+  /// **'Gateway 中已配置的助手'**
+  String get ocFeatureAgentsSummary;
+
+  /// No description provided for @ocFeatureTools.
+  ///
+  /// In zh, this message translates to:
+  /// **'工具'**
+  String get ocFeatureTools;
+
+  /// No description provided for @ocFeatureSearchSummary.
+  ///
+  /// In zh, this message translates to:
+  /// **'按标题查找对话'**
+  String get ocFeatureSearchSummary;
+
+  /// No description provided for @ocFeatureWorkspaceSummary.
+  ///
+  /// In zh, this message translates to:
+  /// **'筛选分组与设置新对话目录'**
+  String get ocFeatureWorkspaceSummary;
+
+  /// No description provided for @ocFeatureGatewayWeb.
+  ///
+  /// In zh, this message translates to:
+  /// **'Gateway 官方界面，可能需要登录'**
+  String get ocFeatureGatewayWeb;
+
+  /// No description provided for @ocFeatureModelsSummary.
+  ///
+  /// In zh, this message translates to:
+  /// **'切换当前对话使用的模型'**
+  String get ocFeatureModelsSummary;
+
+  /// No description provided for @ocFeatureArtifactDownloadNote.
+  ///
+  /// In zh, this message translates to:
+  /// **'仅从当前 Gateway 加载最多 20 MB 的字节附件，不自动请求 URL 型或不支持的下载。图片与文本可预览，分享／保存需另点分享。'**
+  String get ocFeatureArtifactDownloadNote;
+
+  /// No description provided for @ocFeatureLoadArtifact.
+  ///
+  /// In zh, this message translates to:
+  /// **'加载附件'**
+  String get ocFeatureLoadArtifact;
+
+  /// No description provided for @ocFeatureShareArtifact.
+  ///
+  /// In zh, this message translates to:
+  /// **'分享／保存到文件'**
+  String get ocFeatureShareArtifact;
+
+  /// No description provided for @ocFeatureConfiguredAgents.
+  ///
+  /// In zh, this message translates to:
+  /// **'已配置助手'**
+  String get ocFeatureConfiguredAgents;
+
+  /// No description provided for @ocUsageTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'模型用量'**
+  String get ocUsageTitle;
+
+  /// No description provided for @ocUsageSummary.
+  ///
+  /// In zh, this message translates to:
+  /// **'API 余额、订阅额度与各模型用量'**
+  String get ocUsageSummary;
+
+  /// No description provided for @ocUsageScope.
+  ///
+  /// In zh, this message translates to:
+  /// **'仅当前 Gateway 中有权查看的全部助手与模型；Token / 估算费用不等于供应商账单，API 钱包与订阅额度分别展示。'**
+  String get ocUsageScope;
+
+  /// No description provided for @ocUsageWallets.
+  ///
+  /// In zh, this message translates to:
+  /// **'API 钱包与订阅'**
+  String get ocUsageWallets;
+
+  /// No description provided for @ocUsageModels.
+  ///
+  /// In zh, this message translates to:
+  /// **'Gateway 各模型统计'**
+  String get ocUsageModels;
+
+  /// No description provided for @ocUsagePluginMissing.
+  ///
+  /// In zh, this message translates to:
+  /// **'此 Gateway 未启用 API Usage 插件，或当前账号无权读取；不影响下方 Gateway 用量统计。'**
+  String get ocUsagePluginMissing;
+
+  /// No description provided for @ocUsageUnknown.
+  ///
+  /// In zh, this message translates to:
+  /// **'未提供'**
+  String get ocUsageUnknown;
+
+  /// No description provided for @ocUsageBalance.
+  ///
+  /// In zh, this message translates to:
+  /// **'余额'**
+  String get ocUsageBalance;
+
+  /// No description provided for @ocUsageToday.
+  ///
+  /// In zh, this message translates to:
+  /// **'今日'**
+  String get ocUsageToday;
+
+  /// No description provided for @ocUsageTotal.
+  ///
+  /// In zh, this message translates to:
+  /// **'累计'**
+  String get ocUsageTotal;
+
+  /// No description provided for @ocUsageRequests.
+  ///
+  /// In zh, this message translates to:
+  /// **'请求'**
+  String get ocUsageRequests;
+
+  /// No description provided for @ocUsageInput.
+  ///
+  /// In zh, this message translates to:
+  /// **'输入'**
+  String get ocUsageInput;
+
+  /// No description provided for @ocUsageOutput.
+  ///
+  /// In zh, this message translates to:
+  /// **'输出'**
+  String get ocUsageOutput;
+
+  /// No description provided for @ocUsageCache.
+  ///
+  /// In zh, this message translates to:
+  /// **'缓存读取'**
+  String get ocUsageCache;
+
+  /// No description provided for @ocUsageCost.
+  ///
+  /// In zh, this message translates to:
+  /// **'估算费用（USD）'**
+  String get ocUsageCost;
+
+  /// No description provided for @ocUsageRefresh.
+  ///
+  /// In zh, this message translates to:
+  /// **'刷新'**
+  String get ocUsageRefresh;
+
+  /// No description provided for @ocUsageUpdated.
+  ///
+  /// In zh, this message translates to:
+  /// **'数据时间'**
+  String get ocUsageUpdated;
+
+  /// No description provided for @ocUsage7d.
+  ///
+  /// In zh, this message translates to:
+  /// **'近 7 天'**
+  String get ocUsage7d;
+
+  /// No description provided for @ocUsage30d.
+  ///
+  /// In zh, this message translates to:
+  /// **'近 30 天'**
+  String get ocUsage30d;
+
+  /// No description provided for @ocUsage90d.
+  ///
+  /// In zh, this message translates to:
+  /// **'近 90 天'**
+  String get ocUsage90d;
+
+  /// No description provided for @ocUsagePartial.
+  ///
+  /// In zh, this message translates to:
+  /// **'数据仍在统计、缓存过期或缺失，当前不是完整结果；请稍后刷新。'**
+  String get ocUsagePartial;
+
+  /// No description provided for @ocUsageMissingCost.
+  ///
+  /// In zh, this message translates to:
+  /// **'部分费用无法估算，不代表免费。'**
+  String get ocUsageMissingCost;
+
+  /// No description provided for @ocUsageReset.
+  ///
+  /// In zh, this message translates to:
+  /// **'重置（设备本地时间）'**
+  String get ocUsageReset;
+
+  /// No description provided for @ocUsageUsed.
+  ///
+  /// In zh, this message translates to:
+  /// **'已用'**
+  String get ocUsageUsed;
+
+  /// No description provided for @ocUsageNoDetail.
+  ///
+  /// In zh, this message translates to:
+  /// **'此供应商只提供余额，没有用量明细。'**
+  String get ocUsageNoDetail;
+
+  /// No description provided for @ocUsageSubscription.
+  ///
+  /// In zh, this message translates to:
+  /// **'订阅额度（非 API 钱包）'**
+  String get ocUsageSubscription;
+
+  /// No description provided for @ocUsageBlocked.
+  ///
+  /// In zh, this message translates to:
+  /// **'账号当前不可用或额度受限'**
+  String get ocUsageBlocked;
+
+  /// No description provided for @ocUsageEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'此时间范围没有模型用量记录。'**
+  String get ocUsageEmpty;
+
+  /// No description provided for @ocUsagePeriod.
+  ///
+  /// In zh, this message translates to:
+  /// **'统计日期（UTC）'**
+  String get ocUsagePeriod;
+
+  /// No description provided for @ocUsageFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'读取失败，请重试或检查 Gateway 权限 / 插件。'**
+  String get ocUsageFailed;
+
+  /// No description provided for @ocReceivedFileNote.
+  ///
+  /// In zh, this message translates to:
+  /// **'先下载附件，再通过系统分享菜单保存到“文件”或打开。最多 100 MB；不自动安装或解压。文件名遵循 Gateway 返回值，若 IPA 被命名为 ZIP，请手动改回 .ipa。'**
+  String get ocReceivedFileNote;
+
+  /// No description provided for @ocReceivedFileFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'附件下载或分享失败：请重试、确认会话权限，或检查是否超过 100 MB。'**
+  String get ocReceivedFileFailed;
+
+  /// No description provided for @ocReceivedFileSave.
+  ///
+  /// In zh, this message translates to:
+  /// **'保存到文件 / 分享'**
+  String get ocReceivedFileSave;
+
+  /// No description provided for @ocResync.
+  ///
+  /// In zh, this message translates to:
+  /// **'重新同步'**
+  String get ocResync;
+
+  /// No description provided for @ocSyncFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'对话同步失败'**
+  String get ocSyncFailed;
+
+  /// No description provided for @ocModelsEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂无可用模型'**
+  String get ocModelsEmpty;
+
+  /// No description provided for @ocDetailsTurns.
+  ///
+  /// In zh, this message translates to:
+  /// **'已记录轮次'**
+  String get ocDetailsTurns;
+
+  /// No description provided for @ocDetailsSteps.
+  ///
+  /// In zh, this message translates to:
+  /// **'步骤'**
+  String get ocDetailsSteps;
+
+  /// No description provided for @ocDetailsChangedFiles.
+  ///
+  /// In zh, this message translates to:
+  /// **'改动文件'**
+  String get ocDetailsChangedFiles;
+
+  /// No description provided for @ocDetailsUnavailable.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂无数据'**
+  String get ocDetailsUnavailable;
+
+  /// No description provided for @ocDetailsTrajectory.
+  ///
+  /// In zh, this message translates to:
+  /// **'轨迹'**
+  String get ocDetailsTrajectory;
+
+  /// No description provided for @ocDetailsChanges.
+  ///
+  /// In zh, this message translates to:
+  /// **'改动'**
+  String get ocDetailsChanges;
+
+  /// No description provided for @ocDetailsFiles.
+  ///
+  /// In zh, this message translates to:
+  /// **'文件'**
+  String get ocDetailsFiles;
+
+  /// No description provided for @ocDetailsProgress.
+  ///
+  /// In zh, this message translates to:
+  /// **'进度'**
+  String get ocDetailsProgress;
+
+  /// No description provided for @ocDetailsContext.
+  ///
+  /// In zh, this message translates to:
+  /// **'上下文'**
+  String get ocDetailsContext;
+
+  /// No description provided for @ocDetailsAssistant.
+  ///
+  /// In zh, this message translates to:
+  /// **'助手'**
+  String get ocDetailsAssistant;
+
+  /// No description provided for @ocDetailsAttachment.
+  ///
+  /// In zh, this message translates to:
+  /// **'附件'**
+  String get ocDetailsAttachment;
+
+  /// No description provided for @ocDetailsBytes.
+  ///
+  /// In zh, this message translates to:
+  /// **'字节'**
+  String get ocDetailsBytes;
+
+  /// No description provided for @ocDetailsCacheRead.
+  ///
+  /// In zh, this message translates to:
+  /// **'缓存读取 Token'**
+  String get ocDetailsCacheRead;
+
+  /// No description provided for @ocDetailsCacheWrite.
+  ///
+  /// In zh, this message translates to:
+  /// **'缓存写入 Token'**
+  String get ocDetailsCacheWrite;
+
+  /// No description provided for @ocDetailsCachedHistory.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前为缓存历史，可能不完整。'**
+  String get ocDetailsCachedHistory;
+
+  /// No description provided for @ocDetailsChangesNote.
+  ///
+  /// In zh, this message translates to:
+  /// **'仅展示历史中工具结果明确记录的差异，不代表工作区当前状态。'**
+  String get ocDetailsChangesNote;
+
+  /// No description provided for @ocDetailsChangesUnavailable.
+  ///
+  /// In zh, this message translates to:
+  /// **'历史未提供可展示的文件差异。'**
+  String get ocDetailsChangesUnavailable;
+
+  /// No description provided for @ocDetailsContextLimit.
+  ///
+  /// In zh, this message translates to:
+  /// **'上下文上限'**
+  String get ocDetailsContextLimit;
+
+  /// No description provided for @ocDetailsContextNote.
+  ///
+  /// In zh, this message translates to:
+  /// **'显示 Gateway 提供的会话元数据。'**
+  String get ocDetailsContextNote;
+
+  /// No description provided for @ocDetailsContextUnavailable.
+  ///
+  /// In zh, this message translates to:
+  /// **'未提供完整上下文内容及其占用明细。'**
+  String get ocDetailsContextUnavailable;
+
+  /// No description provided for @ocDetailsDuration.
+  ///
+  /// In zh, this message translates to:
+  /// **'记录用时'**
+  String get ocDetailsDuration;
+
+  /// No description provided for @ocDetailsEarlierHistory.
+  ///
+  /// In zh, this message translates to:
+  /// **'较早的历史片段'**
+  String get ocDetailsEarlierHistory;
+
+  /// No description provided for @ocDetailsFilesNote.
+  ///
+  /// In zh, this message translates to:
+  /// **'仅列出历史中明确引用的文件；不是工作区文件浏览器。'**
+  String get ocDetailsFilesNote;
+
+  /// No description provided for @ocDetailsFilesUnavailable.
+  ///
+  /// In zh, this message translates to:
+  /// **'历史未提供文件记录。'**
+  String get ocDetailsFilesUnavailable;
+
+  /// No description provided for @ocDetailsGroup.
+  ///
+  /// In zh, this message translates to:
+  /// **'分组'**
+  String get ocDetailsGroup;
+
+  /// No description provided for @ocDetailsHistoryEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂无可展示的历史。'**
+  String get ocDetailsHistoryEmpty;
+
+  /// No description provided for @ocDetailsHistoryNote.
+  ///
+  /// In zh, this message translates to:
+  /// **'由当前已加载历史整理，可能仅包含最近部分；未记录的耗时和调用不作推断。'**
+  String get ocDetailsHistoryNote;
+
+  /// No description provided for @ocDetailsInputTokens.
+  ///
+  /// In zh, this message translates to:
+  /// **'输入 Token'**
+  String get ocDetailsInputTokens;
+
+  /// No description provided for @ocDetailsMessage.
+  ///
+  /// In zh, this message translates to:
+  /// **'消息'**
+  String get ocDetailsMessage;
+
+  /// No description provided for @ocDetailsMimeType.
+  ///
+  /// In zh, this message translates to:
+  /// **'文件类型'**
+  String get ocDetailsMimeType;
+
+  /// No description provided for @ocDetailsModel.
+  ///
+  /// In zh, this message translates to:
+  /// **'模型'**
+  String get ocDetailsModel;
+
+  /// No description provided for @ocDetailsOutputTokens.
+  ///
+  /// In zh, this message translates to:
+  /// **'输出 Token'**
+  String get ocDetailsOutputTokens;
+
+  /// No description provided for @ocDetailsPath.
+  ///
+  /// In zh, this message translates to:
+  /// **'路径'**
+  String get ocDetailsPath;
+
+  /// No description provided for @ocDetailsPermission.
+  ///
+  /// In zh, this message translates to:
+  /// **'权限'**
+  String get ocDetailsPermission;
+
+  /// No description provided for @ocDetailsProgressNote.
+  ///
+  /// In zh, this message translates to:
+  /// **'显示 Gateway 的进度卡记录。'**
+  String get ocDetailsProgressNote;
+
+  /// No description provided for @ocDetailsProgressUnavailable.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂无可用进度卡。'**
+  String get ocDetailsProgressUnavailable;
+
+  /// No description provided for @ocDetailsProvider.
+  ///
+  /// In zh, this message translates to:
+  /// **'供应商'**
+  String get ocDetailsProvider;
+
+  /// No description provided for @ocDetailsRecordedDiff.
+  ///
+  /// In zh, this message translates to:
+  /// **'已记录差异'**
+  String get ocDetailsRecordedDiff;
+
+  /// No description provided for @ocDetailsResultMissing.
+  ///
+  /// In zh, this message translates to:
+  /// **'未记录结果'**
+  String get ocDetailsResultMissing;
+
+  /// No description provided for @ocDetailsResultRecorded.
+  ///
+  /// In zh, this message translates to:
+  /// **'已记录结果'**
+  String get ocDetailsResultRecorded;
+
+  /// No description provided for @ocDetailsSensitiveFile.
+  ///
+  /// In zh, this message translates to:
+  /// **'敏感文件内容已隐藏'**
+  String get ocDetailsSensitiveFile;
+
+  /// No description provided for @ocDetailsSession.
+  ///
+  /// In zh, this message translates to:
+  /// **'会话'**
+  String get ocDetailsSession;
+
+  /// No description provided for @ocDetailsSessionId.
+  ///
+  /// In zh, this message translates to:
+  /// **'会话 ID'**
+  String get ocDetailsSessionId;
+
+  /// No description provided for @ocDetailsSessionKey.
+  ///
+  /// In zh, this message translates to:
+  /// **'会话键'**
+  String get ocDetailsSessionKey;
+
+  /// No description provided for @ocDetailsStatus.
+  ///
+  /// In zh, this message translates to:
+  /// **'状态'**
+  String get ocDetailsStatus;
+
+  /// No description provided for @ocDetailsToolError.
+  ///
+  /// In zh, this message translates to:
+  /// **'工具出错'**
+  String get ocDetailsToolError;
+
+  /// No description provided for @ocDetailsToolPrivacy.
+  ///
+  /// In zh, this message translates to:
+  /// **'仅展示工具名称和元数据，不展示原始参数及输出。'**
+  String get ocDetailsToolPrivacy;
+
+  /// No description provided for @ocDetailsToolReference.
+  ///
+  /// In zh, this message translates to:
+  /// **'工具引用'**
+  String get ocDetailsToolReference;
+
+  /// No description provided for @ocDetailsTotalTokens.
+  ///
+  /// In zh, this message translates to:
+  /// **'总 Token'**
+  String get ocDetailsTotalTokens;
+
+  /// No description provided for @ocDetailsUpdated.
+  ///
+  /// In zh, this message translates to:
+  /// **'更新时间'**
+  String get ocDetailsUpdated;
+
+  /// No description provided for @ocDetailsUser.
+  ///
+  /// In zh, this message translates to:
+  /// **'用户'**
+  String get ocDetailsUser;
+
+  /// No description provided for @ocDetailsWorkspace.
+  ///
+  /// In zh, this message translates to:
+  /// **'工作区'**
+  String get ocDetailsWorkspace;
+
+  /// No description provided for @ocDetailsTurn.
+  ///
+  /// In zh, this message translates to:
+  /// **'第 {number} 轮'**
+  String ocDetailsTurn(int number);
+
+  /// No description provided for @ocDetailsStepCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'{steps} 步 · {tools} 次工具调用'**
+  String ocDetailsStepCount(int steps, int tools);
 
   /// No description provided for @performanceTitle.
   ///

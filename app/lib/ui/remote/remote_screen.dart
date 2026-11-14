@@ -857,14 +857,6 @@ class _GatewayRowsState extends State<_GatewayRows> {
             ),
           ),
         ),
-        if (entry.openConsole != null)
-          SettingsTile(
-            key: ValueKey('gateway-console-${entry.id}'),
-            icon: AppIcons.openExternal,
-            title: l.ocGatewayConsole,
-            subtitle: entry.name(),
-            onTap: () => entry.openConsole!(context),
-          ),
       ],
     );
   }

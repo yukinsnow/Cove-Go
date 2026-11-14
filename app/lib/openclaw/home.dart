@@ -23,9 +23,19 @@ import 'mascot_settings.dart';
 import 'mascot_stage.dart';
 import 'tool_activity.dart';
 import 'images.dart';
+import 'attachments.dart';
+import 'received_file.dart';
+import 'interaction_sheets.dart';
+import 'session_details.dart';
+import '../ui/chat/widgets/plus_panel.dart' show AttachSource;
+import 'feature_data.dart';
+import 'workspaces.dart';
+import 'features.dart';
+import 'feature_export.dart';
 import 'ssh_tunnel.dart';
 import '../state/hosts_state.dart';
 import '../state/settings_state.dart';
+import '../state/attachments.dart' show maxAttachments;
 import '../remote/ssh/ssh_transport.dart';
 import '../remote/ssh/ssh_link.dart';
 import '../ui/remote/host_key_dialog.dart';
@@ -43,6 +53,37 @@ import '../ui/settings/settings_widgets.dart';
 import '../ui/shell/session_search_page.dart';
 import '../ui/web/web_view_page.dart';
 
+/// Native gallery selection; overridden by widget tests without platform UI.
+final gatewayImagePickerProvider = Provider<Future<List<XFile>> Function(int limit)>((ref) {
+  return (limit) => ImagePicker().pickMultipleMedia(
+    maxWidth: 2048,
+    maxHeight: 2048,
+    imageQuality: 85,
+    requestFullMetadata: false,
+    limit: limit,
+  );
+});
+
+String gatewayModelId(Map<String, dynamic> model) {
+  final id = model['id'] as String? ?? '';
+  final provider = model['provider'] as String? ?? '';
+  return provider.isEmpty || id.startsWith('$provider/') ? id : '$provider/$id';
+}
+
+bool gatewayModelSelected(ClawController controller, Map<String, dynamic> model) {
+  final session = controller.sessions.where((s) => s['key'] == controller.sessionKey).firstOrNull;
+  final current = session?['model'] ?? session?['modelOverride'];
+  if (current is! String || current.isEmpty) return false;
+  final provider = session?['modelProvider'] ?? session?['providerOverride'];
+  if (provider is String && provider.isNotEmpty) {
+    return gatewayModelId({'id': current, 'provider': provider}) == gatewayModelId(model);
+  }
+  if (current == gatewayModelId(model)) return true;
+  // An unqualified legacy id is safe only when the catalog match is unique.
+  final candidates = controller.models.where((m) => m['id'] == current).toList();
+  return candidates.length == 1 && gatewayModelId(candidates.single) == gatewayModelId(model);
+}
+
 class ClawHome extends ConsumerStatefulWidget {
   const ClawHome({super.key, required this.onLanguage, this.controller, this.ownsController = true});
   final ClawController? controller;
@@ -58,6 +99,7 @@ class ClawHomeState extends ConsumerState<ClawHome> with WidgetsBindingObserver 
   final input = TextEditingController(), scroll = ScrollController(keepScrollOffset: false);
   final attachments = <Map<String, dynamic>>[];
   String queue = 'followup';
+  bool pickingImages = false;
   final composerFocus = FocusNode();
   final gatewayTunnel = GatewaySshTunnel();
   @override
@@ -212,53 +254,85 @@ class ClawHomeState extends ConsumerState<ClawHome> with WidgetsBindingObserver 
   }
 
   Future<void> attach() => c.guard(() async {
-    final host = c.address, credential = c.token, session = c.sessionKey, selection = c.selectionRevision;
-    bool current() =>
-        mounted &&
-        c.address == host &&
-        c.token == credential &&
-        c.sessionKey == session &&
-        c.selectionRevision == selection;
-    await hideKeyboard();
-    if (!current()) return;
-    final file = await ImagePicker().pickImage(source: ImageSource.gallery, maxWidth: 2048, imageQuality: 85);
-    if (file == null) return;
-    final bytes = await file.readAsBytes();
-    final policy = c.client.hello['policy'] as Map? ?? {};
-    final limits = policy['attachments'] as Map? ?? {};
-    final limit = limits['maxImageBytes'] as int? ?? 6 * 1024 * 1024;
-    if (bytes.length > limit) throw StateError('Image exceeds Gateway limit ($limit bytes)');
-    // image_picker may return PNG/HEIC; do not mislabel the upload as JPEG.
-    final mime =
-        file.mimeType ??
-        (bytes.length > 3 && bytes[0] == 0x89 && bytes[1] == 0x50
-            ? 'image/png'
-            : bytes.length > 2 && bytes[0] == 0xff && bytes[1] == 0xd8
-            ? 'image/jpeg'
-            : null);
-    if (mime == null) throw StateError('Choose a JPEG or PNG image');
-    if (!mounted || !current()) return;
-    final confirmed = await Navigator.of(context).push<bool>(
-      MaterialPageRoute(
-        builder: (_) => GatewayImageSelection(image: MemoryImage(bytes), name: file.name),
-      ),
-    );
-    if (!mounted ||
-        confirmed != true ||
-        c.address != host ||
-        c.token != credential ||
-        c.sessionKey != session ||
-        c.selectionRevision != selection) {
-      return;
+    if (pickingImages) return;
+    pickingImages = true;
+    try {
+      final host = c.address, credential = c.token, session = c.sessionKey, selection = c.selectionRevision;
+      bool current() =>
+          mounted &&
+          c.address == host &&
+          c.token == credential &&
+          c.sessionKey == session &&
+          c.selectionRevision == selection;
+      await hideKeyboard();
+      if (!mounted || !current()) return;
+      final room = maxAttachments - attachments.length;
+      if (room <= 0) throw StateError(context.l10n.chatAttachmentLimit(maxAttachments));
+      final source = await showGatewayAttachmentPanel(context);
+      if (!current() || source == null) return;
+      final files = await ref.read(switch (source) {
+        AttachSource.gallery => gatewayImagePickerProvider,
+        AttachSource.camera => gatewayCameraPickerProvider,
+        AttachSource.files => gatewayFilePickerProvider,
+      })(room);
+      if (!mounted || !current() || files.isEmpty) return;
+      if (files.length > room) throw StateError(context.l10n.chatAttachmentLimit(maxAttachments));
+      final policy = c.client.hello['policy'] as Map? ?? {};
+      final limits = policy['attachments'] as Map? ?? {};
+      final limit = limits['maxImageBytes'] as int? ?? 6 * 1024 * 1024;
+      final maxBytes = limits['maxBytes'] as int? ?? 20 * 1024 * 1024;
+      // Reserve space for JSON/base64 overhead; client.request checks the exact frame.
+      final frameBytes = policy['maxPayload'] as int? ?? 26214400;
+      final byteBudget = ((frameBytes - 65536) * 3 ~/ 4).clamp(0, 20 * 1024 * 1024);
+      var usedBytes = attachments.fold<int>(
+        0,
+        (n, a) => n + (a['sizeBytes'] as int? ?? base64Decode(a['content'] as String).length),
+      );
+      final pending = <Map<String, dynamic>>[];
+      final previews = <({ImageProvider image, String name})>[];
+      for (final file in files) {
+        final remaining = byteBudget - usedBytes;
+        final bytes = await readGatewayAttachment(file, remaining < maxBytes ? remaining : maxBytes);
+        if (!mounted || !current()) return;
+        final mime = gatewayAttachmentMime(file, bytes);
+        final image = mime.startsWith('image/');
+        if (image && bytes.length > limit) {
+          throw StateError(context.l10n.ocAttachmentTooLarge(file.name, '$limit B'));
+        }
+        usedBytes += bytes.length;
+        pending.add({
+          'type': image ? 'image' : 'file',
+          'mimeType': mime,
+          'fileName': file.name,
+          'content': base64Encode(bytes),
+          'sizeBytes': bytes.length,
+          'origin': 'file',
+        });
+        if (image) previews.add((image: MemoryImage(bytes), name: file.name));
+      }
+      if (!mounted || !current()) return;
+      final confirmed = await Navigator.of(context).push<bool>(
+        MaterialPageRoute(
+          builder: (_) => previews.length != pending.length
+              ? GatewayAttachmentSelection(files: pending)
+              : previews.length == 1
+              ? GatewayImageSelection(image: previews.single.image, name: previews.single.name)
+              : GatewayImagesSelection(images: previews),
+        ),
+      );
+      if (!mounted || !current() || confirmed != true) return;
+      if (attachments.length + pending.length > maxAttachments) {
+        throw StateError(context.l10n.chatAttachmentLimit(maxAttachments));
+      }
+      setState(() => attachments.addAll(pending));
+    } finally {
+      pickingImages = false;
     }
-    setState(
-      () => attachments.add({'type': 'image', 'mimeType': mime, 'fileName': file.name, 'content': base64Encode(bytes)}),
-    );
   });
   Future<void> send() async {
     final text = input.text.trim();
     if (text.isEmpty && attachments.isEmpty) return;
-    if (c.sending) return;
+    if (c.sending || c.syncing || c.syncFailed) return;
     final files = List<Map<String, dynamic>>.from(attachments);
     final host = c.address, token = c.token, session = c.sessionKey;
     final selection = c.selectionRevision;
@@ -394,12 +468,29 @@ class ClawHomeState extends ConsumerState<ClawHome> with WidgetsBindingObserver 
 
   void openSettings({bool features = false}) {
     closeSidebar();
+    if (features) {
+      Navigator.of(context).push<void>(
+        MaterialPageRoute(
+          builder: (page) => GatewayFeaturesPage(
+            controller: c,
+            onSettings: () => openSettings(),
+            onSearch: searchSessions,
+            onModels: chooseModel,
+            onHosts: manageHosts,
+            onWeb: () => openGatewayWeb(from: page),
+            onExport: () =>
+                Navigator.of(page).push<void>(MaterialPageRoute(builder: (_) => GatewayExportPage(controller: c))),
+          ),
+        ),
+      );
+      return;
+    }
     Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (pageContext) {
           final l = pageContext.l10n;
           return AppPage.list(
-            title: features ? l.hubSettingsAllFeatures : l.commonSettings,
+            title: l.commonSettings,
             children: [
               SettingsSection(
                 title: l.commonRemoteHost,
@@ -423,32 +514,6 @@ class ClawHomeState extends ConsumerState<ClawHome> with WidgetsBindingObserver 
                   ),
                 ],
               ),
-              if (features)
-                SettingsSection(
-                  title: l.ocSessions,
-                  children: [
-                    SettingsTile(
-                      icon: AppIcons.refresh,
-                      title: l.ocRefresh,
-                      onTap: c.connected ? () => c.guard(c.refreshSessions) : null,
-                    ),
-                    SettingsTile(
-                      icon: AppIcons.add,
-                      title: l.commonNewChat,
-                      onTap: c.connected
-                          ? () {
-                              Navigator.of(pageContext).pop();
-                              c.guard(c.newSession);
-                            }
-                          : null,
-                    ),
-                    SettingsTile(
-                      icon: AppIcons.model,
-                      title: l.ocModels,
-                      onTap: c.connected && c.sessionKey.isNotEmpty ? chooseModel : null,
-                    ),
-                  ],
-                ),
               const RemoteAppearanceSettings(),
               SettingsSection(
                 title: l.commonSettings,
@@ -477,7 +542,6 @@ class ClawHomeState extends ConsumerState<ClawHome> with WidgetsBindingObserver 
 
   Widget sessionList() {
     final l = context.l10n;
-    final theme = Theme.of(context);
     final top = <Widget>[
       DrawerBrandHeader(
         onWeb: openGatewayWeb,
@@ -495,10 +559,8 @@ class ClawHomeState extends ConsumerState<ClawHome> with WidgetsBindingObserver 
         padding: const EdgeInsets.fromLTRB(20, 0, 10, 0),
         child: Row(
           children: [
-            const Icon(AppIcons.conversations, size: 18),
-            const SizedBox(width: 8),
-            Expanded(child: Text(l.remoteWorkspaceAllChats, style: theme.textTheme.titleSmall)),
-            DrawerViewButton(onTap: () => openSettings(features: true)),
+            GatewayWorkspaceSwitcher(controller: c),
+            DrawerViewButton(onTap: () => showGatewayWorkspaces(context, c)),
           ],
         ),
       ),
@@ -510,9 +572,12 @@ class ClawHomeState extends ConsumerState<ClawHome> with WidgetsBindingObserver 
     }
 
     final visible = List<Map<String, dynamic>>.of(
-      c.sessions,
+      c.scopedSessions,
     )..sort((a, b) => (updatedAt(b)?.millisecondsSinceEpoch ?? 0).compareTo(updatedAt(a)?.millisecondsSinceEpoch ?? 0));
-    final groups = <String, List<Map<String, dynamic>>>{for (final name in c.sessionGroups) name: []};
+    final groups = <String, List<Map<String, dynamic>>>{
+      for (final name in c.sessionGroups)
+        if (c.selectedGroup == null || c.selectedGroup == name) name: [],
+    };
     for (final session in visible) {
       final category = session['category'];
       final name = category is String ? category : '';
@@ -529,6 +594,7 @@ class ClawHomeState extends ConsumerState<ClawHome> with WidgetsBindingObserver 
         return byActivity != 0 ? byActivity : catalogOrder.indexOf(a.key).compareTo(catalogOrder.indexOf(b.key));
       });
     final rows = <Widget>[
+      if (visible.isEmpty) Padding(padding: const EdgeInsets.all(20), child: Text(l.remoteWorkspaceNoChats)),
       for (final group in orderedGroups) ...[
         DrawerEyebrow(group.key.isEmpty ? l.remoteWorkspaceUngrouped : group.key),
         for (final session in group.value)
@@ -537,7 +603,9 @@ class ClawHomeState extends ConsumerState<ClawHome> with WidgetsBindingObserver 
             running: c.connected && c.isSessionRunning(session),
             runningSpinner: true,
             current: session['key'] == c.sessionKey,
-            onLongPress: null,
+            onLongPress: c.connected && c.groupCatalogSupported
+                ? () => showGatewayWorkspaces(context, c, moveKey: session['key'] as String)
+                : null,
             onTap: () {
               closeSidebar();
               c.guard(() => c.select(session['key'] as String));
@@ -575,13 +643,28 @@ class ClawHomeState extends ConsumerState<ClawHome> with WidgetsBindingObserver 
   Widget bubble(Map<String, dynamic> message) {
     final text = messageText(message), user = message['role'] == 'user';
     final images = gatewayImages(message);
-    if (text.isEmpty && images.isEmpty) return const SizedBox.shrink();
-    final pictures = images.isEmpty
+    final files = gatewayFiles(message);
+    if (text.isEmpty && images.isEmpty && files.isEmpty) return const SizedBox.shrink();
+    final pictures = images.isEmpty && files.isEmpty
         ? null
         : Wrap(
             spacing: 8,
             runSpacing: 8,
             children: [
+              for (final file in files)
+                GatewayFileTile(
+                  file: file,
+                  onTap: () {
+                    Navigator.of(context).push<void>(
+                      MaterialPageRoute(
+                        builder: (_) => GatewayReceivedFilePage(
+                          scope: GatewayFeatureScope(c, session: c.sessionKey),
+                          file: file,
+                        ),
+                      ),
+                    );
+                  },
+                ),
               for (final image in images)
                 GatewayImage(
                   block: image,
@@ -631,7 +714,7 @@ class ClawHomeState extends ConsumerState<ClawHome> with WidgetsBindingObserver 
             details: text.isEmpty ? c.toolText(message) : text,
           ),
         );
-      } else if (text.isNotEmpty || gatewayImages(message).isNotEmpty) {
+      } else if (text.isNotEmpty || gatewayImages(message).isNotEmpty || gatewayFiles(message).isNotEmpty) {
         flushTools();
         rows.add(bubble(message));
       }
@@ -650,8 +733,20 @@ class ClawHomeState extends ConsumerState<ClawHome> with WidgetsBindingObserver 
       useDshState: false,
       title: session == null ? 'Cove-Go' : sessionTitle(session),
       status: HeaderStatus(
-        c.connected ? StatusTone.ok : StatusTone.idle,
-        c.connected ? l.ocConnected : l.ocDisconnected,
+        c.syncFailed
+            ? StatusTone.warn
+            : c.syncing
+            ? StatusTone.busy
+            : c.connected
+            ? StatusTone.ok
+            : StatusTone.idle,
+        c.syncFailed
+            ? l.ocSyncFailed
+            : c.syncing
+            ? l.stateChatSynchronizing
+            : c.connected
+            ? l.ocConnected
+            : l.ocDisconnected,
       ),
       onOpenDrawer: wide
           ? null
@@ -659,7 +754,13 @@ class ClawHomeState extends ConsumerState<ClawHome> with WidgetsBindingObserver 
               composerFocus.unfocus();
               scaffoldKey.currentState?.openDrawer();
             },
-      onTitleTap: switchHost,
+      onTitleTap: c.sessionKey.isEmpty
+          ? switchHost
+          : () => Navigator.of(context).push<void>(
+              MaterialPageRoute(
+                builder: (_) => GatewaySessionDetailsPage(scope: GatewayFeatureScope(c, session: c.sessionKey)),
+              ),
+            ),
       onNewChat: c.connected ? () => c.guard(c.newSession) : null,
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
@@ -736,27 +837,16 @@ class ClawHomeState extends ConsumerState<ClawHome> with WidgetsBindingObserver 
   );
 
   Future<void> chooseModel() async {
-    final selected = await showModalBottomSheet<String>(
-      context: context,
-      builder: (ctx) => SafeArea(
-        child: ListView(
-          shrinkWrap: true,
-          children: [
-            ListTile(title: Text(ctx.l10n.ocModels)),
-            for (final model in c.models)
-              ListTile(
-                title: Text('${model['name'] ?? model['id']}'),
-                subtitle: Text('${model['provider'] ?? ''}'),
-                onTap: () {
-                  final id = '${model['id']}';
-                  Navigator.pop(ctx, id.contains('/') ? id : '${model['provider']}/$id');
-                },
-              ),
-          ],
-        ),
-      ),
-    );
-    if (selected != null) await c.guard(() => c.model(selected));
+    final host = c.address, token = c.token, session = c.sessionKey, revision = c.selectionRevision;
+    final selected = await showGatewayModelSheet(context, c);
+    if (selected != null &&
+        mounted &&
+        c.address == host &&
+        c.token == token &&
+        c.sessionKey == session &&
+        c.selectionRevision == revision) {
+      await c.guard(() => c.model(selected));
+    }
   }
 
   @override
@@ -833,7 +923,7 @@ class ClawHomeState extends ConsumerState<ClawHome> with WidgetsBindingObserver 
                               ),
                             )
                           : RefreshIndicator(
-                              onRefresh: () => c.guard(c.history),
+                              onRefresh: () => c.guard(c.resync),
                               child: ListView(
                                 key: ValueKey(('gateway-messages', c.sessionKey, c.selectionRevision)),
                                 // Zero is the newest message. A new conversation gets
@@ -860,6 +950,23 @@ class ClawHomeState extends ConsumerState<ClawHome> with WidgetsBindingObserver 
                               ),
                             ),
                     ),
+                    if (c.syncing || c.syncFailed)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                        child: Card(
+                          color: Theme.of(context).colorScheme.secondaryContainer,
+                          child: ListTile(
+                            key: const ValueKey('gateway-sync-status'),
+                            leading: const Icon(Icons.info_outline),
+                            title: Text(c.syncFailed ? l.ocSyncFailed : l.stateChatSynchronizing),
+                            trailing: TextButton(
+                              key: const ValueKey('gateway-sync-retry'),
+                              onPressed: c.resyncing || !c.connected ? null : () => c.guard(c.resync),
+                              child: Text(l.ocResync),
+                            ),
+                          ),
+                        ),
+                      ),
                     SafeArea(
                       top: false,
                       child: Padding(
@@ -870,10 +977,10 @@ class ClawHomeState extends ConsumerState<ClawHome> with WidgetsBindingObserver 
                             controller: input,
                             returnKeySends: ref.watch(settingsProvider.select((s) => s.returnKeySends)),
                             focusNode: composerFocus,
-                            connected: c.connected,
+                            connected: c.connected && !c.syncing && !c.syncFailed,
                             running: c.live.isNotEmpty,
                             busy: c.sending,
-                            placeholder: l.ocHint,
+                            placeholder: c.syncing ? l.stateChatSynchronizing : l.ocHint,
                             maxLines: Composer.linesFor(context),
                             onSend: send,
                             onStop: () => c.guard(c.abort),
@@ -908,16 +1015,18 @@ class ClawHomeState extends ConsumerState<ClawHome> with WidgetsBindingObserver 
                                           children: [
                                             Padding(
                                               padding: const EdgeInsets.all(4),
-                                              child: GatewayImage(
-                                                block: {
-                                                  'type': 'image',
-                                                  'fileName': attachments[i]['fileName'],
-                                                  'data': attachments[i]['content'],
-                                                },
-                                                client: c.client,
-                                                sessionKey: c.sessionKey,
-                                                size: 72,
-                                              ),
+                                              child: attachments[i]['type'] != 'image'
+                                                  ? GatewayFileTile(file: attachments[i])
+                                                  : GatewayImage(
+                                                      block: {
+                                                        'type': 'image',
+                                                        'fileName': attachments[i]['fileName'],
+                                                        'data': attachments[i]['content'],
+                                                      },
+                                                      client: c.client,
+                                                      sessionKey: c.sessionKey,
+                                                      size: 72,
+                                                    ),
                                             ),
                                             Positioned(
                                               right: 0,

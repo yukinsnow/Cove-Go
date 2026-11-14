@@ -350,7 +350,7 @@ void main() {
     });
   }
 
-  for (final source in ['文件', '相册', '拍照']) {
+  for (final source in ['文件', '图片／视频', '拍照']) {
     testWidgets('the current $source selection still reaches the current draft', (tester) async {
       final rig = _Rig();
       await rig.pump(tester);

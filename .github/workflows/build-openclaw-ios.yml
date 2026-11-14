@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
   push:
     branches: [openclaw]
-    paths: ['app/**', 'packages/openclaw_client/**', 'tooling/build-openclaw-ipa.sh', 'tooling/openclaw_icon.swift', 'tooling/assets/**', '.github/workflows/build-openclaw-ios.yml']
+    paths: ['app/**', 'packages/openclaw_client/**', 'tooling/build-openclaw-ipa.sh', 'tooling/openclaw_icon.swift', 'tooling/setup-ios-notifications.py', 'tooling/ios/**', 'tooling/assets/**', '.github/workflows/build-openclaw-ios.yml']
 permissions:
   contents: read
 jobs:
@@ -26,8 +26,8 @@ jobs:
       - run: bash tooling/build-openclaw-ipa.sh
       - uses: actions/upload-artifact@v4
         with:
-          name: Cove-Go-0.1.15-build16-${{ github.sha }}-unsigned
+          name: Cove-Go-0.1.24-build25-${{ github.sha }}-unsigned
           path: |
-            build/openclaw/Cove-Go-0.1.15-build16*-unsigned.ipa
-            build/openclaw/Cove-Go-0.1.15-build16*-unsigned.ipa.sha256
+            build/openclaw/Cove-Go-0.1.24-build25*-unsigned.ipa
+            build/openclaw/Cove-Go-0.1.24-build25*-unsigned.ipa.sha256
           if-no-files-found: error

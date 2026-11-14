@@ -60,5 +60,186 @@
         "type": "String"
       }
     }
+  },
+  "ocSelectSingleImage": "Choose one image",
+  "ocSelectMultipleImages": "Select multiple images",
+  "ocAttachSelectedImages": "Attach selected images ({count})",
+  "@ocAttachSelectedImages": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "ocNotifications": "iOS notifications",
+  "ocNotificationDone": "Task completed. Tap to open the conversation.",
+  "ocNotificationFailed": "Task failed or stopped. Tap to review.",
+  "ocNotificationAttention": "New alert: your approval or answer is needed.",
+  "ocNotificationLimit": "Notifications require events to reach this device. Delivery is not guaranteed while iOS suspends or closes the app; APNs remote push is not configured.",
+  "ocNotificationPrivacy": "Completion, failure and attention alerts. No conversation content, host addresses or credentials on the lock screen.",
+  "ocNotificationPermission": "Open system notification settings",
+  "ocNotificationPermissionHint": "Allow Cove-Go notifications in iOS Settings. Banners and sounds remain subject to Focus and system settings.",
+  "ocNotificationTest": "Send test notification",
+  "ocNotificationTestBody": "Test: Cove-Go can post local notifications.",
+  "ocPhotosVideos": "Photos / videos",
+  "ocAttachSelectedFiles": "Attach selected files ({count})",
+  "@ocAttachSelectedFiles": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "ocAttachmentTooLarge": "{name} exceeds the attachment or message limit ({limit}).",
+  "@ocAttachmentTooLarge": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "limit": {
+        "type": "String"
+      }
+    }
+  },
+  "ocWorkspaceHint": "OpenClaw workspaces use server session groups. A group filters conversations; its optional directory only applies to new chats. Existing chat directories are unchanged.",
+  "ocWorkspaceReadOnly": "Group management requires a connected Gateway with group APIs and write permission. Existing groups can still be filtered.",
+  "ocMoveToGroup": "Move conversation to group",
+  "ocWorkspaceDirectory": "New chat directory",
+  "ocWorkspaceDirectoryHint": "Enter an absolute directory on the Gateway, not on this phone. Leave empty for the agent default. Saving selects the current checkout (not a new worktree). The Gateway validates permissions; existing conversations are not moved.",
+  "ocGroupRemoveBody": "Only removes the group. Conversations are retained and become ungrouped; directories and files are not deleted.",
+  "ocFeatureHubSubtitle": "OpenClaw tools and conversation features, in one place",
+  "ocFeatureScopeChanged": "Connection or conversation changed. Close this page and reopen it.",
+  "ocFeatureUnavailable": "This Gateway may not support the feature or your account may lack permission. No changes were made.",
+  "ocFeatureEmpty": "No data in this scope yet",
+  "ocFeaturePreviewUnavailable": "This format or size cannot be previewed here. Use the Gateway web UI.",
+  "ocFeatureDetailsSummary": "Model, status, directory and usage",
+  "ocFeatureArtifactsSummary": "List assistant-delivered outputs",
+  "ocFeatureArtifactsNote": "Only assistant-delivered artifacts are listed. Tap an item for metadata, bounded byte downloads, supported previews and system sharing. URL-only downloads use the Gateway web UI.",
+  "ocFeatureFilesNote": "Read-only files referenced by this conversation. Tap to preview; this is not a device-wide file manager.",
+  "ocFeatureWebOnly": "Open Gateway web UI; no native page yet",
+  "ocFeatureExportSummary": "Share recent display history as JSON",
+  "ocFeatureExportNote": "Exports up to 150 recent display messages returned by the Gateway. This is not a full transcript or ZIP backup. It can contain private conversation content and attachments. Tap below only when you want to open the system share sheet.",
+  "ocFeatureExportAction": "Export JSON and open share sheet",
+  "ocFeatureProgressSummary": "Read the current progress card and plan",
+  "ocFeatureSkillsSummary": "Available skills and missing requirements",
+  "ocFeatureCronSummary": "View scheduled and recurring jobs",
+  "ocFeatureReadOnly": "Read-only inventory. This page does not install, modify, run or remove items; use the Gateway web UI for management. Automation lists the first 100 jobs.",
+  "ocFeaturePluginsSummary": "Plugin inventory and status",
+  "ocFeatureAgentsSummary": "Configured agents on this Gateway",
+  "ocFeatureTools": "Tools",
+  "ocFeatureSearchSummary": "Find conversations by title",
+  "ocFeatureWorkspaceSummary": "Filter groups and set new-chat directories",
+  "ocFeatureGatewayWeb": "Gateway official interface; may require login",
+  "ocFeatureModelsSummary": "Switch the current conversation model",
+  "ocFeatureArtifactDownloadNote": "Loads up to 20 MB from this Gateway only. URL-only and unsupported downloads are not fetched. Images and text can be previewed; sharing/saving requires the separate Share action.",
+  "ocFeatureLoadArtifact": "Load attachment",
+  "ocFeatureShareArtifact": "Share / save to Files",
+  "ocFeatureConfiguredAgents": "Configured agents",
+  "ocUsageTitle": "Model usage",
+  "ocUsageSummary": "API balances, subscription quotas and per-model usage",
+  "ocUsageScope": "All agents and models visible to you on this Gateway only. Tokens / estimated cost are not provider billing. API wallets and subscription quotas are shown separately.",
+  "ocUsageWallets": "API wallets and subscriptions",
+  "ocUsageModels": "Gateway usage by model",
+  "ocUsagePluginMissing": "API Usage is unavailable or not permitted on this Gateway. Gateway usage statistics below remain independent.",
+  "ocUsageUnknown": "Not provided",
+  "ocUsageBalance": "Balance",
+  "ocUsageToday": "Today",
+  "ocUsageTotal": "Lifetime",
+  "ocUsageRequests": "Requests",
+  "ocUsageInput": "Input",
+  "ocUsageOutput": "Output",
+  "ocUsageCache": "Cache read",
+  "ocUsageCost": "Estimated cost (USD)",
+  "ocUsageRefresh": "Refresh",
+  "ocUsageUpdated": "Data timestamp",
+  "ocUsage7d": "Last 7 days",
+  "ocUsage30d": "Last 30 days",
+  "ocUsage90d": "Last 90 days",
+  "ocUsagePartial": "Usage is incomplete, stale or still computing. Refresh later for a complete result.",
+  "ocUsageMissingCost": "Some costs could not be estimated; this does not mean free.",
+  "ocUsageReset": "Resets (device local time)",
+  "ocUsageUsed": "Used",
+  "ocUsageNoDetail": "This provider offers balance only, not usage details.",
+  "ocUsageSubscription": "Subscription quota (not API wallet)",
+  "ocUsageBlocked": "Account unavailable or quota limited",
+  "ocUsageEmpty": "No model usage records for this period.",
+  "ocUsagePeriod": "Reporting dates (UTC)",
+  "ocUsageFailed": "Read failed. Retry or check Gateway permissions / plugin.",
+  "ocReceivedFileNote": "Download first, then use the system share sheet to save to Files or open. Up to 100 MB; never automatically installed or extracted. Filenames follow the Gateway; if an IPA was renamed ZIP, change it back to .ipa.",
+  "ocReceivedFileFailed": "Download or sharing failed. Retry, check session permissions, or check the 100 MB limit.",
+  "ocReceivedFileSave": "Save to Files / Share",
+  "ocResync": "Sync again",
+  "ocSyncFailed": "Conversation sync failed",
+  "ocModelsEmpty": "No models available",
+  "ocDetailsTurns": "Recorded turns",
+  "ocDetailsSteps": "Steps",
+  "ocDetailsChangedFiles": "Changed files",
+  "ocDetailsUnavailable": "Unavailable",
+  "ocDetailsTrajectory": "Trajectory",
+  "ocDetailsChanges": "Changes",
+  "ocDetailsFiles": "Files",
+  "ocDetailsProgress": "Progress",
+  "ocDetailsContext": "Context",
+  "ocDetailsAssistant": "Assistant",
+  "ocDetailsAttachment": "Attachment",
+  "ocDetailsBytes": "Bytes",
+  "ocDetailsCacheRead": "Cache read tokens",
+  "ocDetailsCacheWrite": "Cache write tokens",
+  "ocDetailsCachedHistory": "Cached history may be incomplete.",
+  "ocDetailsChangesNote": "Only diffs explicitly recorded in tool results are shown, not the current workspace state.",
+  "ocDetailsChangesUnavailable": "No recorded file diffs available.",
+  "ocDetailsContextLimit": "Context limit",
+  "ocDetailsContextNote": "Session metadata provided by the Gateway.",
+  "ocDetailsContextUnavailable": "Full context content and its breakdown are unavailable.",
+  "ocDetailsDuration": "Recorded duration",
+  "ocDetailsEarlierHistory": "Earlier history fragment",
+  "ocDetailsFilesNote": "Files explicitly referenced in loaded history, not a workspace browser.",
+  "ocDetailsFilesUnavailable": "No file records available.",
+  "ocDetailsGroup": "Group",
+  "ocDetailsHistoryEmpty": "No history available.",
+  "ocDetailsHistoryNote": "Based on loaded history, which may only include recent records. Unrecorded calls and durations are not inferred.",
+  "ocDetailsInputTokens": "Input tokens",
+  "ocDetailsMessage": "Message",
+  "ocDetailsMimeType": "MIME type",
+  "ocDetailsModel": "Model",
+  "ocDetailsOutputTokens": "Output tokens",
+  "ocDetailsPath": "Path",
+  "ocDetailsPermission": "Permission",
+  "ocDetailsProgressNote": "Progress card recorded by the Gateway.",
+  "ocDetailsProgressUnavailable": "No progress card available.",
+  "ocDetailsProvider": "Provider",
+  "ocDetailsRecordedDiff": "Recorded diff",
+  "ocDetailsResultMissing": "Result not recorded",
+  "ocDetailsResultRecorded": "Result recorded",
+  "ocDetailsSensitiveFile": "Sensitive file content hidden",
+  "ocDetailsSession": "Session",
+  "ocDetailsSessionId": "Session ID",
+  "ocDetailsSessionKey": "Session key",
+  "ocDetailsStatus": "Status",
+  "ocDetailsToolError": "Tool error",
+  "ocDetailsToolPrivacy": "Only tool names and metadata are shown, not raw arguments or output.",
+  "ocDetailsToolReference": "Tool reference",
+  "ocDetailsTotalTokens": "Total tokens",
+  "ocDetailsUpdated": "Updated",
+  "ocDetailsUser": "User",
+  "ocDetailsWorkspace": "Workspace",
+  "ocDetailsTurn": "Turn {number}",
+  "@ocDetailsTurn": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "ocDetailsStepCount": "{steps} steps · {tools} tool calls",
+  "@ocDetailsStepCount": {
+    "placeholders": {
+      "steps": {
+        "type": "int"
+      },
+      "tools": {
+        "type": "int"
+      }
+    }
   }
 }

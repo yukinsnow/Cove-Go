@@ -11,19 +11,22 @@ import '../ui/remote/host_switcher.dart';
 import 'home.dart';
 import 'host_catalog.dart';
 import 'controller.dart';
+import 'notification_host.dart';
+import 'notifications.dart';
+import '../state/sessions_state.dart';
 import '../ui/theme/theme.dart';
 
 /// Separate protocol owners and navigators: switching never reuses a DSH
 /// session identifier or credential for an OpenClaw Gateway.
-class BackendHome extends StatefulWidget {
+class BackendHome extends ConsumerStatefulWidget {
   const BackendHome({super.key, required this.onLanguage, this.catalog});
   final GatewayHostCatalog? catalog;
   final VoidCallback onLanguage;
   @override
-  State<BackendHome> createState() => _BackendHomeState();
+  ConsumerState<BackendHome> createState() => _BackendHomeState();
 }
 
-class _BackendHomeState extends State<BackendHome> {
+class _BackendHomeState extends ConsumerState<BackendHome> {
   int selected = 0;
   bool openedDsh = false;
   int selectionVersion = 0;
@@ -126,6 +129,38 @@ class _BackendHomeState extends State<BackendHome> {
     await prefs.setString('remote.backend', index == 1 ? 'dsh' : 'openclaw');
   }
 
+  Future<void> openNotice(CoveNotificationTarget target) async {
+    if (!mounted || target.host == 'settings') return;
+    // Wait for the keychain catalog without inventing/recreating deleted hosts.
+    if (!catalog.loaded) {
+      await WidgetsBinding.instance.endOfFrame;
+      if (!mounted || !catalog.loaded) return;
+    }
+    if (target.backend == 'openclaw') {
+      final owner = catalog.controllers[target.host];
+      if (owner == null) return;
+      Navigator.of(context, rootNavigator: true).popUntil((route) => route.isFirst);
+      await catalog.pick(target.host);
+      if (!mounted) return;
+      await select(0);
+      if (target.session.isNotEmpty) await owner.guard(() => owner.select(target.session));
+    } else {
+      final host = HostRef.decode(target.host);
+      final container = ProviderScope.containerOf(context, listen: false);
+      await container.read(hostsProvider.notifier).ready;
+      if (!mounted ||
+          host.isLocal ||
+          (host.kind == HostKind.ssh && container.read(hostsProvider).sshById(host.id) == null)) {
+        return;
+      }
+      Navigator.of(context, rootNavigator: true).popUntil((route) => route.isFirst);
+      dshNavigator.currentState?.popUntil((route) => route.isFirst);
+      container.read(activeHostProvider.notifier).select(host);
+      container.read(currentSessionProvider.notifier).select(target.session);
+      await select(1);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (!catalog.loaded) {
@@ -159,24 +194,28 @@ class _BackendHomeState extends State<BackendHome> {
     );
     return ProviderScope(
       overrides: [gatewayHostEntryProvider.overrideWithValue(directory)],
-      child: IndexedStack(
-        index: selected == 1 ? ids.length : ids.indexOf(catalog.selected),
-        children: [
-          for (final id in ids)
-            ClawHome(
-              key: clawKeys[id],
-              controller: catalog.controllers[id],
-              ownsController: false,
-              onLanguage: widget.onLanguage,
-            ),
-          if (openedDsh)
-            Navigator(
-              key: dshNavigator,
-              onGenerateRoute: (_) => MaterialPageRoute<void>(builder: (_) => const DshRemoteHome()),
-            )
-          else
-            const SizedBox.shrink(),
-        ],
+      child: CoveNotificationHost(
+        catalog: catalog,
+        onTap: openNotice,
+        child: IndexedStack(
+          index: selected == 1 ? ids.length : ids.indexOf(catalog.selected),
+          children: [
+            for (final id in ids)
+              ClawHome(
+                key: clawKeys[id],
+                controller: catalog.controllers[id],
+                ownsController: false,
+                onLanguage: widget.onLanguage,
+              ),
+            if (openedDsh)
+              Navigator(
+                key: dshNavigator,
+                onGenerateRoute: (_) => MaterialPageRoute<void>(builder: (_) => const DshRemoteHome()),
+              )
+            else
+              const SizedBox.shrink(),
+          ],
+        ),
       ),
     );
   }

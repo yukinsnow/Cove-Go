@@ -23,7 +23,11 @@ List<Map> gatewayImages(Map message) {
   final images = <Map>[
     if (content is List)
       for (final block in content.whereType<Map>())
-        if (block['type'] == 'image' || block['type'] == 'image_url') block,
+        if (block['type'] == 'image' || block['type'] == 'image_url')
+          block
+        else if (block['type'] == 'attachment' && block['attachment'] is Map)
+          if ('${(block['attachment'] as Map)['mimeType']}'.startsWith('image/'))
+            {...block['attachment'] as Map, 'type': 'image', 'fileName': (block['attachment'] as Map)['label']},
     if (facts is List)
       for (final fact in facts.whereType<Map>())
         if (fact['kind'] == 'image' ||
@@ -42,5 +46,30 @@ List<Map> gatewayImages(Map message) {
   return images
       .where((block) => !usable || gatewayImageUsable(block))
       .where((block) => seen.add('${block['artifactId'] ?? gatewayImageReference(block) ?? jsonEncode(block)}'))
+      .toList();
+}
+
+/// Non-image history facts contain metadata, never interpreted as image bytes.
+List<Map> gatewayFiles(Map message) {
+  final content = message['openclawDisplayContent'] ?? message['content'];
+  final metadata = message['__openclaw'];
+  final facts = metadata is Map ? metadata['media'] : null;
+  final seen = <String>{};
+  return [
+        if (content is List)
+          for (final block in content.whereType<Map>())
+            if (['file', 'video', 'audio', 'document'].contains(block['type']))
+              block
+            else if (block['type'] == 'attachment' && block['attachment'] is Map)
+              if (!'${(block['attachment'] as Map)['mimeType']}'.startsWith('image/'))
+                {...block['attachment'] as Map, 'fileName': (block['attachment'] as Map)['label']},
+        if (facts is List)
+          for (final fact in facts.whereType<Map>())
+            if (['file', 'video', 'audio', 'document'].contains(fact['kind']) ||
+                (fact['contentType'] is String && !'${fact['contentType']}'.startsWith('image/')))
+              {...fact, 'mimeType': fact['contentType']},
+        if (message['_localFiles'] is List) ...(message['_localFiles'] as List).whereType<Map>(),
+      ]
+      .where((f) => seen.add('${f['artifactId'] ?? f['url'] ?? f['path'] ?? '${f['fileName']}:${f['sizeBytes']}'}'))
       .toList();
 }

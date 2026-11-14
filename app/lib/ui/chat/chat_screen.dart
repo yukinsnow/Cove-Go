@@ -855,7 +855,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen> with WidgetsBindingObse
         return;
       }
       if (!ownsDraft()) return;
-      _addDrafts(picked.attachments, problem: picked.problem);
+      final filesAllowed = canStageFiles(ref.read(activeConnectionProvider).value, ref.read(activeHostProvider));
+      _addDrafts(
+        filesAllowed ? picked.attachments : picked.attachments.where((a) => a.isImage).toList(),
+        problem: !filesAllowed && picked.attachments.any((a) => !a.isImage)
+            ? appL10n.stateShareImagesOnly
+            : picked.problem,
+      );
     } finally {
       hostChanges.close();
     }

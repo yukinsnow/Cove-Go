@@ -27,10 +27,11 @@ Uri localWebUri(String baseUrl, String token) =>
 /// The official DSH Web UI served by the local engine: the fallback for anything
 /// the native UI doesn't do yet (plugins, advanced settings…).
 class LocalWebScreen extends ConsumerWidget {
-  const LocalWebScreen({super.key, this.target, this.handle, this.link, this.onSession});
+  const LocalWebScreen({super.key, this.target, this.handle, this.link, this.onSession, this.onBack});
 
   /// Page to land on (a session, a panel, a settings section…).
   final DshWebTarget? target;
+  final Future<void> Function()? onBack;
 
   /// 网页模式: the page is the app's home; [handle] takes the back button's
   /// seat (and a place in the engine page's bar while the engine is down).
@@ -62,12 +63,13 @@ class LocalWebScreen extends ConsumerWidget {
         onSession: onSession,
       );
     }
-    return _NotRunning(handle: handle);
+    return _NotRunning(handle: handle, onBack: onBack);
   }
 }
 
 class _NotRunning extends ConsumerWidget {
-  const _NotRunning({this.handle});
+  const _NotRunning({this.handle, this.onBack});
+  final Future<void> Function()? onBack;
 
   final Widget Function(double size)? handle;
 
@@ -81,6 +83,7 @@ class _NotRunning extends ConsumerWidget {
     // Nothing on this phone: the one way forward is installing it.
     final missing = state.status.runtimeMissing;
     return AppPage(
+      onBack: onBack == null ? null : () => unawaited(onBack!()),
       title: context.l10n.commonWeb,
       showLargeTitle: false,
       actions: [

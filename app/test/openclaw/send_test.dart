@@ -5,6 +5,7 @@ import 'dart:ui' as drawing;
 
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:dsh_app/state/settings_state.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:dsh_app/ui/chat/composer.dart';
@@ -19,6 +20,7 @@ import 'package:gpt_markdown/gpt_markdown.dart';
 import 'package:dsh_app/l10n/l10n.dart';
 import 'package:dsh_app/openclaw/home.dart';
 import 'package:dsh_app/openclaw/images.dart';
+import 'package:dsh_app/openclaw/attachments.dart';
 import 'package:dsh_app/ui/chat/artifact_preview.dart' show ImageViewerPage;
 import 'package:dsh_app/openclaw/tool_activity.dart';
 import 'package:dsh_app/ui/theme/theme.dart';
@@ -46,6 +48,7 @@ class SlowGateway extends GatewayClient {
   int downloads = 0;
   static const png = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aD1sAAAAASUVORK5CYII=';
   final ids = <String>[];
+  Map<String, dynamic>? sent;
   List<Map<String, dynamic>> rows = [];
   @override
   bool get connected => true;
@@ -56,6 +59,7 @@ class SlowGateway extends GatewayClient {
       return {'encoding': 'base64', 'data': png};
     }
     if (method == 'chat.send') {
+      sent = params;
       ids.add(params['idempotencyKey'] as String);
       await admission.future;
       if (reject) throw StateError('not admitted');
@@ -74,7 +78,16 @@ class UiController extends ClawController {
   Future<void> load() async {}
 }
 
-Widget home(ClawController controller, ThemeData theme) => ProviderScope(
+Widget home(
+  ClawController controller,
+  ThemeData theme, {
+  Future<List<XFile>> Function(int)? picker,
+  Future<List<XFile>> Function(int)? filePicker,
+}) => ProviderScope(
+  overrides: [
+    if (picker != null) gatewayImagePickerProvider.overrideWithValue(picker),
+    if (filePicker != null) gatewayFilePickerProvider.overrideWithValue(filePicker),
+  ],
   child: MaterialApp(
     theme: withTestFonts(theme),
     locale: const Locale('zh', 'CN'),
@@ -371,7 +384,7 @@ void main() {
     tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
       const MethodChannel('plugins.flutter.io/image_picker'),
       (call) async {
-        expect(calls, contains('TextInput.hide'));
+        expectSync(calls, contains('TextInput.hide'));
         return null;
       },
     );
@@ -383,17 +396,310 @@ void main() {
       );
     });
     final ui = UiController(gateway)..sessionKey = 'a';
-    await tester.pumpWidget(home(ui, buildLightTheme()));
+    await tester.pumpWidget(
+      home(
+        ui,
+        buildLightTheme(),
+        picker: (_) async {
+          expectSync(calls, contains('TextInput.hide'));
+          return [];
+        },
+      ),
+    );
     await tester.pumpAndSettle();
     await tester.tap(find.byType(TextField));
     await tester.pump();
     final state = tester.state<ClawHomeState>(find.byType(ClawHome));
     expect(state.composerFocus.hasFocus, isTrue);
     calls.clear();
-    await state.attach();
+    final picking = state.attach();
     await tester.pumpAndSettle();
-    expect(calls, contains('TextInput.hide'));
+    await tester.tap(find.byKey(const ValueKey('gateway-pick-media')));
+    await tester.pumpAndSettle();
+    await picking;
+    expectSync(calls, contains('TextInput.hide'));
     expect(state.composerFocus.hasFocus, isFalse);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('media option accepts one photo without asking single or multiple', (tester) async {
+    final ui = UiController(gateway)..sessionKey = 'a';
+    var calls = 0;
+    await tester.pumpWidget(
+      home(
+        ui,
+        buildLightTheme(),
+        picker: (_) async {
+          calls++;
+          return [XFile.fromData(base64Decode(SlowGateway.png), path: 'one.png', mimeType: 'image/png')];
+        },
+      ),
+    );
+    await tester.pumpAndSettle();
+    final state = tester.state<ClawHomeState>(find.byType(ClawHome));
+    final picking = state.attach();
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('gateway-pick-media')));
+    await tester.pumpAndSettle();
+    expect(calls, 1);
+    expect(find.byType(BottomSheet), findsNothing);
+    expect(find.byType(GatewayImageSelection), findsOneWidget);
+    await tester.tap(find.byType(FilledButton));
+    await tester.pumpAndSettle();
+    await picking;
+    expect(state.attachments, hasLength(1));
+    expect(state.attachments.single['fileName'], 'one.png');
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  for (final confirm in [true, false]) {
+    testWidgets('multiple images are previewed and attached atomically ($confirm)', (tester) async {
+      final ui = UiController(gateway)..sessionKey = 'a';
+      var calls = 0;
+      await tester.pumpWidget(
+        home(
+          ui,
+          buildLightTheme(),
+          picker: (limit) async {
+            calls++;
+            expectSync(limit, 9);
+            return [
+              for (final name in ['one.png', 'two.png'])
+                XFile.fromData(base64Decode(SlowGateway.png), name: name, path: name, mimeType: 'image/png'),
+            ];
+          },
+        ),
+      );
+      await tester.pumpAndSettle();
+      final state = tester.state<ClawHomeState>(find.byType(ClawHome));
+      state.input.text = 'keep draft';
+      final picking = state.attach();
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('gateway-pick-media')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('gateway-pick-multiple')), findsNothing);
+      await state.attach(); // Duplicate taps must not open another picker.
+      expect(calls, 1);
+      expect(find.byType(GatewayImagesSelection), findsOneWidget, reason: ui.error);
+      expect(state.attachments, isEmpty);
+      expect(find.text('添加所选图片（2）'), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('gateway-image-preview-0')));
+      await tester.pumpAndSettle();
+      expect(find.byType(InteractiveViewer), findsOneWidget);
+      Navigator.of(tester.element(find.byType(ImageViewerPage))).pop();
+      await tester.pumpAndSettle();
+      if (confirm) {
+        await tester.tap(find.text('添加所选图片（2）'));
+      } else {
+        Navigator.of(tester.element(find.byType(GatewayImagesSelection))).pop();
+      }
+      await tester.pumpAndSettle();
+      await picking;
+      expect(state.attachments.map((a) => a['fileName']), confirm ? ['one.png', 'two.png'] : isEmpty);
+      expect(state.input.text, 'keep draft');
+      expect(state.pickingImages, isFalse);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox.shrink());
+    });
+  }
+
+  for (final change in ['cancel', 'session', 'oversize', 'limit', 'preview-session']) {
+    testWidgets('multi-selection discards cancelled stale or invalid batches ($change)', (tester) async {
+      final ui = UiController(gateway)..sessionKey = 'a';
+      final result = Completer<List<XFile>>();
+      if (change == 'oversize') {
+        gateway.hello = {
+          'policy': {
+            'attachments': {'maxImageBytes': 1},
+          },
+        };
+      }
+      await tester.pumpWidget(home(ui, buildLightTheme(), picker: (_) => result.future));
+      await tester.pumpAndSettle();
+      final state = tester.state<ClawHomeState>(find.byType(ClawHome));
+      final picking = state.attach();
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('gateway-pick-media')));
+      await tester.pumpAndSettle();
+      if (change == 'session') ui.sessionKey = 'another';
+      result.complete(
+        change == 'cancel'
+            ? []
+            : [
+                for (var i = 0; i < (change == 'limit' ? 10 : 2); i++)
+                  XFile.fromData(base64Decode(SlowGateway.png), name: '$i.png', path: '$i.png', mimeType: 'image/png'),
+              ],
+      );
+      await tester.pumpAndSettle();
+      if (change == 'preview-session') {
+        expect(find.byType(GatewayImagesSelection), findsOneWidget, reason: ui.error);
+        ui.sessionKey = 'another';
+        await tester.tap(find.text('添加所选图片（2）'));
+        await tester.pumpAndSettle();
+      }
+      await picking;
+      expect(state.attachments, isEmpty);
+      expect(state.pickingImages, isFalse);
+      if (change == 'oversize' || change == 'limit') expect(ui.error, isNotEmpty);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox.shrink());
+    });
+  }
+
+  testWidgets('upload menu cancels without calling either native picker', (tester) async {
+    final ui = UiController(gateway)..sessionKey = 'a';
+    var calls = 0;
+    Future<List<XFile>> picker(int _) async {
+      calls++;
+      return [];
+    }
+
+    await tester.pumpWidget(home(ui, buildLightTheme(), picker: picker, filePicker: picker));
+    await tester.pumpAndSettle();
+    final state = tester.state<ClawHomeState>(find.byType(ClawHome));
+    final pending = state.attach();
+    await tester.pumpAndSettle();
+    expect(find.text('图片／视频'), findsOneWidget);
+    expect(find.byKey(const ValueKey('gateway-pick-files')), findsOneWidget);
+    Navigator.of(tester.element(find.byKey(const ValueKey('gateway-pick-files')))).pop();
+    await tester.pumpAndSettle();
+    await pending;
+    expect(calls, 0);
+    expect(state.attachments, isEmpty);
+    expect(state.pickingImages, isFalse);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  for (final outcome in ['confirm', 'cancel', 'session', 'host', 'oversize', 'empty', 'total']) {
+    testWidgets('file picker validates and confirms document plus video ($outcome)', (tester) async {
+      final ui = UiController(gateway)..sessionKey = 'a';
+      if (outcome == 'oversize') {
+        gateway.hello = {
+          'policy': {
+            'attachments': {'maxBytes': 1},
+          },
+        };
+      }
+      if (outcome == 'total') {
+        gateway.hello = {
+          'policy': {'maxPayload': 65540},
+        };
+      }
+      final result = Completer<List<XFile>>();
+      await tester.pumpWidget(home(ui, buildLightTheme(), filePicker: (_) => result.future));
+      await tester.pumpAndSettle();
+      final state = tester.state<ClawHomeState>(find.byType(ClawHome));
+      final picking = state.attach();
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('gateway-pick-files')));
+      await tester.pumpAndSettle();
+      if (outcome == 'session') ui.sessionKey = 'b';
+      if (outcome == 'host') ui.address = 'wss://other.example';
+      result.complete([
+        XFile.fromData(
+          Uint8List.fromList(outcome == 'empty' ? [] : utf8.encode('%PDF-1.4')),
+          path: 'report.pdf',
+          name: 'report.pdf',
+        ),
+        XFile.fromData(
+          Uint8List.fromList([0, 0, 0, 24, 102, 116, 121, 112, 105, 115, 111, 109]),
+          path: 'clip.mp4',
+          name: 'clip.mp4',
+        ),
+      ]);
+      await tester.pumpAndSettle();
+      if (outcome == 'confirm' || outcome == 'cancel') {
+        expect(find.byType(GatewayAttachmentSelection), findsOneWidget, reason: ui.error);
+        expect(find.text('report.pdf'), findsOneWidget);
+        expect(find.text('clip.mp4'), findsOneWidget);
+        if (outcome == 'confirm') {
+          await tester.tap(find.text('添加所选附件（2）'));
+        } else {
+          Navigator.of(tester.element(find.byType(GatewayAttachmentSelection))).pop();
+        }
+        await tester.pumpAndSettle();
+      }
+      await picking;
+      expect(state.attachments.length, outcome == 'confirm' ? 2 : 0);
+      if (outcome == 'confirm') {
+        expect(state.attachments.first['mimeType'], 'application/pdf');
+        expect(state.attachments.last['mimeType'], 'video/mp4');
+        late Future<void> sending;
+        await tester.runAsync(() async {
+          sending = state.send();
+        });
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 300));
+        expect(gateway.sent?['attachments'], hasLength(2));
+        expect(gatewayFiles(ui.visibleMessages.single), hasLength(2));
+        expect(gatewayImages(ui.visibleMessages.single), isEmpty);
+        await tester.runAsync(() async {
+          gateway.admission.complete();
+          await sending;
+        });
+      }
+      if (['oversize', 'empty', 'total'].contains(outcome)) expect(ui.error, isNotEmpty);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox.shrink());
+    });
+  }
+
+  testWidgets('failed file send restores attachment metadata and content for retry', (tester) async {
+    final ui = UiController(gateway)..sessionKey = 'a';
+    await tester.pumpWidget(home(ui, buildLightTheme()));
+    await tester.pumpAndSettle();
+    final state = tester.state<ClawHomeState>(find.byType(ClawHome));
+    final file = {
+      'type': 'file',
+      'fileName': 'report.pdf',
+      'mimeType': 'application/pdf',
+      'content': base64Encode(utf8.encode('%PDF-1.4')),
+      'sizeBytes': 8,
+    };
+    state.attachments.add(file);
+    state.input.text = 'check this';
+    gateway.reject = true;
+    gateway.admission.complete();
+    await tester.runAsync(() async {
+      await state.send();
+    });
+    await tester.pumpAndSettle();
+    expect(state.input.text, 'check this');
+    expect(state.attachments.single, file);
+    expect(ui.error, isNotEmpty);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('gallery media accepts a video without rendering it as an image', (tester) async {
+    final ui = UiController(gateway)..sessionKey = 'a';
+    await tester.pumpWidget(
+      home(
+        ui,
+        buildLightTheme(),
+        picker: (_) async => [
+          XFile.fromData(
+            Uint8List.fromList([0, 0, 0, 24, 102, 116, 121, 112, 105, 115, 111, 109]),
+            path: 'clip.mp4',
+            name: 'clip.mp4',
+          ),
+        ],
+      ),
+    );
+    await tester.pumpAndSettle();
+    final state = tester.state<ClawHomeState>(find.byType(ClawHome));
+    final picking = state.attach();
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('gateway-pick-media')));
+    await tester.pumpAndSettle();
+    expect(find.byType(GatewayAttachmentSelection), findsOneWidget);
+    await tester.tap(find.text('添加所选附件（1）'));
+    await tester.pumpAndSettle();
+    await picking;
+    expect(state.attachments.single['type'], 'file');
+    expect(state.attachments.single['mimeType'], 'video/mp4');
+    expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox.shrink());
   });
 

@@ -68,8 +68,7 @@ class _ModeHomeState extends ConsumerState<ModeHome> {
 }
 
 /// The drawer's quiet switch to 网页模式: a round glass key the height of
-/// 新对话 beside it, with 界面's own mark (the globe at the drawer's foot
-/// opens the web page on top; this one makes it the home).
+/// 新对话 beside it, with a globe to make its web destination explicit.
 class WebModeKey extends ConsumerWidget {
   const WebModeKey({super.key, this.size = 36, this.onTap});
 
@@ -81,7 +80,7 @@ class WebModeKey extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return GlassIconButton(
-      icon: AppIcons.swap,
+      icon: AppIcons.web,
       tooltip: context.l10n.webSwitchToWeb,
       size: size,
       onPressed: onTap ?? () => unawaited(ref.read(uiModeProvider.notifier).set(UiMode.web)),

@@ -14,6 +14,7 @@ import 'package:dsh_app/state/ui_mode_state.dart';
 import 'package:dsh_app/ui/common/side_insets.dart';
 import 'package:dsh_app/ui/pets/pet_settings_page.dart';
 import 'package:dsh_app/ui/shell/page_frame.dart';
+import 'package:dsh_app/ui/theme/app_icons.dart';
 import 'package:dsh_app/ui/web/dsh_web_launcher.dart';
 import 'package:dsh_app/ui/web/mode_home.dart';
 import 'package:dsh_app/ui/web/web_back.dart';
@@ -103,6 +104,7 @@ Future<ProviderContainer> _pumpHome(
   _Window window, {
   String? session,
   DshWebTarget? initial,
+  bool unavailable = false,
 }) async {
   _useWindow(tester, window);
   _shares = _Native(tester, 'dsh/share', 'share');
@@ -116,10 +118,17 @@ Future<ProviderContainer> _pumpHome(
   final harness = ChatHarness(session: session);
   await tester.pumpWidget(
     testApp(
-      WebHome(initial: initial),
-      overrides: [...harness.overrides, dshWebAccessProvider.overrideWithValue(SshDshWeb(_url, 'studio'))],
+      unavailable ? const ModeHome(native: Text('原生返回成功')) : WebHome(initial: initial),
+      overrides: [
+        ...harness.overrides,
+        dshWebAccessProvider.overrideWithValue(unavailable ? const NoDshWeb('中继主机不支持网页版') : SshDshWeb(_url, 'studio')),
+      ],
     ),
   );
+  if (unavailable) {
+    await tester.pumpAndSettle();
+    return ProviderScope.containerOf(tester.element(find.byType(WebHome)));
+  }
   // The WebView loads once it is set up and guarded.
   for (var i = 0; i < 20 && _page.loads.isEmpty; i++) {
     await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 10)));
@@ -145,6 +154,25 @@ void main() {
     SharedPreferences.setMockInitialValues({UiModeController.key: 'web'});
     WebViewPlatform.instance = _platform = FakeWebViewPlatform();
   });
+
+  for (final systemBack in [false, true]) {
+    testWidgets('unavailable relay web returns to native with ${systemBack ? "system" : "top-left"} back', (
+      tester,
+    ) async {
+      final container = await _pumpHome(tester, _windows.first, session: 'kept-chat', unavailable: true);
+      expect(find.text('这台主机打不开网页版'), findsOneWidget);
+      if (systemBack) {
+        await tester.binding.handlePopRoute();
+      } else {
+        await tester.tap(find.byTooltip('返回'));
+      }
+      await tester.pumpAndSettle();
+      expect(container.read(uiModeProvider).mode, UiMode.native);
+      expect(container.read(currentSessionProvider), 'kept-chat');
+      expect(find.text('原生返回成功'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+  }
 
   group('the handle never covers the page', () {
     for (final w in _windows) {
@@ -392,6 +420,7 @@ void main() {
       await tester.pumpAndSettle();
       final container = ProviderScope.containerOf(tester.element(find.byType(WebModeKey)));
       expect(tester.getSize(find.byType(GlassIconButton)), const Size.square(36));
+      expect(tester.widget<GlassIconButton>(find.byType(GlassIconButton)).icon, AppIcons.web);
       await tester.tap(find.byType(WebModeKey));
       await tester.pumpAndSettle();
       expect(container.read(uiModeProvider).mode, UiMode.web);

@@ -3797,7 +3797,7 @@ class L10nZh extends L10n {
   String get chatInterrupted => '已中断';
 
   @override
-  String get chatGallery => '相册';
+  String get chatGallery => '图片／视频';
 
   @override
   String get chatTakePhoto => '拍照';
@@ -8525,6 +8525,438 @@ class L10nZh extends L10n {
   @override
   String ocRemoveGatewayFailedCode(String code) {
     return '未能删除连接，请重试。错误代码：$code';
+  }
+
+  @override
+  String get ocSelectSingleImage => '选择单张图片';
+
+  @override
+  String get ocSelectMultipleImages => '多选图片';
+
+  @override
+  String ocAttachSelectedImages(int count) {
+    return '添加所选图片（$count）';
+  }
+
+  @override
+  String get ocNotifications => 'iOS 系统通知';
+
+  @override
+  String get ocNotificationDone => '任务已完成，点击查看会话。';
+
+  @override
+  String get ocNotificationFailed => '任务失败或已停止，点击查看。';
+
+  @override
+  String get ocNotificationAttention => '收到新提醒，需要你确认或回答。';
+
+  @override
+  String get ocNotificationLimit => '仅对设备实际收到的事件发通知。iOS 挂起或退出 App 后无法保证实时接收；未接入 APNs 远程推送。';
+
+  @override
+  String get ocNotificationPrivacy => '任务完成、失败及待确认提醒；锁屏不显示对话内容、主机地址或凭据。';
+
+  @override
+  String get ocNotificationPermission => '打开系统通知设置';
+
+  @override
+  String get ocNotificationPermissionHint => '请在 iOS 设置中允许 Cove-Go 通知。横幅与声音仍受专注模式和系统设置控制。';
+
+  @override
+  String get ocNotificationTest => '发送测试通知';
+
+  @override
+  String get ocNotificationTestBody => '通知测试：Cove-Go 已可发送本地通知。';
+
+  @override
+  String get ocPhotosVideos => '图片／视频';
+
+  @override
+  String ocAttachSelectedFiles(int count) {
+    return '添加所选附件（$count）';
+  }
+
+  @override
+  String ocAttachmentTooLarge(String name, String limit) {
+    return '$name 超过附件或消息大小限制（$limit）。';
+  }
+
+  @override
+  String get ocWorkspaceHint => 'OpenClaw 工作区使用服务端会话分组：分组用于筛选对话；可选目录仅用于新对话，不改变已有对话的工作目录。';
+
+  @override
+  String get ocWorkspaceReadOnly => '管理分组需要连接支持分组接口的 Gateway 并具备写入权限。已有分组仍可筛选。';
+
+  @override
+  String get ocMoveToGroup => '将对话移至分组';
+
+  @override
+  String get ocWorkspaceDirectory => '新对话工作目录';
+
+  @override
+  String get ocWorkspaceDirectoryHint =>
+      '填写 Gateway 上的绝对目录，不是手机路径。留空使用助手默认目录。保存后使用当前目录（不新建 worktree）；由 Gateway 校验权限，不移动已有对话。';
+
+  @override
+  String get ocGroupRemoveBody => '仅移除分组，对话保留并移至未分组；不会删除目录或文件。';
+
+  @override
+  String get ocFeatureHubSubtitle => 'OpenClaw 的对话与工具功能，都在这里';
+
+  @override
+  String get ocFeatureScopeChanged => '连接或当前对话已变化，请返回后重新打开此页面。';
+
+  @override
+  String get ocFeatureUnavailable => 'Gateway 可能不支持此接口，或当前账号缺少权限。未执行修改。';
+
+  @override
+  String get ocFeatureEmpty => '当前范围暂无数据';
+
+  @override
+  String get ocFeaturePreviewUnavailable => '此格式或大小暂不支持原生预览，请使用 Gateway 网页版。';
+
+  @override
+  String get ocFeatureDetailsSummary => '模型、状态、目录与用量';
+
+  @override
+  String get ocFeatureArtifactsSummary => '查看助手交付的产出文件';
+
+  @override
+  String get ocFeatureArtifactsNote => '仅列出助手交付的产出；点击可查看信息、加载字节型附件、预览支持的格式并通过系统分享。仅 URL 型下载请用 Gateway 网页版。';
+
+  @override
+  String get ocFeatureFilesNote => '只读展示当前对话涉及的文件，点击可预览；不是整台设备的文件管理器。';
+
+  @override
+  String get ocFeatureWebOnly => '打开 Gateway 网页版；暂无原生页面';
+
+  @override
+  String get ocFeatureExportSummary => '以 JSON 分享近期显示记录';
+
+  @override
+  String get ocFeatureExportNote => '导出 Gateway 返回的最近最多 150 条显示消息，不是完整会话或 ZIP 备份。可能包含私密对话与附件；确认需要后点击下方按钮打开系统分享。';
+
+  @override
+  String get ocFeatureExportAction => '导出 JSON 并打开分享';
+
+  @override
+  String get ocFeatureProgressSummary => '查看当前进度卡与计划';
+
+  @override
+  String get ocFeatureSkillsSummary => '可用技能与缺少的依赖';
+
+  @override
+  String get ocFeatureCronSummary => '查看定时与周期任务';
+
+  @override
+  String get ocFeatureReadOnly => '当前为只读清单，不会安装、修改、运行或删除项目；管理操作请用 Gateway 网页版。自动化清单显示前 100 项。';
+
+  @override
+  String get ocFeaturePluginsSummary => '插件清单与状态';
+
+  @override
+  String get ocFeatureAgentsSummary => 'Gateway 中已配置的助手';
+
+  @override
+  String get ocFeatureTools => '工具';
+
+  @override
+  String get ocFeatureSearchSummary => '按标题查找对话';
+
+  @override
+  String get ocFeatureWorkspaceSummary => '筛选分组与设置新对话目录';
+
+  @override
+  String get ocFeatureGatewayWeb => 'Gateway 官方界面，可能需要登录';
+
+  @override
+  String get ocFeatureModelsSummary => '切换当前对话使用的模型';
+
+  @override
+  String get ocFeatureArtifactDownloadNote => '仅从当前 Gateway 加载最多 20 MB 的字节附件，不自动请求 URL 型或不支持的下载。图片与文本可预览，分享／保存需另点分享。';
+
+  @override
+  String get ocFeatureLoadArtifact => '加载附件';
+
+  @override
+  String get ocFeatureShareArtifact => '分享／保存到文件';
+
+  @override
+  String get ocFeatureConfiguredAgents => '已配置助手';
+
+  @override
+  String get ocUsageTitle => '模型用量';
+
+  @override
+  String get ocUsageSummary => 'API 余额、订阅额度与各模型用量';
+
+  @override
+  String get ocUsageScope => '仅当前 Gateway 中有权查看的全部助手与模型；Token / 估算费用不等于供应商账单，API 钱包与订阅额度分别展示。';
+
+  @override
+  String get ocUsageWallets => 'API 钱包与订阅';
+
+  @override
+  String get ocUsageModels => 'Gateway 各模型统计';
+
+  @override
+  String get ocUsagePluginMissing => '此 Gateway 未启用 API Usage 插件，或当前账号无权读取；不影响下方 Gateway 用量统计。';
+
+  @override
+  String get ocUsageUnknown => '未提供';
+
+  @override
+  String get ocUsageBalance => '余额';
+
+  @override
+  String get ocUsageToday => '今日';
+
+  @override
+  String get ocUsageTotal => '累计';
+
+  @override
+  String get ocUsageRequests => '请求';
+
+  @override
+  String get ocUsageInput => '输入';
+
+  @override
+  String get ocUsageOutput => '输出';
+
+  @override
+  String get ocUsageCache => '缓存读取';
+
+  @override
+  String get ocUsageCost => '估算费用（USD）';
+
+  @override
+  String get ocUsageRefresh => '刷新';
+
+  @override
+  String get ocUsageUpdated => '数据时间';
+
+  @override
+  String get ocUsage7d => '近 7 天';
+
+  @override
+  String get ocUsage30d => '近 30 天';
+
+  @override
+  String get ocUsage90d => '近 90 天';
+
+  @override
+  String get ocUsagePartial => '数据仍在统计、缓存过期或缺失，当前不是完整结果；请稍后刷新。';
+
+  @override
+  String get ocUsageMissingCost => '部分费用无法估算，不代表免费。';
+
+  @override
+  String get ocUsageReset => '重置（设备本地时间）';
+
+  @override
+  String get ocUsageUsed => '已用';
+
+  @override
+  String get ocUsageNoDetail => '此供应商只提供余额，没有用量明细。';
+
+  @override
+  String get ocUsageSubscription => '订阅额度（非 API 钱包）';
+
+  @override
+  String get ocUsageBlocked => '账号当前不可用或额度受限';
+
+  @override
+  String get ocUsageEmpty => '此时间范围没有模型用量记录。';
+
+  @override
+  String get ocUsagePeriod => '统计日期（UTC）';
+
+  @override
+  String get ocUsageFailed => '读取失败，请重试或检查 Gateway 权限 / 插件。';
+
+  @override
+  String get ocReceivedFileNote =>
+      '先下载附件，再通过系统分享菜单保存到“文件”或打开。最多 100 MB；不自动安装或解压。文件名遵循 Gateway 返回值，若 IPA 被命名为 ZIP，请手动改回 .ipa。';
+
+  @override
+  String get ocReceivedFileFailed => '附件下载或分享失败：请重试、确认会话权限，或检查是否超过 100 MB。';
+
+  @override
+  String get ocReceivedFileSave => '保存到文件 / 分享';
+
+  @override
+  String get ocResync => '重新同步';
+
+  @override
+  String get ocSyncFailed => '对话同步失败';
+
+  @override
+  String get ocModelsEmpty => '暂无可用模型';
+
+  @override
+  String get ocDetailsTurns => '已记录轮次';
+
+  @override
+  String get ocDetailsSteps => '步骤';
+
+  @override
+  String get ocDetailsChangedFiles => '改动文件';
+
+  @override
+  String get ocDetailsUnavailable => '暂无数据';
+
+  @override
+  String get ocDetailsTrajectory => '轨迹';
+
+  @override
+  String get ocDetailsChanges => '改动';
+
+  @override
+  String get ocDetailsFiles => '文件';
+
+  @override
+  String get ocDetailsProgress => '进度';
+
+  @override
+  String get ocDetailsContext => '上下文';
+
+  @override
+  String get ocDetailsAssistant => '助手';
+
+  @override
+  String get ocDetailsAttachment => '附件';
+
+  @override
+  String get ocDetailsBytes => '字节';
+
+  @override
+  String get ocDetailsCacheRead => '缓存读取 Token';
+
+  @override
+  String get ocDetailsCacheWrite => '缓存写入 Token';
+
+  @override
+  String get ocDetailsCachedHistory => '当前为缓存历史，可能不完整。';
+
+  @override
+  String get ocDetailsChangesNote => '仅展示历史中工具结果明确记录的差异，不代表工作区当前状态。';
+
+  @override
+  String get ocDetailsChangesUnavailable => '历史未提供可展示的文件差异。';
+
+  @override
+  String get ocDetailsContextLimit => '上下文上限';
+
+  @override
+  String get ocDetailsContextNote => '显示 Gateway 提供的会话元数据。';
+
+  @override
+  String get ocDetailsContextUnavailable => '未提供完整上下文内容及其占用明细。';
+
+  @override
+  String get ocDetailsDuration => '记录用时';
+
+  @override
+  String get ocDetailsEarlierHistory => '较早的历史片段';
+
+  @override
+  String get ocDetailsFilesNote => '仅列出历史中明确引用的文件；不是工作区文件浏览器。';
+
+  @override
+  String get ocDetailsFilesUnavailable => '历史未提供文件记录。';
+
+  @override
+  String get ocDetailsGroup => '分组';
+
+  @override
+  String get ocDetailsHistoryEmpty => '暂无可展示的历史。';
+
+  @override
+  String get ocDetailsHistoryNote => '由当前已加载历史整理，可能仅包含最近部分；未记录的耗时和调用不作推断。';
+
+  @override
+  String get ocDetailsInputTokens => '输入 Token';
+
+  @override
+  String get ocDetailsMessage => '消息';
+
+  @override
+  String get ocDetailsMimeType => '文件类型';
+
+  @override
+  String get ocDetailsModel => '模型';
+
+  @override
+  String get ocDetailsOutputTokens => '输出 Token';
+
+  @override
+  String get ocDetailsPath => '路径';
+
+  @override
+  String get ocDetailsPermission => '权限';
+
+  @override
+  String get ocDetailsProgressNote => '显示 Gateway 的进度卡记录。';
+
+  @override
+  String get ocDetailsProgressUnavailable => '暂无可用进度卡。';
+
+  @override
+  String get ocDetailsProvider => '供应商';
+
+  @override
+  String get ocDetailsRecordedDiff => '已记录差异';
+
+  @override
+  String get ocDetailsResultMissing => '未记录结果';
+
+  @override
+  String get ocDetailsResultRecorded => '已记录结果';
+
+  @override
+  String get ocDetailsSensitiveFile => '敏感文件内容已隐藏';
+
+  @override
+  String get ocDetailsSession => '会话';
+
+  @override
+  String get ocDetailsSessionId => '会话 ID';
+
+  @override
+  String get ocDetailsSessionKey => '会话键';
+
+  @override
+  String get ocDetailsStatus => '状态';
+
+  @override
+  String get ocDetailsToolError => '工具出错';
+
+  @override
+  String get ocDetailsToolPrivacy => '仅展示工具名称和元数据，不展示原始参数及输出。';
+
+  @override
+  String get ocDetailsToolReference => '工具引用';
+
+  @override
+  String get ocDetailsTotalTokens => '总 Token';
+
+  @override
+  String get ocDetailsUpdated => '更新时间';
+
+  @override
+  String get ocDetailsUser => '用户';
+
+  @override
+  String get ocDetailsWorkspace => '工作区';
+
+  @override
+  String ocDetailsTurn(int number) {
+    return '第 $number 轮';
+  }
+
+  @override
+  String ocDetailsStepCount(int steps, int tools) {
+    return '$steps 步 · $tools 次工具调用';
   }
 
   @override

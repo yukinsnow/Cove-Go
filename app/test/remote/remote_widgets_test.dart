@@ -152,9 +152,9 @@ void main() {
     expect(find.text('OpenClaw'), findsOneWidget);
     expect(find.text('OpenClaw Gateway'), findsOneWidget);
     expect(find.text('SSH 主机'), findsNothing);
-    await tester.ensureVisible(find.byKey(const ValueKey('gateway-console-legacy')));
-    await tester.tap(find.byKey(const ValueKey('gateway-console-legacy')));
-    expect(consoles, 1);
+    expect(find.byKey(const ValueKey('gateway-console-legacy')), findsNothing);
+    expect(find.text('OpenClaw Gateway 网页控制台'), findsNothing);
+    expect(consoles, 0);
     final boundary = capture.currentContext!.findRenderObject()! as RenderRepaintBoundary;
     await tester.runAsync(() async {
       final image = await boundary.toImage(pixelRatio: 2);

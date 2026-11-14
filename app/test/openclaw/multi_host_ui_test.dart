@@ -7,6 +7,8 @@ import 'dart:convert';
 
 import 'package:dsh_app/l10n/l10n.dart';
 import 'package:dsh_app/openclaw/backend_home.dart';
+import 'package:dsh_app/openclaw/notification_host.dart';
+import 'package:dsh_app/openclaw/notifications.dart';
 import 'package:dsh_app/openclaw/controller.dart';
 import 'package:dsh_app/openclaw/home.dart';
 import 'package:dsh_app/openclaw/host_catalog.dart';
@@ -77,6 +79,24 @@ void main() {
     );
     await tester.pumpAndSettle();
   }
+
+  testWidgets('notification tap opens exact Gateway session and ignores removed host', (tester) async {
+    await pump(tester);
+    final notifications = tester.widget<CoveNotificationHost>(find.byType(CoveNotificationHost));
+    await tester.runAsync(
+      () => notifications.onTap(const CoveNotificationTarget(backend: 'openclaw', host: 'two', session: 'notice-chat')),
+    );
+    await tester.pumpAndSettle();
+    expect(catalog.selected, 'two');
+    expect(catalog.controllers['two']!.sessionKey, 'notice-chat');
+    expect(catalog.controllers['one']!.sessionKey, isNot('notice-chat'));
+    await notifications.onTap(const CoveNotificationTarget(backend: 'openclaw', host: 'removed', session: 'lost'));
+    await tester.pumpAndSettle();
+    expect(catalog.selected, 'two');
+    expect(catalog.controllers.containsKey('removed'), false);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
 
   testWidgets(
     'two live Gateways switch without replacing owner draft or history; deleting inactive host isolates secrets',

@@ -76,7 +76,10 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('设置'));
     await tester.pumpAndSettle();
-    await tester.scrollUntilVisible(find.text('English / 中文'), 250);
+    await tester.scrollUntilVisible(find.text('English / 中文'), 200);
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('English / 中文'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('English / 中文'));
     await tester.pumpAndSettle();
     await tester.tap(find.byIcon(AppIcons.back));
@@ -243,8 +246,12 @@ void main() {
     await tester.pump(const Duration(milliseconds: 600));
     expect(find.text('连接与设置'), findsNothing);
     expect(find.text('管理远程主机'), findsOneWidget);
+    await tester.scrollUntilVisible(find.text('开源许可'), 200);
+    await tester.pumpAndSettle();
     expect(find.text('English / 中文'), findsOneWidget);
     expect(find.text('开源许可'), findsOneWidget);
+    await tester.scrollUntilVisible(find.text('管理远程主机'), -200);
+    await tester.pumpAndSettle();
     await tester.tap(find.text('管理远程主机'));
     await tester.pumpAndSettle();
     expect(find.byType(RemoteScreen), findsOneWidget);

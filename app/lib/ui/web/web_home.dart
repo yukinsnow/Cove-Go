@@ -154,7 +154,7 @@ class _WebHomeState extends ConsumerState<WebHome> {
     final access = ref.watch(dshWebAccessProvider);
     final phoneLayout = ref.watch(settingsProvider.select((s) => s.webPhoneLayout));
     final Widget page = switch (access) {
-      LocalDshWeb() => LocalWebScreen(handle: _handle, link: _link, onSession: _onSession),
+      LocalDshWeb() => LocalWebScreen(handle: _handle, link: _link, onSession: _onSession, onBack: _toNative),
       SshDshWeb(:final url, :final hostName) => WebViewPage(
         // A new forward (reconnect) or layout switch: a new page.
         key: ValueKey((url, phoneLayout)),
@@ -171,7 +171,7 @@ class _WebHomeState extends ConsumerState<WebHome> {
         link: _link,
         onSession: _onSession,
       ),
-      NoDshWeb(:final reason) => _NoWeb(reason: reason, handle: _handle),
+      NoDshWeb(:final reason) => _NoWeb(reason: reason, handle: _handle, onNative: _toNative),
     };
     return ChatAlertHost(
       child: Stack(
@@ -218,28 +218,36 @@ class _PetHostState extends ConsumerState<_PetHost> {
 /// The active host has no web page the app can reach (a DSH Remote host):
 /// say so, with the handle's ways out at hand.
 class _NoWeb extends StatelessWidget {
-  const _NoWeb({required this.reason, required this.handle});
+  const _NoWeb({required this.reason, required this.handle, required this.onNative});
 
   final String reason;
+  final Future<void> Function() onNative;
   final Widget Function(double size) handle;
 
   @override
   Widget build(BuildContext context) {
-    return AppPage(
-      title: context.l10n.commonWeb,
-      showLargeTitle: false,
-      actions: [handle(44)],
-      slivers: [
-        SliverFillRemaining(
-          hasScrollBody: false,
-          child: Padding(
-            padding: const EdgeInsets.only(bottom: 80),
-            child: Center(
-              child: EmptyView(icon: AppIcons.webApp, title: context.l10n.webHostUnavailable, message: reason),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) unawaited(onNative());
+      },
+      child: AppPage(
+        onBack: () => unawaited(onNative()),
+        title: context.l10n.commonWeb,
+        showLargeTitle: false,
+        actions: [handle(44)],
+        slivers: [
+          SliverFillRemaining(
+            hasScrollBody: false,
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 80),
+              child: Center(
+                child: EmptyView(icon: AppIcons.webApp, title: context.l10n.webHostUnavailable, message: reason),
+              ),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
