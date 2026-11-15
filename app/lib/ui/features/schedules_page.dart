@@ -259,9 +259,9 @@ class _ScheduleDetailPageState extends ConsumerState<ScheduleDetailPage> {
         SnackBar(
           content: Text(context.l10n.featuresScheduleSent),
           persist: false,
-          action: SnackBarAction(
+          action: task.sessionId == null ? null : SnackBarAction(
             label: context.l10n.featuresView,
-            onPressed: () => openSessionInChat(context, ref, task.sessionId),
+            onPressed: () => openSessionInChat(context, ref, task.sessionId!),
           ),
         ),
       );
@@ -380,7 +380,7 @@ class _ScheduleDetailPageState extends ConsumerState<ScheduleDetailPage> {
                       : sessionTitle == null || sessionTitle.isEmpty
                       ? l10n.commonUntitledChat
                       : sessionTitle,
-                  onTap: session == null ? null : () => openSessionInChat(context, ref, task.sessionId),
+                  onTap: session == null ? null : () => openSessionInChat(context, ref, task.sessionId!),
                 ),
               ],
             ),

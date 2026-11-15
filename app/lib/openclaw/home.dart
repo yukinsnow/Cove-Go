@@ -665,9 +665,11 @@ class ClawHomeState extends ConsumerState<ClawHome> with WidgetsBindingObserver 
                     );
                   },
                 ),
-              for (final image in images)
+              for (var i = 0; i < images.length; i++)
                 GatewayImage(
-                  block: image,
+                  block: images[i],
+                  gallery: images,
+                  galleryIndex: i,
                   client: c.client,
                   sessionKey: c.sessionKey,
                   address: c.transportAddress ?? c.address,

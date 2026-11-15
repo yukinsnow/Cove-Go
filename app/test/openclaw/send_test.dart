@@ -22,6 +22,7 @@ import 'package:dsh_app/openclaw/home.dart';
 import 'package:dsh_app/openclaw/images.dart';
 import 'package:dsh_app/openclaw/attachments.dart';
 import 'package:dsh_app/ui/chat/artifact_preview.dart' show ImageViewerPage;
+import 'package:dsh_app/ui/chat/widgets/image_gallery.dart' show ZoomableImage;
 import 'package:dsh_app/openclaw/tool_activity.dart';
 import 'package:dsh_app/ui/theme/theme.dart';
 import 'package:dsh_app/ui/chat/render/markdown_body.dart';
@@ -145,7 +146,7 @@ void main() {
     await tester.tap(find.byType(GatewayImage).first);
     await tester.pumpAndSettle();
     expect(find.byType(ImageViewerPage), findsOneWidget);
-    expect(find.byType(InteractiveViewer), findsOneWidget);
+    expect(find.byType(ZoomableImage), findsOneWidget);
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox.shrink());
   });
@@ -166,7 +167,7 @@ void main() {
     expect(find.byType(GatewayImage), findsOneWidget);
     await tester.tap(find.byType(GatewayImage));
     await tester.pumpAndSettle();
-    expect(find.byType(InteractiveViewer), findsOneWidget);
+    expect(find.byType(ZoomableImage), findsOneWidget);
     Navigator.of(tester.element(find.byType(ImageViewerPage))).pop();
     await tester.pumpAndSettle();
     expect(state.attachments, hasLength(1));
@@ -212,7 +213,7 @@ void main() {
     );
     final cancelled = preview();
     await tester.pumpAndSettle();
-    expect(find.byType(InteractiveViewer), findsOneWidget);
+    expect(find.byType(ZoomableImage), findsOneWidget);
     Navigator.of(tester.element(find.byType(GatewayImageSelection))).pop();
     expect(await cancelled, isNull);
     final confirmed = preview();
@@ -486,7 +487,7 @@ void main() {
       expect(find.text('添加所选图片（2）'), findsOneWidget);
       await tester.tap(find.byKey(const ValueKey('gateway-image-preview-0')));
       await tester.pumpAndSettle();
-      expect(find.byType(InteractiveViewer), findsOneWidget);
+      expect(find.byType(ZoomableImage), findsOneWidget);
       Navigator.of(tester.element(find.byType(ImageViewerPage))).pop();
       await tester.pumpAndSettle();
       if (confirm) {

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../l10n/l10n.dart';
+import '../ui/chat/render/long_text.dart';
 
 class GatewayToolEntry {
   const GatewayToolEntry({required this.name, required this.details});
@@ -52,7 +53,12 @@ class GatewayToolActivity extends StatelessWidget {
                           children: [
                             Padding(
                               padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                              child: Align(alignment: Alignment.centerLeft, child: SelectableText(entry.details)),
+                              child: LongTextWell(
+                                text: entry.details,
+                                title: entry.name,
+                                style: Theme.of(ctx).textTheme.bodySmall!,
+                                maxHeight: 320,
+                              ),
                             ),
                           ],
                         );

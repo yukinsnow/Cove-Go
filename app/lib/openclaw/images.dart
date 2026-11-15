@@ -8,6 +8,7 @@ import 'package:openclaw_client/openclaw_client.dart';
 import '../l10n/l10n.dart';
 import 'image_blocks.dart';
 import '../ui/chat/artifact_preview.dart' show ImageViewerPage;
+import '../ui/chat/widgets/image_gallery.dart' show ViewerImage;
 import '../ui/common/display_image.dart';
 import '../ui/theme/app_icons.dart';
 
@@ -90,6 +91,8 @@ class GatewayImage extends StatefulWidget {
     required this.client,
     required this.sessionKey,
     this.size = 144,
+    this.gallery = const [],
+    this.galleryIndex = 0,
     this.address,
     this.token = '',
   });
@@ -97,6 +100,8 @@ class GatewayImage extends StatefulWidget {
   final GatewayClient client;
   final String sessionKey;
   final double size;
+  final List<Map> gallery;
+  final int galleryIndex;
   final String? address;
   final String token;
 
@@ -161,7 +166,40 @@ class _GatewayImageState extends State<GatewayImage> {
                 button: true,
                 image: true,
                 child: GestureDetector(
-                  onTap: () => Navigator.of(context).push(ImageViewerPage.route(title: title, image: image)),
+                  onTap: () {
+                    FocusManager.instance.primaryFocus?.unfocus();
+                    if (widget.gallery.isEmpty) {
+                      Navigator.of(context).push(ImageViewerPage.route(title: title, image: image));
+                      return;
+                    }
+                    // Capture this host/session: a route must not load the next
+                    // page from a different host after the chat switches.
+                    final client = widget.client, session = widget.sessionKey;
+                    final address = widget.address, token = widget.token;
+                    final blocks = List<Map>.of(widget.gallery);
+                    final pages = [
+                      for (var i = 0; i < blocks.length; i++)
+                        if (i == widget.galleryIndex)
+                          ViewerImage(name: title, image: image)
+                        else
+                          ViewerImage.lazy(
+                            name: '${blocks[i]['fileName'] ?? context.l10n.ocAttach}',
+                            load: () async {
+                              final result = await loadGatewayImage(
+                                blocks[i],
+                                client,
+                                session,
+                                address: address,
+                                token: token,
+                              );
+                              if (result == null) throw StateError('Image unavailable');
+                              return result;
+                            },
+                          ),
+                    ];
+                    Navigator.of(context)
+                        .push(ImageViewerPage.galleryRoute(images: pages, initial: widget.galleryIndex));
+                  },
                   child: Image(
                     image: imageForDisplay(
                       image,

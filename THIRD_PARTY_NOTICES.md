@@ -857,3 +857,19 @@ of the date such litigation is filed.
 - SIL Open Font License 1.1：`app/assets/fonts/OFL.txt`
 - GNU LGPL-3.0（spake2-android、libtalloc）：https://www.gnu.org/licenses/lgpl-3.0.txt ；它以 GNU GPL-3.0 为基础，两份全文一并附在 App 内许可页的 spake2-android 条目里：https://www.gnu.org/licenses/gpl-3.0.txt
 - GNU GPL-2.0（proot）：随 APK 附带于 `assets/runtime/licenses/proot-COPYING.txt`
+
+## Cove-Go remote-chat upstream sync (2026-11-15)
+
+Remote client, transport and chat components are adapted from
+[ccch1mneyyy/dsh-Go](https://github.com/ccch1mneyyy/dsh-Go), commit
+`fd4c10848e485906a4b76a664f05b77bf549bfd9`, under the repository's AGPL-3.0
+license and the per-file notices retained with the copied code. Fork-specific
+Gateway integration remains separate.
+
+- `packages/dartssh2/`: dartssh2 4.1.0 (MIT), upstream
+  https://github.com/vicajilau/dartssh2, with dsh-Go's negotiated post-auth SSH
+  compression changes. See `packages/dartssh2/VENDORED.md` and `LICENSE`.
+- `app/lib/ui/fx/orbs/`: Libraries.dev Thinking orbs, based on commit `387b049`
+  of https://github.com/Jakubantalik/Libraries.dev. Copyright (c) 2026 Jakub
+  Antalik, MIT; translated to Flutter CustomPainter. Model and Pro assets are
+  not included. The MIT license text in this document applies to this code as well.

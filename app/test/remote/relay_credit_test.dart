@@ -184,16 +184,15 @@ void main() {
     // One button per sign-in provider; the lowest one sits nearest the credit line.
     final signIn = tester.getRect(find.byWidgetPredicate((w) => w is FilledButton).last);
     final selfHosted = tester.getRect(find.widgetWithText(TextButton, '自建服务器 · 邮箱登录'));
-    final sshTitle = tester.getRect(find.text('SSH 主机'));
-    final sshCard = tester.getRect(card('添加 SSH 主机'));
+    final sshCard = tester.getRect(card('通过 SSH 添加 DSH 主机'));
     final line = lineRect(tester);
     final name = partRect(tester, 'liguobao/ds-harness-remote');
     final glyph = tester.getRect(find.descendant(of: find.byType(RelayCredit), matching: find.byType(Icon)));
 
-    // Every point from the sign-in button to the SSH card, 1dp apart.
-    final region = linkRegion(tester, signIn.top, sshCard.bottom)!;
+    // Cove-Go groups SSH above the credit; sample through its bottom margin.
+    final region = linkRegion(tester, signIn.top, line.bottom + 24)!;
     expect(region.top, greaterThanOrEqualTo(relayCard.bottom), reason: 'stays out of the card');
-    expect(region.bottom, lessThan(sshTitle.top), reason: 'stays out of the next section');
+    expect(region.bottom, lessThanOrEqualTo(line.bottom + 24), reason: 'stays in the footer margin');
     for (final (label, rect) in [('sign-in', signIn), ('self-hosted', selfHosted), ('SSH card', sshCard)]) {
       expect(region.overlaps(rect), isFalse, reason: '$label $rect vs link $region');
     }
@@ -225,9 +224,9 @@ void main() {
   testWidgets('the layout is that of a plain footer', (tester) async {
     await pump(tester);
     final line = lineRect(tester);
-    // Card → 8 → the line → the section margin (24) → the next section's title.
+    // The combined DSH/SSH card precedes the line; its own bottom margin follows.
     expect(line.top - tester.getRect(card('登录 DSH Remote')).bottom, closeTo(8, 0.01));
-    expect(tester.getRect(find.text('SSH 主机')).top - line.bottom, closeTo(24, 0.01));
+    expect(tester.getRect(find.byType(RelayCredit)).bottom - line.bottom, closeTo(24, 0.01));
   });
 
   testWidgets('signing in still opens the sign-in page, not the project', (tester) async {

@@ -1,4 +1,6 @@
-// Portions derived from ds-harness-remote (https://github.com/liguobao/ds-harness-remote), MIT, Copyright (c) 2026 DSH Remote contributors. See THIRD_PARTY_NOTICES.md.
+// SPDX-FileCopyrightText: 2026 DSH Remote contributors
+// SPDX-License-Identifier: MIT
+// See THIRD_PARTY_NOTICES.md.
 // Client Control transport: the Server Control WebSocket, plus the
 // assigned Relay node data WebSocket when the Server offers one. With
 // `offerDirect` it also negotiates WebRTC and carries its signaling
@@ -84,6 +86,10 @@ class RelayTransport implements SecureHandshakeTransport {
   /// retry once), `HOST_OFFLINE`, `MEMBERSHIP_REQUIRED`,
   /// `CAPABILITY_NOT_SUPPORTED`, `CONNECTION_REJECTED` (Host refused),
   /// `INVALID_MESSAGE` (protocol violation).
+  ///
+  /// [isCancelled] retires an owner's pending socket before it can send hello.
+  /// A socket that arrives after cancellation is closed without authentication;
+  /// this does not retract a hello that was already sent.
   static Future<RelayTransport> connect({
     required Uri url,
     required String deviceId,
@@ -92,10 +98,14 @@ class RelayTransport implements SecureHandshakeTransport {
     String? clientVersion,
     Duration timeout = const Duration(seconds: 10),
     ControlSocketConnector? connector,
+    bool Function()? isCancelled,
     ControlTracer? tracer,
     bool offerDirect = false,
     List<RemoteTransportMode>? preferredTransports,
   }) async {
+    if (isCancelled?.call() == true) {
+      throw const RemoteTransportException('CLIENT_CLOSED', 'The connection owner closed.', retryable: false);
+    }
     final connect = connector ?? _defaultConnector;
     final WebSocket socket;
     try {
@@ -114,6 +124,10 @@ class RelayTransport implements SecureHandshakeTransport {
       throw RemoteTransportException('CONNECTION_FAILED', 'Control WebSocket connect failed: ${error.message}');
     } on HandshakeException catch (error) {
       throw RemoteTransportException('CONNECTION_FAILED', 'TLS handshake failed: ${error.message}');
+    }
+    if (isCancelled?.call() == true) {
+      unawaited(socket.close(WebSocketStatus.normalClosure).catchError((Object _) {}));
+      throw const RemoteTransportException('CLIENT_CLOSED', 'The connection owner closed.', retryable: false);
     }
     final transport = RelayTransport._(
       socket,

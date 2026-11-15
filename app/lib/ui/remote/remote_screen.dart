@@ -27,6 +27,7 @@ import 'host_key_dialog.dart';
 import 'host_status.dart';
 import 'link_progress.dart';
 import 'network_details_sheet.dart';
+import 'pairing_page.dart';
 import 'relay_credit.dart';
 import 'relay_login_sheet.dart';
 import 'ssh_host_form.dart';
@@ -200,6 +201,18 @@ class _RemoteScreenState extends ConsumerState<RemoteScreen> {
               ),
             ],
           ),
+          SettingsSection(
+            title: l10n.remoteTransferSettings,
+            children: [
+              SettingsSwitchTile(
+                key: const ValueKey('remote-compact-history'),
+                spot: Spots.remoteCompactHistory,
+                subtitle: l10n.remoteCompactHistoryHint,
+                value: ref.watch(remoteCompactHistoryProvider),
+                onChanged: (value) => unawaited(ref.read(remoteCompactHistoryProvider.notifier).set(value)),
+              ),
+            ],
+          ),
           // Only meaningful once there is a host to come back to.
           if (ssh.isNotEmpty || signedIn)
             SettingsSection(
@@ -286,6 +299,20 @@ class _ActiveCard extends ConsumerWidget {
                     ? (
                         l10n.remoteSignInAgain,
                         () async {
+                          if (ref.read(relayAccountProvider).value?.user?.provider == 'password') {
+                            final backend = ref.read(relayBackendProvider);
+                            final signedIn = await showSelfHostedLogin(
+                              context,
+                              initialServer: ref.read(relayServerProvider) ?? defaultRelayServer,
+                            );
+                            if (signedIn == true &&
+                                context.mounted &&
+                                ref.read(activeHostProvider) == active &&
+                                identical(backend, ref.read(relayBackendProvider))) {
+                              reconnect();
+                            }
+                            return;
+                          }
                           await ref.read(relayAccountProvider.notifier).login();
                           if (context.mounted && (ref.read(relayAccountProvider).value?.signedIn ?? false)) reconnect();
                         },
@@ -563,6 +590,13 @@ class _RelaySection extends ConsumerWidget {
           onTap: onManage,
         ),
         ...sshChildren,
+        if (ref.watch(relayPairingSupportProvider).value ?? false)
+          SettingsTile(
+            icon: AppIcons.qrCode,
+            tinted: false,
+            title: l10n.remotePairAddComputer,
+            onTap: () => Navigator.of(context).push(RemotePairingPage.route()),
+          ),
       ],
     );
   }
@@ -638,6 +672,21 @@ class _LoginCard extends ConsumerWidget {
             ],
           ),
           const SizedBox(height: 14),
+          if (!account.loggingIn && available && (ref.watch(relayPairingSupportProvider).value ?? false)) ...[
+            FilledButton.tonalIcon(
+              onPressed: () => Navigator.of(context).push(RemotePairingPage.route()),
+              icon: const Icon(AppIcons.qrCode, size: 18),
+              label: Text(l10n.remotePairEntry),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(4, 6, 4, 12),
+              child: Text(
+                l10n.remotePairEntryHint,
+                textAlign: TextAlign.center,
+                style: theme.textTheme.bodySmall?.copyWith(color: colors.textTertiary),
+              ),
+            ),
+          ],
           if (account.loggingIn)
             _Waiting(url: account.loginUrl, onCancel: notifier.cancelLogin)
           else if (account.providers.isEmpty)

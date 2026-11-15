@@ -972,7 +972,7 @@ abstract final class Spots {
   static final addSshHost = SettingSpot(
     'add-ssh-host',
     page: SettingsPageId.remote,
-    title: (l) => l.remoteAddSshHost,
+    title: (l) => l.ocAddDshSsh,
     keywords: (l) => l.searchKwAddSshHost,
   );
   static final remoteAutoConnect = SettingSpot(
@@ -980,6 +980,13 @@ abstract final class Spots {
     page: SettingsPageId.remote,
     title: (l) => l.remoteAutoConnectOnStartup,
     keywords: (l) => l.searchKwRemoteAutoConnect,
+  );
+
+  static final remoteCompactHistory = SettingSpot(
+    'remote-compact-history',
+    page: SettingsPageId.remote,
+    title: (l) => l.remoteCompactHistory,
+    keywords: (l) => l.searchKwRemoteCompactHistory,
   );
 
   // 引擎参数 and its pages (drawn from the engine's schema).
@@ -1102,6 +1109,7 @@ final _rows = <SettingSpot>[
   Spots.engineUninstall,
   Spots.addSshHost,
   Spots.remoteAutoConnect,
+  Spots.remoteCompactHistory,
   Spots.subagentDepth,
   Spots.parallelCalls,
   Spots.commandTimeout,

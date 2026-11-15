@@ -1,4 +1,6 @@
-// Portions derived from DS Bot (https://github.com/Fei2411/DeepSeek-Bot), Apache-2.0, Copyright 2026 Fei2411 and the DS Bot contributors. See THIRD_PARTY_NOTICES.md.
+// SPDX-FileCopyrightText: 2026 Fei2411 and the DS Bot contributors
+// SPDX-License-Identifier: Apache-2.0
+// See THIRD_PARTY_NOTICES.md.
 // Modified: the ink table (`src/client/inks.js`) and `fnv1a` / `defaultColor`
 // (`src/client/characters.js`) translated to Dart.
 
@@ -127,7 +129,7 @@ class DsBotHttpTransport implements DsBotTransport {
             return;
           }
           if (response.statusCode != 200) {
-            await response.drain<void>().catchError((_) {});
+            await response.listen(null).cancel().catchError((_) {});
             throw DshHttpException(response.statusCode, 'HTTP ${response.statusCode} from $feedRoute');
           }
           final parser = SseParser();
