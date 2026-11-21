@@ -27,6 +27,12 @@
       "source": "app/ios/Runner/NativeFilesChannel.swift",
       "upstream_sha256": "320e0a79890c98c91de65c27222b7bc2f13a451c38726420751d63144bddbd2c",
       "adapted_sha256": "320e0a79890c98c91de65c27222b7bc2f13a451c38726420751d63144bddbd2c"
+    },
+    "PetOverlayAudioRecoveryState.swift": {
+      "source": "app/ios/Runner/PetOverlay/PetOverlayState.swift",
+      "extraction": "PetOverlayAudioRecoveryState only; no overlay feature included",
+      "upstream_sha256": "53bb907349d2ecfcd5d97fa77dcac27e3676f585d0a6e8cd14ad38659a1c223e",
+      "adapted_sha256": "fb6b516505060c376cc84480bb79a39d99560617c4315cec61a526a08980f883"
     }
   }
 }

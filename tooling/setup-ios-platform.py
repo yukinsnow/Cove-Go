@@ -11,7 +11,8 @@ import sys
 
 ROOT = Path(__file__).resolve().parent.parent
 SOURCES = (
-    'DshPlugin.swift', 'IOSAudioSessionCoordinator.swift', 'VoiceChannel.swift',
+    'DshPlugin.swift', 'PetOverlayAudioRecoveryState.swift',
+    'IOSAudioSessionCoordinator.swift', 'VoiceChannel.swift',
     'NativeFilesChannel.swift', 'NativeMediaChannel.swift',
 )
 MARKER = '\n// BEGIN COVE IOS PLATFORM\n'
