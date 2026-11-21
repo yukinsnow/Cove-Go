@@ -660,6 +660,7 @@ class ClawHomeState extends ConsumerState<ClawHome> with WidgetsBindingObserver 
                         builder: (_) => GatewayReceivedFilePage(
                           scope: GatewayFeatureScope(c, session: c.sessionKey),
                           file: file,
+                          autoDownload: true,
                         ),
                       ),
                     );

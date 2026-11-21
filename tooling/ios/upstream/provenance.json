@@ -1,0 +1,32 @@
+{
+  "repository": "https://github.com/ccch1mneyyy/dsh-Go",
+  "revision": "da798027013851328f83f59af4adb52c3afaab23",
+  "license": "AGPL-3.0-only",
+  "files": {
+    "IOSAudioSessionCoordinator.swift": {
+      "source": "app/ios/Runner/IOSAudioSessionCoordinator.swift",
+      "upstream_sha256": "6b530ab06928642b5bb784ee69dcf0a3e8d80e67e4045463e75f064ecea46b85",
+      "adapted_sha256": "6b530ab06928642b5bb784ee69dcf0a3e8d80e67e4045463e75f064ecea46b85"
+    },
+    "NativeMediaChannel.swift": {
+      "source": "app/ios/Runner/NativeMediaChannel.swift",
+      "upstream_sha256": "706b323f62e2535fc1614b180761de6cd962b054985958f8f5b0fb1c55da9bc0",
+      "adapted_sha256": "706b323f62e2535fc1614b180761de6cd962b054985958f8f5b0fb1c55da9bc0"
+    },
+    "DshPlugin.swift": {
+      "source": "app/ios/Runner/DshPlugin.swift",
+      "upstream_sha256": "0ac8f1cdc4d71426667b31837e0cb23310ae18110e671c53deb758abee8e64fe",
+      "adapted_sha256": "11151132b2a791d81981635fcb9f3025eae630fa8b7ede6ffcd66181b1a36981"
+    },
+    "VoiceChannel.swift": {
+      "source": "app/ios/Runner/VoiceChannel.swift",
+      "upstream_sha256": "21e3fc484e8ee3f193e6ea7fb0ef5d3962af15221919a4d790d8135ea812caea",
+      "adapted_sha256": "21e3fc484e8ee3f193e6ea7fb0ef5d3962af15221919a4d790d8135ea812caea"
+    },
+    "NativeFilesChannel.swift": {
+      "source": "app/ios/Runner/NativeFilesChannel.swift",
+      "upstream_sha256": "320e0a79890c98c91de65c27222b7bc2f13a451c38726420751d63144bddbd2c",
+      "adapted_sha256": "320e0a79890c98c91de65c27222b7bc2f13a451c38726420751d63144bddbd2c"
+    }
+  }
+}

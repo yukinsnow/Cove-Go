@@ -2,11 +2,13 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../l10n/l10n.dart';
 import '../state/attachments.dart' show formatBytes;
+import '../state/artifacts.dart' show FilesChannel;
 import '../ui/shell/page_frame.dart';
 import 'feature_data.dart';
 
@@ -114,9 +116,10 @@ Future<File> downloadGatewayFile(
 }
 
 class GatewayReceivedFilePage extends StatefulWidget {
-  const GatewayReceivedFilePage({super.key, required this.scope, required this.file});
+  const GatewayReceivedFilePage({super.key, required this.scope, required this.file, this.autoDownload = false});
   final GatewayFeatureScope scope;
   final Map file;
+  final bool autoDownload;
   @override
   State<GatewayReceivedFilePage> createState() => _GatewayReceivedFilePageState();
 }
@@ -124,16 +127,25 @@ class GatewayReceivedFilePage extends StatefulWidget {
 class _GatewayReceivedFilePageState extends State<GatewayReceivedFilePage> {
   File? file;
   bool busy = false, failed = false;
+  String? savedTo;
   @override
   void initState() {
     super.initState();
     widget.scope.controller.addListener(changed);
+    if (widget.autoDownload) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) download();
+      });
+    }
   }
 
   void changed() {
     if (mounted) {
       setState(() {
-        if (!widget.scope.current) file = null;
+        if (!widget.scope.current) {
+          file = null;
+          savedTo = null;
+        }
       });
     }
   }
@@ -149,6 +161,7 @@ class _GatewayReceivedFilePageState extends State<GatewayReceivedFilePage> {
     setState(() {
       busy = true;
       failed = false;
+      savedTo = null;
     });
     try {
       // Isolated temp directory avoids clobbering another chat's same-named file.
@@ -184,6 +197,29 @@ class _GatewayReceivedFilePageState extends State<GatewayReceivedFilePage> {
     }
   }
 
+  Future<void> nativeFile({required bool save}) async {
+    if (busy || file == null || !widget.scope.current) return;
+    setState(() {
+      busy = true;
+      failed = false;
+    });
+    try {
+      const channel = FilesChannel();
+      final name = gatewayReceivedName(widget.file);
+      final mime = '${widget.file['mimeType'] ?? 'application/octet-stream'}';
+      if (save) {
+        final destination = await channel.saveToDownloads(file!.path, name: name, mime: mime);
+        if (mounted && widget.scope.current) setState(() => savedTo = destination);
+      } else {
+        await channel.open(file!.path, name: name, mime: mime);
+      }
+    } catch (_) {
+      if (mounted) setState(() => failed = true);
+    } finally {
+      if (mounted) setState(() => busy = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final l = context.l10n;
@@ -202,6 +238,7 @@ class _GatewayReceivedFilePageState extends State<GatewayReceivedFilePage> {
           Padding(padding: const EdgeInsets.all(20), child: Text(l.ocReceivedFileNote)),
           if (failed) Padding(padding: const EdgeInsets.all(20), child: Text(l.ocReceivedFileFailed)),
           if (busy) const Center(child: CircularProgressIndicator()),
+          if (savedTo != null) Padding(padding: const EdgeInsets.all(20), child: Text(savedTo!)),
           Padding(
             padding: const EdgeInsets.all(20),
             child: FilledButton.icon(
@@ -211,6 +248,26 @@ class _GatewayReceivedFilePageState extends State<GatewayReceivedFilePage> {
               label: Text(l.ocFeatureLoadArtifact),
             ),
           ),
+          if (file != null && defaultTargetPlatform == TargetPlatform.iOS) ...[
+            Padding(
+              padding: const EdgeInsets.all(20),
+              child: FilledButton.icon(
+                key: const ValueKey('received-file-native-save'),
+                icon: const Icon(Icons.save_alt),
+                onPressed: busy ? null : () => nativeFile(save: true),
+                label: Text(l.ocReceivedFileNativeSave),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(20),
+              child: OutlinedButton.icon(
+                key: const ValueKey('received-file-preview'),
+                icon: const Icon(Icons.open_in_new),
+                onPressed: busy ? null : () => nativeFile(save: false),
+                label: Text(l.ocReceivedFilePreview),
+              ),
+            ),
+          ],
           if (file != null)
             Padding(
               padding: const EdgeInsets.all(20),

@@ -19247,13 +19247,13 @@ abstract class L10n {
   /// No description provided for @ocReceivedFileNote.
   ///
   /// In zh, this message translates to:
-  /// **'先下载附件，再通过系统分享菜单保存到“文件”或打开。最多 100 MB；不自动安装或解压。文件名遵循 Gateway 返回值，若 IPA 被命名为 ZIP，请手动改回 .ipa。'**
+  /// **'先下载附件，再预览、在 iOS 保存到“文件”的 Cove-Go 目录，或使用系统分享菜单。最多 100 MB；不自动安装或解压。文件名遵循 Gateway 返回值，若 IPA 被命名为 ZIP，请手动改回 .ipa。'**
   String get ocReceivedFileNote;
 
   /// No description provided for @ocReceivedFileFailed.
   ///
   /// In zh, this message translates to:
-  /// **'附件下载或分享失败：请重试、确认会话权限，或检查是否超过 100 MB。'**
+  /// **'附件下载、保存或分享失败：请重试、确认会话权限，或检查是否超过 100 MB。'**
   String get ocReceivedFileFailed;
 
   /// No description provided for @ocReceivedFileSave.
@@ -19261,6 +19261,18 @@ abstract class L10n {
   /// In zh, this message translates to:
   /// **'保存到文件 / 分享'**
   String get ocReceivedFileSave;
+
+  /// No description provided for @ocReceivedFileNativeSave.
+  ///
+  /// In zh, this message translates to:
+  /// **'保存到“文件”的 Cove-Go 目录'**
+  String get ocReceivedFileNativeSave;
+
+  /// No description provided for @ocReceivedFilePreview.
+  ///
+  /// In zh, this message translates to:
+  /// **'预览 / 打开'**
+  String get ocReceivedFilePreview;
 
   /// No description provided for @ocResync.
   ///

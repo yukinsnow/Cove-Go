@@ -10395,13 +10395,19 @@ class L10nZh extends L10n {
 
   @override
   String get ocReceivedFileNote =>
-      '先下载附件，再通过系统分享菜单保存到“文件”或打开。最多 100 MB；不自动安装或解压。文件名遵循 Gateway 返回值，若 IPA 被命名为 ZIP，请手动改回 .ipa。';
+      '先下载附件，再预览、在 iOS 保存到“文件”的 Cove-Go 目录，或使用系统分享菜单。最多 100 MB；不自动安装或解压。文件名遵循 Gateway 返回值，若 IPA 被命名为 ZIP，请手动改回 .ipa。';
 
   @override
-  String get ocReceivedFileFailed => '附件下载或分享失败：请重试、确认会话权限，或检查是否超过 100 MB。';
+  String get ocReceivedFileFailed => '附件下载、保存或分享失败：请重试、确认会话权限，或检查是否超过 100 MB。';
 
   @override
   String get ocReceivedFileSave => '保存到文件 / 分享';
+
+  @override
+  String get ocReceivedFileNativeSave => '保存到“文件”的 Cove-Go 目录';
+
+  @override
+  String get ocReceivedFilePreview => '预览 / 打开';
 
   @override
   String get ocResync => '重新同步';

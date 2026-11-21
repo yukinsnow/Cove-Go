@@ -51,7 +51,9 @@ class GatewayFileTile extends StatelessWidget {
   Widget build(BuildContext context) => SizedBox(
     width: 220,
     child: Material(
-      color: Colors.transparent,
+      color: Theme.of(context).colorScheme.surfaceContainerHigh,
+      borderRadius: BorderRadius.circular(12),
+      clipBehavior: Clip.antiAlias,
       child: ListTile(
         onTap: onTap,
         trailing: onTap == null ? null : const Icon(Icons.download_outlined),

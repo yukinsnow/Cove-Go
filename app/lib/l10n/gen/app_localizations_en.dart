@@ -10939,14 +10939,20 @@ class L10nEn extends L10n {
 
   @override
   String get ocReceivedFileNote =>
-      'Download first, then use the system share sheet to save to Files or open. Up to 100 MB; never automatically installed or extracted. Filenames follow the Gateway; if an IPA was renamed ZIP, change it back to .ipa.';
+      'Download first, then preview, save to Cove-Go in Files on iOS, or use the system share sheet. Up to 100 MB; never automatically installed or extracted. Filenames follow the Gateway; if an IPA was renamed ZIP, change it back to .ipa.';
 
   @override
   String get ocReceivedFileFailed =>
-      'Download or sharing failed. Retry, check session permissions, or check the 100 MB limit.';
+      'Download, saving or sharing failed. Retry, check session permissions, or check the 100 MB limit.';
 
   @override
   String get ocReceivedFileSave => 'Save to Files / Share';
+
+  @override
+  String get ocReceivedFileNativeSave => 'Save to Cove-Go in Files';
+
+  @override
+  String get ocReceivedFilePreview => 'Preview / Open';
 
   @override
   String get ocResync => 'Sync again';

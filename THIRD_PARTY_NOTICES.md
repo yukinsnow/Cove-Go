@@ -9,6 +9,15 @@
 
 ## 一、复制或改写进源码的代码
 
+### DSH Go 官方 iOS 原生通道（Cove-Go）
+
+来源： https://github.com/ccch1mneyyy/dsh-Go ，提交
+`da798027013851328f83f59af4adb52c3afaab23`，AGPL-3.0，版权归原作者与贡献者。
+`app/ios/Runner/` 的五份文件复制到 `tooling/ios/upstream/`，用于远程客户端的
+文件预览/保存、相册、选文件、语音与音频会话协调。四份原样保留；
+`DshPlugin.swift` 裁剪为远程通道注册并改保存目录显示名。不含官方品牌美术。
+逐文件来源、哈希和修改说明见该目录的 `provenance.json` 与 `README.md`。
+
 ### Phase（经作者许可使用）
 
 | 项 | 内容 |
