@@ -16,6 +16,7 @@ import '../ui/chat/widgets/user_bubble.dart';
 import '../ui/shell/drawer/session_tile.dart';
 import '../ui/shell/page_frame.dart';
 import '../ui/common/status_dot.dart';
+import '../ui/common/typing_indicator.dart';
 import 'controller.dart';
 import 'about_page.dart';
 import 'appearance_settings.dart';
@@ -681,7 +682,13 @@ class ClawHomeState extends ConsumerState<ClawHome> with WidgetsBindingObserver 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 12),
       child: user
-          ? UserBubble(text: text, attachments: pictures)
+          ? UserBubble(
+              text: text,
+              attachments: pictures,
+              // Optimistic echo: marked until the Gateway transcript has the row.
+              pendingLabel: message['_pending'] == true ? context.l10n.chatSending : null,
+              pendingIcon: AppIcons.queued,
+            )
           : Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -949,6 +956,15 @@ class ClawHomeState extends ConsumerState<ClawHome> with WidgetsBindingObserver 
                                       ],
                                     ),
                                   for (final text in c.live.values) bubble({'role': 'assistant', 'content': text}),
+                                  if (c.awaitingReply)
+                                    Padding(
+                                      key: const ValueKey('gateway-awaiting-reply'),
+                                      padding: const EdgeInsets.symmetric(vertical: 12),
+                                      child: Align(
+                                        alignment: Alignment.centerLeft,
+                                        child: Semantics(label: l.chatReplying, child: const TypingIndicator()),
+                                      ),
+                                    ),
                                 ].reversed.toList(),
                               ),
                             ),
@@ -981,7 +997,7 @@ class ClawHomeState extends ConsumerState<ClawHome> with WidgetsBindingObserver 
                             returnKeySends: ref.watch(settingsProvider.select((s) => s.returnKeySends)),
                             focusNode: composerFocus,
                             connected: c.connected && !c.syncing && !c.syncFailed,
-                            running: c.live.isNotEmpty,
+                            running: c.live.isNotEmpty || c.awaitingReply,
                             busy: c.sending,
                             placeholder: c.syncing ? l.stateChatSynchronizing : l.ocHint,
                             maxLines: Composer.linesFor(context),

@@ -221,8 +221,21 @@ class ClawController extends ChangeNotifier {
   List<Map<String, dynamic>> get visibleMessages => [
     ...messages,
     for (final prompt in _outgoing)
-      if (prompt.sessionKey == sessionKey) prompt.message,
+      if (prompt.sessionKey == sessionKey) {...prompt.message, '_pending': true},
   ];
+
+  /// Sessions with a submitted prompt whose run has not produced a terminal
+  /// chat event yet. Covers the gap before the Gateway reports activity.
+  final _awaiting = <String>{};
+
+  /// DSH-style "replying" dots: shown from the moment a prompt is sent until
+  /// the first streamed text arrives or the run ends.
+  bool get awaitingReply {
+    if (!connected || live.isNotEmpty || sessionKey.isEmpty && _outgoing.isEmpty) return false;
+    if (_awaiting.contains(sessionKey) || _outgoing.any((p) => p.sessionKey == sessionKey)) return true;
+    final session = sessions.where((s) => s['key'] == sessionKey).firstOrNull;
+    return session != null && isSessionRunning(session);
+  }
 
   void _retainImages(Map<String, dynamic> row, Map previous) {
     final files = gatewayFiles(previous);
@@ -654,11 +667,13 @@ class ClawController extends ChangeNotifier {
       previousMatches: visibleMessages.where((m) => m['role'] == 'user' && messageText(m) == text).length,
     );
     _outgoing.add(prompt);
+    if (key.isNotEmpty) _awaiting.add(key);
     changed();
     try {
       if (key.isEmpty) {
         await newSession(outgoingId: id);
         prompt.sessionKey = sessionKey;
+        _awaiting.add(sessionKey);
         _submissionFingerprint = jsonEncode([sessionKey, text, queueMode, attachments]);
         changed();
       }
@@ -678,6 +693,7 @@ class ClawController extends ChangeNotifier {
       unawaited(guard(history));
     } catch (_) {
       _outgoing.remove(prompt);
+      _awaiting.remove(prompt.sessionKey);
       rethrow;
     } finally {
       sending = false;
@@ -758,6 +774,7 @@ class ClawController extends ChangeNotifier {
       }
       if (['final', 'aborted', 'error'].contains(p['state'])) {
         live.remove(run);
+        _awaiting.remove(sessionKey);
         if (p['state'] == 'error') error = '${p['errorMessage'] ?? 'Agent run failed'}';
         unawaited(guard(history));
       }
